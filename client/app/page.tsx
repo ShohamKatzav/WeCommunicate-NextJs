@@ -12,10 +12,8 @@ const Page = () => {
     const newSocket = io('http://localhost:5000'); // Backend URL
     setSocket(newSocket);
 
-    return () => {
-      if (socket) {
-        socket.disconnect();
-      }
+    return ()=>{
+      newSocket.disconnect();
     };
   }, []);
 
