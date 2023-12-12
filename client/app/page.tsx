@@ -1,87 +1,54 @@
-'use client';
-import { useEffect, useRef, useState } from 'react';
-import io, { Socket } from 'socket.io-client';
+"use client"
+import Login from './login/page';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import fetchUserData, { isLoading } from './utils/fetchUserData';
+import User from './types/user';
+import Loading from './components/loading';
 
-const Page = () => {
-  const [message, setMessage] = useState<{ id: string | undefined, message: string }>({ id: '', message: '' });
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [chat, setChat] = useState<string[]>([]);
-  const chatBox = useRef<HTMLDivElement>(null);
+// Define the Home component
+function Home() {
+  const router = useRouter();
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [email, setEmail] = useState("");
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_PATH;
+  const [user, setUser] = useState<User>({});
 
   useEffect(() => {
-    const newSocket = io('http://localhost:5000'); // Backend URL
-    setSocket(newSocket);
+    // Fetch the user email and token from cookies
+    const verifyCookie = async () => {
 
-    return ()=>{
-      newSocket.disconnect();
+      const user: User = await fetchUserData() as User;
+      setUser(user);
+
+      // If the token/email does not exist, mark the user as logged out
+      if (!user || !user.token) {
+        setLoggedIn(false);
+        return;
+      }
+
+      // If the token exists, verify it with the auth server to see if it is valid
+      const response = await fetch(`${baseUrl}/verify`, {
+        method: "POST",
+        headers: {
+          'jwt-token': user.token,
+        },
+      });
+
+      const result = await response.json();
+
+      setLoggedIn(result.message === 'success');
+      setEmail(user.email || "");
+      router.push("/chat");
     };
+
+    verifyCookie();
   }, []);
 
-  useEffect(() => {
-    socket?.on("chat message", (data: { id: string, message: string }) => {
-      data.id == socket.id ?
-        setChat((prevChat) => [...prevChat, `On ${new Date().toLocaleString()}\nYou\nSaid: ` + data.message]) :
-        setChat((prevChat) => [...prevChat, `On ${new Date().toLocaleString()}\nSocket Id: ${data.id}\nSaid: ` + data.message])
-    });
-  }, [socket]);
+  if (isLoading() || Object.keys(user).length !== 0) return <Loading />
+  else
+    return <Login setLoggedIn={setLoggedIn} setEmail={setEmail} />
+}
 
-  useEffect(() => {
-    if (socket?.id)
-      setMessage((prevState) => ({ id: socket?.id, message: prevState.message }));
-  }, [socket?.id]);
-
-  useEffect(() => {
-    if (chatBox.current)
-      chatBox.current.scrollTop = chatBox.current.scrollHeight;
-  }, [chat]);
-
-  const handleSendMessage = async () => {
-    if (socket) {
-      await socket.emit('chat message', message);
-      setMessage((prevState) => ({ id: prevState.id, message: '' }));
-    }
-  };
-
-  return (
-    <>
-      <div className='px-5 py-5'>
-        <h1 className="text-3xl font-bold underline">Next.js with Express and Socket.IO</h1>
-        <div className="grid gap-6 mb-6 md:grid-cols-4">
-          <input
-            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg
-           focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700
-            dark:border-gray-600 dark:placeholder-gray-400 dark:text-white
-             dark:focus:ring-blue-500 dark:focus:border-blue-500 mt-20"
-            placeholder="Type your message here..."
-            type="text"
-            value={message.message}
-            onChange={(e) => setMessage((prevState) => ({ id: prevState.id, message: e.target.value }))}
-          />
-        </div>
-        <button className="bg-transparent hover:bg-blue-500 text-blue-700 font-semibold
-      hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded"
-          onClick={handleSendMessage}>Send Message</button>
-        <div className="grid gap-6 mb-6 md:grid-cols-4 mt-5">
-          <div ref={chatBox} className="w-full flex flex-col md:flex-cols-4 overflow-y-auto h-80">
-            <div className="grid gap-6 mb-6 md:grid-cols-1">
-              {chat.map((line, index) =>
-                <div
-                  className="mr-2 py-3 px-4 bg-blue-400 rounded-bl-3xl rounded-tl-3xl
-                                rounded-tr-xl text-white break-words overflow-auto"
-                  key={index}>
-                  {line.split("\n").map((line, index) =>
-                    <div key={index}>
-                      {line}
-                    </div>
-                  )}
-                </div>)
-              }
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-};
-
-export default Page;
+// Export the Home component as the default export
+export default Home;

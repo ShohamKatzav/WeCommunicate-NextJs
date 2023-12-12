@@ -1,33 +1,27 @@
 const express = require('express'),
     PORT = 5000,
     app = express();
-
+const cors = require('cors');
 const http = require('http');
-
 const server = http.createServer(app);
-const io = require("socket.io")(server, {
-    cors: {
-        origin: "http://localhost:3000",
-        methods: ["GET", "POST"]
-    }
-});
 
+const dotenv = require('dotenv');
+dotenv.config();
 
-app.get('/api/message', (req, res) => {
-    res.json({ message: 'Hello from the backend!' });
-});
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-io.on('connection', (socket) => {
-    console.log(`${socket.id} connected`);
+const accountRoutes = require("./routes/Account");
+app.use("/api/v1", accountRoutes);
 
-    // Handle chat messages
-    socket.on('chat message', (message) => {
-        io.emit('chat message', message); // Broadcast the message to all connected clients
-    });
+const chatModule = require('./modules/Chat')(server);
 
-    socket.on('disconnect', () => {
-        console.log(`${socket.id} disconnected`);
-    });
+app.use((err, req, res, next) => {
+  if (err.name === 'UnauthorizedError') {
+    console.log(err);
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 });
 
 server.listen(PORT, () => {
