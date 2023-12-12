@@ -40,15 +40,16 @@ TOKEN_SECRET=*your_jwt_secret_key*
 
 You can generate a random secret key using `crypto` module.
 
-<pre><code>const crypto = require('crypto');
+```javascript
+const crypto = require('crypto');
 const generateRandomSecret = () => {
     return crypto.randomBytes(64).toString('hex');
 };
-</code></pre>
+```
 
 4. **Run the Application:**
 
-  Navigate to the root directory of the project and run the following command:
+* Navigate to the root directory of the project and run the following command:
   ```
   npm start
   ```
@@ -63,8 +64,8 @@ const generateRandomSecret = () => {
 
 7. **Testing:**
 
-For the best testing experience, I recommend using two different browsers to simulate real-time chat interactions.
-You can use the following login details for testing purposes:
+   For the best testing experience, I recommend using two different browsers to simulate real-time chat interactions.
+   You can use the following login details for testing purposes:
 
 1. **User 1:**
 * **Username:** shoham@gmail.com
