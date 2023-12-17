@@ -16,7 +16,7 @@ const MessageInput = ({ message, setMessage }: MessageInputProps) => {
             placeholder="Type your message here..."
             type="text"
             value={message.value}
-            onChange={(e) => setMessage((prevState) => ({ id: prevState.id, sender: prevState.sender, value: e.target.value }))}
+            onChange={(e) => setMessage({ value: e.target.value })}
         />
     );
 }

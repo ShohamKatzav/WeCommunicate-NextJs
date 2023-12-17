@@ -1,10 +1,13 @@
 const jwt = require('jsonwebtoken');
 const jwtSecretKey = process.env.TOKEN_SECRET;
 const bcrypt = require("bcrypt")
+
 var low = require("lowdb");
 var FileSync = require("lowdb/adapters/FileSync");
-var adapter = new FileSync("./database.json");
+var adapter = new FileSync("./database/database.json");
 var db = low(adapter);
+
+const guard = require("../guards/guard")
 
 const Auth = (req, res) => {
     const { email, password } = req.body;
@@ -22,7 +25,6 @@ const Auth = (req, res) => {
                     email,
                     signInTime: Date.now(),
                 };
-
                 const token = jwt.sign(loginData, jwtSecretKey);
                 res.status(200).json({ message: "success", token });
             }
@@ -46,29 +48,14 @@ const Auth = (req, res) => {
 
 // The verify endpoint that checks if a given JWT token is valid
 const Verify = (req, res) => {
-    const tokenHeaderKey = "jwt-token";
-    const authToken = req.headers[tokenHeaderKey];
-    try {
-        const verified = jwt.verify(authToken, jwtSecretKey);
-        if (verified) {
-            return res
-                .status(200)
-                .json({ status: "logged in", message: "success" });
-        } else {
-            // Access Denied
-            return res.status(401).json({ status: "invalid auth", message: "error" });
-        }
-    } catch (error) {
-        // Access Denied
-        return res.status(401).json({ status: "invalid auth", message: "error" });
-    }
-
+    guard(req, res, () => {
+        res.status(200).json({ status: "logged in", message: "success" });
+    });
 }
 
 // An endpoint to see if there's an existing account for a given email address
 const CheckAccount = (req, res) => {
     const { email } = req.body
-
     const user = db.get("users").value().filter(user => ciEquals(email, user.email))
 
     res.status(200).json({
@@ -76,7 +63,7 @@ const CheckAccount = (req, res) => {
     })
 }
 
-function ciEquals(a, b) {
+const ciEquals = (a, b) => {
     return typeof a === 'string' && typeof b === 'string'
         ? a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0
         : a === b;

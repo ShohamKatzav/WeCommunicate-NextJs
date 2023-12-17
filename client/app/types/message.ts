@@ -1,5 +1,5 @@
 export default interface Message {
-    id?: string | undefined;
+    date?: Date | undefined;
     sender?: string | undefined;
     value?: string;
  }

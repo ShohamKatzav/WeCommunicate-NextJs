@@ -3,34 +3,44 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import io, { Socket } from 'socket.io-client';
 import { del } from '../utils/cookie-actions';
-import fetchUserData, {isLoading} from '../utils/fetchUserData';
+import fetchUserData, { isLoading } from '../utils/fetchUserData';
 import Message from '../types/message';
 import User from '../types/user';
 import Loading from '../components/loading';
 import MessageBox from '../components/messageBox';
 import MessageInput from '../components/messageInput';
+import useAxiosWithAuth from '../hooks/useAxiosWithAuth';
 
 const Chat = () => {
   const router = useRouter();
-  const [message, setMessage] = useState<Message>({ id: '', sender: '', value: '' });
+  const [message, setMessage] = useState<Message>({ date: undefined, sender: '', value: '' });
   const [socket, setSocket] = useState<Socket | null>(null);
   const [chat, setChat] = useState<Message[]>([]);
   const chatBox = useRef<HTMLDivElement>(null);
   const baseAddress = process.env.NEXT_PUBLIC_BASE_ADDRESS as string;
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH as string;
   const [user, setUser] = useState<User>({});
 
   useEffect(() => {
+
     const connetIfVerified = async () => {
       const user = await fetchUserData() as User;
+      if (user.email) user.email = user.email?.charAt(0).toUpperCase() + user.email?.slice(1).toLowerCase();
       setUser(user);
-      if (!user?.token)
-        router.push("/");
+      const socketConfig = {
+        autoConnect: false,
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 10000,
+        reconnectionDelayMax: 10000,
+        auth: {
+          token: user?.token
+        }
+      }
+      const newSocket = io(baseAddress, socketConfig);
+      if (!user?.token) router.push("/");
       else {
-        var newSocket = io(baseAddress, {
-          auth: {
-            token: user?.token
-          }
-        });
+        newSocket.connect();
         setSocket(newSocket);
       }
       return () => {
@@ -44,15 +54,25 @@ const Chat = () => {
   }, []);
 
   useEffect(() => {
-    socket?.on("connect", () => {
-      setMessage((prevState) => ({ id: socket.id, sender: user.email, value: prevState.value }));
-    });
-    socket?.on("chat message", (data: Message) => {
-      const senderAsName = data.sender ? data.sender.charAt(0).toUpperCase() + data.sender.slice(1).toLowerCase() : '';
-      data.id == socket.id ?
-        setChat((prevChat) => [...prevChat, { id: data.id, value: `On ${new Date().toLocaleString()}\nYou\nSaid: ` + data.value }]) :
-        setChat((prevChat) => [...prevChat, { id: data.id, value: `On ${new Date().toLocaleString()}\n${senderAsName}\nSaid: ` + data.value }])
-    });
+
+    const onConnection = async () => {
+      const response = await useAxiosWithAuth().get(`${basePath}/get-data`);
+      const chatWithFormattedDates = response.data.chat.map((message: Message) =>
+        ({ ...message, date: new Date(message.date!).toLocaleString() }));
+      setChat(chatWithFormattedDates);
+    }
+
+    const onChatMessage = (data: Message) => {
+      setChat((prevChat) => [...prevChat, { date: new Date(), sender: data.sender, value: data.value }])
+    };
+
+    socket?.on("connect", onConnection);
+    socket?.on("chat message", onChatMessage);
+
+    return () => {
+      socket?.on("connection", onConnection);
+      socket?.off("chat message", onChatMessage);
+    };
   }, [socket]);
 
   useEffect(() => {
@@ -62,8 +82,14 @@ const Chat = () => {
 
   const handleSendMessage = async () => {
     if (socket) {
-      await socket.emit('chat message', message);
-      setMessage((prevState) => ({ id: prevState.id, sender: prevState.sender, value: '' }));
+      const newMessage: Message = {
+        date: new Date(),
+        sender: user.email,
+        value: message.value?.trim(),
+      };
+      await useAxiosWithAuth().post(`${basePath}/save-data`, newMessage);
+      await socket.emit('chat message', newMessage);
+      setMessage(({ value: '' }));
     }
   };
 
@@ -72,16 +98,16 @@ const Chat = () => {
     router.push("/");
   };
 
-  if (isLoading()) return <Loading/>
+  if (isLoading()) return <Loading />
 
   else
     return (
-      <div className='grid grid-cols-3 mt-10'>
+      <div className="grid grid-cols-3 mt-10">
         <div className="col-start-2 col-span-1 gap-4">
-        <h1 className="row-start-6 mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-4xl lg:text-5xl text-center">
-          <span className="text-transparent bg-clip-text bg-gradient-to-r to-red-600 from-amber-400">
-            Hello {user.email ? user.email.charAt(0).toUpperCase() + user.email.slice(1).toLowerCase() : ''}</span></h1>
-          <MessageInput message={message} setMessage={setMessage}/>
+          <h1 className="row-start-6 mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-4xl lg:text-5xl text-center">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r to-red-600 from-amber-400">
+              Hello {user.email}</span></h1>
+          <MessageInput message={message} setMessage={setMessage} />
           <div className="m-4">
             <button className="disabled:opacity-50 disabled:cursor-not-allowed
               bg-transparent hover:bg-blue-500 text-blue-700 font-semibold
@@ -99,7 +125,7 @@ const Chat = () => {
             <div ref={chatBox} className="w-full flex flex-col md:flex-cols-4 overflow-y-auto h-80">
               <div className="grid md:grid-cols-5">
                 {chat.map((message, index) =>
-                  <MessageBox key={index} message={message} socketId={socket?.id} />)
+                  <MessageBox key={index} message={message} email={user.email} />)
                 }
               </div>
             </div>

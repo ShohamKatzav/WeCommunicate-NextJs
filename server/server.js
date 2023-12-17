@@ -16,6 +16,8 @@ const accountRoutes = require("./routes/Account");
 app.use("/api/v1", accountRoutes);
 
 const chatModule = require('./modules/Chat')(server);
+const route = chatModule.router;
+app.use("/api/v1", route);
 
 app.use((err, req, res, next) => {
   if (err.name === 'UnauthorizedError') {

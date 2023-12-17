@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import fetchUserData, { isLoading } from './utils/fetchUserData';
 import User from './types/user';
 import Loading from './components/loading';
+import useAxiosWithAuth from './hooks/useAxiosWithAuth';
 
 // Define the Home component
 function Home() {
@@ -27,19 +28,25 @@ function Home() {
         return;
       }
 
-      // If the token exists, verify it with the auth server to see if it is valid
-      const response = await fetch(`${baseUrl}/verify`, {
-        method: "POST",
-        headers: {
-          'jwt-token': user.token,
-        },
-      });
-
-      const result = await response.json();
-
-      setLoggedIn(result.message === 'success');
-      setEmail(user.email || "");
-      router.push("/chat");
+      await useAxiosWithAuth().post(`${baseUrl}/verify`)
+        .then(response => {
+          setLoggedIn(response.data.message === 'success');
+          setEmail(user.email || "");
+          router.push("/chat");
+        }).catch(error => {
+          if (error.response.status === 401)
+          {
+            window.alert("Wrong email or password");
+            setUser({ });
+            setLoggedIn(false);
+          }
+          else
+          {
+            window.alert("Error occured: " + error.response.data.message);
+            setUser({ });
+            setLoggedIn(false);
+          }
+        })
     };
 
     verifyCookie();

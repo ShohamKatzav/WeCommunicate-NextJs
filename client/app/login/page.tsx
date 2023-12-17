@@ -2,7 +2,8 @@
 import './login.css'
 import React, { useState } from "react";
 import { useRouter } from 'next/navigation';
-import { create }  from '../utils/cookie-actions';
+import { create } from '../utils/cookie-actions';
+import useAxiosWithAuth from '../hooks/useAxiosWithAuth';
 
 const Login = (props: any) => {
   const router = useRouter();
@@ -14,40 +15,29 @@ const Login = (props: any) => {
 
 
   // Call the server API to check if the given email ID already exists
-  const checkAccountExists = (callback: any) => {
-    fetch(`${baseUrl}/check-account`, {
-      method: "POST",
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ email })
-    })
-      .then(r => r.json())
-      .then(r => {
-        callback(r?.userExists)
-      })
+  const checkAccountExists = async (callback: any) => {
+    const response = await useAxiosWithAuth().post(`${baseUrl}/check-account`, { email });
+    callback(response.data.userExists);
   }
 
   // Log in a user using email and password
-  const logIn = () => {
-    fetch(`${baseUrl}/auth`, {
-      method: "POST",
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ email, password })
-    })
-      .then(r => r.json())
-      .then(async r => {
-        if ('success' === r.message) {
-          await create({ email, token: r.token });
+  const logIn = async () => {
+      await useAxiosWithAuth().post(`${baseUrl}/auth`, { email, password })
+      .then(async response => {
+        if ('success' === response.data.message) {
+          await create({ email, token: response.data.token });
           props.setLoggedIn(true)
           props.setEmail(email)
           router.push("/chat");
-        } else {
-          window.alert("Wrong email or password")
         }
       })
+      .catch(error => {
+        if(error.response.status === 401)
+          window.alert("Wrong email or password");
+        else
+          window.alert("Error occured: " + error.response.data.message);
+      })
+
   }
 
   const onButtonClick = () => {
@@ -91,8 +81,8 @@ const Login = (props: any) => {
 
   return <div className={"mainContainer"}>
     <div className={"titleContainer"}>
-    <h1 className="row-start-6 mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-3xl lg:text-6xl text-center">
-          <span className="text-transparent bg-clip-text bg-gradient-to-r to-indigo-700 from-pink-400">Login to WeCommunicate</span></h1>
+      <h1 className="row-start-6 mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-3xl lg:text-6xl text-center">
+        <span className="text-transparent bg-clip-text bg-gradient-to-r to-indigo-700 from-pink-400">Login to WeCommunicate</span></h1>
     </div>
     <br />
     <div className={"inputContainer"}>
