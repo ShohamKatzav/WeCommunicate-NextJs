@@ -1,0 +1,99 @@
+{
+  "users": [
+    {
+      "email": "shoham@gmail.com",
+      "password": "$2b$10$EsLmazVIKBkIUCb3n8Ielu2aRJ/9GrRRCBBlX8nukUW1nJVM8br.a"
+    },
+    {
+      "email": "skgladiator3@gmail.com",
+      "password": "$2b$10$MHpSwlNhexmSNmo5gNjTUerFbbGAvkrrGS2OzG1vP1KLyi6.vNW/S"
+    }
+  ],
+  "chat": [
+    {
+      "date": "2023-12-16T23:15:47.707Z",
+      "sender": "Shoham@gmail.com",
+      "value": "123"
+    },
+    {
+      "date": "2023-12-16T23:16:23.518Z",
+      "sender": "Shoham@gmail.com",
+      "value": "123"
+    },
+    {
+      "date": "2023-12-16T23:18:34.340Z",
+      "sender": "Shoham@gmail.com",
+      "value": "123"
+    },
+    {
+      "date": "2023-12-16T23:19:37.816Z",
+      "sender": "Shoham@gmail.com",
+      "value": "123"
+    },
+    {
+      "date": "2023-12-16T23:23:18.255Z",
+      "sender": "Shoham@gmail.com",
+      "value": "123"
+    },
+    {
+      "date": "2023-12-16T23:23:29.527Z",
+      "sender": "Shoham@gmail.com",
+      "value": "123"
+    },
+    {
+      "date": "2023-12-16T23:25:32.776Z",
+      "sender": "Shoham@gmail.com",
+      "value": "123"
+    },
+    {
+      "date": "2023-12-16T23:26:11.980Z",
+      "sender": "Shoham@gmail.com",
+      "value": "44"
+    },
+    {
+      "date": "2023-12-16T23:28:10.387Z",
+      "sender": "Skgladiator3@gmail.com",
+      "value": "aloha mate"
+    },
+    {
+      "date": "2023-12-16T23:28:35.449Z",
+      "sender": "Skgladiator3@gmail.com",
+      "value": "?"
+    },
+    {
+      "date": "2023-12-16T23:30:08.489Z",
+      "sender": "Shoham@gmail.com",
+      "value": "123"
+    },
+    {
+      "date": "2023-12-17T00:28:01.562Z",
+      "sender": "Shoham@gmail.com",
+      "value": "123"
+    },
+    {
+      "date": "2023-12-17T00:32:18.401Z",
+      "sender": "Shoham@gmail.com",
+      "value": "mhm"
+    },
+    {
+      "date": "2023-12-17T00:37:39.616Z",
+      "sender": "Shoham@gmail.com",
+      "value": "123"
+    },
+    {
+      "date": "2023-12-17T00:42:10.164Z",
+      "sender": "Shoham@gmail.com",
+      "value": "123"
+    },
+    {
+      "date": "2023-12-17T00:42:45.984Z",
+      "sender": "Shoham@gmail.com",
+      "value": "123"
+    },
+    {
+      "date": "2023-12-17T00:44:13.091Z",
+      "sender": "Skgladiator3@gmail.com",
+      "value": "bye"
+    }
+  ]
+}
