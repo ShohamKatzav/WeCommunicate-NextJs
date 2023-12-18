@@ -1,8 +1,8 @@
 import axios from 'axios';
-import fetchUserData from '../utils/fetchUserData';
+import fetchUserData from './fetchUserData';
 import User from '../types/user';
 
-const useAxiosWithAuth = () => {
+const AxiosWithAuth = () => {
     const instance = axios.create();
 
     instance.interceptors.request.use(
@@ -21,4 +21,4 @@ const useAxiosWithAuth = () => {
     return instance;
 };
 
-export default useAxiosWithAuth;
+export default AxiosWithAuth;

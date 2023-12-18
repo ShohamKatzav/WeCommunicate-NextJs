@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import fetchUserData, { isLoading } from './utils/fetchUserData';
 import User from './types/user';
 import Loading from './components/loading';
-import useAxiosWithAuth from './hooks/useAxiosWithAuth';
+import AxiosWithAuth from './utils/AxiosWithAuth';
 
 // Define the Home component
 function Home() {
@@ -28,7 +28,7 @@ function Home() {
         return;
       }
 
-      await useAxiosWithAuth().post(`${baseUrl}/verify`)
+      await AxiosWithAuth().post(`${baseUrl}/verify`)
         .then(response => {
           setLoggedIn(response.data.message === 'success');
           setEmail(user.email || "");

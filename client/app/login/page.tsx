@@ -3,7 +3,7 @@ import './login.css'
 import React, { useState } from "react";
 import { useRouter } from 'next/navigation';
 import { create } from '../utils/cookie-actions';
-import useAxiosWithAuth from '../hooks/useAxiosWithAuth';
+import AxiosWithAuth from '../utils/AxiosWithAuth';
 
 const Login = (props: any) => {
   const router = useRouter();
@@ -16,13 +16,13 @@ const Login = (props: any) => {
 
   // Call the server API to check if the given email ID already exists
   const checkAccountExists = async (callback: any) => {
-    const response = await useAxiosWithAuth().post(`${baseUrl}/check-account`, { email });
+    const response = await AxiosWithAuth().post(`${baseUrl}/check-account`, { email });
     callback(response.data.userExists);
   }
 
   // Log in a user using email and password
   const logIn = async () => {
-      await useAxiosWithAuth().post(`${baseUrl}/auth`, { email, password })
+      await AxiosWithAuth().post(`${baseUrl}/auth`, { email, password })
       .then(async response => {
         if ('success' === response.data.message) {
           await create({ email, token: response.data.token });

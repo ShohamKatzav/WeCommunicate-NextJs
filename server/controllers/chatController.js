@@ -18,8 +18,6 @@ const Chat = (io) => (socket) => {
             io.to('chat room').emit('update users', connectedUsers);
 
             socket.on('chat message', (message) => {
-                const users = io.sockets.adapter.rooms.get('chat room');
-                console.log(users);
                 io.to('chat room').emit('chat message', message); // Broadcast the message to all connected clients
             });
 

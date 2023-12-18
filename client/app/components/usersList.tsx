@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import ChatListUser from "../types/chatUser";
 import { createChatUsersList, getChatUsersList } from "../utils/cookie-actions";
 import ciEquals from "../utils/ciEqual";
-import useAxiosWithAuth from "../hooks/useAxiosWithAuth";
+import AxiosWithAuth from "../utils/AxiosWithAuth";
 import ChatUser from "../types/chatUser";
 import AsName from "../utils/asName";
 
@@ -24,7 +24,7 @@ const UsersList = ({ chatListActiveUsers }: ListProps) => {
         const init = async () => {
             const chatUsers = await getChatUsersList();
             if (chatUsers === undefined) {
-                const response: any = await useAxiosWithAuth().get(`${basePath}/get-usernames`);
+                const response: any = await AxiosWithAuth().get(`${basePath}/get-usernames`);
                 const arrayUsers: ChatUser[] = response?.data?.userNames?.map((email: string) => ({ email }));
                 createChatUsersList(arrayUsers);
                 setChatListAllUsers(arrayUsers);

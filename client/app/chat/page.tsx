@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import io, { Socket } from 'socket.io-client';
-import useAxiosWithAuth from '../hooks/useAxiosWithAuth';
+import AxiosWithAuth from '../utils/AxiosWithAuth';
 import { del } from '../utils/cookie-actions';
 import fetchUserData, { isLoading } from '../utils/fetchUserData';
 import AsName from '../utils/asName';
@@ -61,7 +61,7 @@ const Chat = () => {
   useEffect(() => {
 
     const onConnection = async () => {
-      const response = await useAxiosWithAuth().get(`${basePath}/get-data`, {
+      const response = await AxiosWithAuth().get(`${basePath}/get-data`, {
         params: { email: user.email }
       });
       const chatWithFormattedDates = response.data.chat.length ? response.data.chat?.map((message: Message) =>
@@ -100,14 +100,14 @@ const Chat = () => {
         sender: user.email,
         value: message.value?.trim(),
       };
-      await useAxiosWithAuth().post(`${basePath}/save-data`, newMessage);
+      await AxiosWithAuth().post(`${basePath}/save-data`, newMessage);
       await socket.emit('chat message', newMessage);
       setMessage(({ value: '' }));
     }
   };
 
   const handleInitHistory = async () => {
-    await useAxiosWithAuth().put(`${basePath}/init-history`, { email: user.email })
+    await AxiosWithAuth().put(`${basePath}/init-history`, { email: user.email })
       .then(async response => {
         if ('success' === response.data.message) {
           setChat([]);

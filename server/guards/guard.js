@@ -3,11 +3,11 @@ const jwtSecretKey = process.env.TOKEN_SECRET;
 
 const guard = (requestOrSocket, response, next) => {
     // axios http req
-    if (requestOrSocket.headers.authorization) {
+    if (requestOrSocket?.headers?.authorization) {
         authToken = requestOrSocket.headers.authorization.split(' ')[1];
     } else {
         // socket req
-        if (requestOrSocket.auth.token)
+        if (requestOrSocket?.auth?.token)
             authToken = requestOrSocket.auth.token;
         else {
             // Missing token
