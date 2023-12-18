@@ -12,7 +12,7 @@ module.exports = (server) => {
       skipMiddlewares: true,
     },
     cors: {
-      origin: ["http://localhost:3000", "https://websocket-express-next-js.vercel.app"],
+      origin: ["http://localhost:3000", "https://websocket-express-next-js.vercel.app", "https://we-communicate.vercel.app/"],
       methods: ["GET", "POST"],
     },
   });
