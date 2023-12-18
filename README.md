@@ -5,7 +5,7 @@
 My project utilizes Express.js for the backend and Next.js for the frontend.
 Users can securely connect using a username and password.
 In the event that the username doesn't exist, they have the option to create a new user.
-User data, including passwords, is currently stored in a simple JSON file. Importantly, passwords are securely hashed before storage.
+User data, including passwords and messages, is now stored with MongoDB. Importantly, passwords are securely hashed before storage.
 Upon successful login, users receive a JWT (JSON Web Token) stored in their browser for subsequent authentication requests.
 Once authenticated, users are seamlessly directed to a chat page, leveraging Socket.IO for real-time communication.
 
