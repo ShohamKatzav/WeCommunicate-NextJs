@@ -36,6 +36,7 @@ NEXT_PUBLIC_BASE_PATH="http://localhost:5000/api/v1"
 
 ```env
 TOKEN_SECRET=*your_jwt_secret_key*
+DB_URI=*your_mongodb_uri*
 ```
 
 You can generate a random secret key using `crypto` module.

@@ -34,7 +34,7 @@ function Home() {
           setEmail(user.email || "");
           router.push("/chat");
         }).catch(error => {
-          if (error.response.status === 401)
+          if (error?.response?.status === 401)
           {
             window.alert("Wrong email or password");
             setUser({ });
@@ -42,7 +42,7 @@ function Home() {
           }
           else
           {
-            window.alert("Error occured: " + error.response.data.message);
+            window.alert("Error occured: " + error?.response?.data?.message);
             setUser({ });
             setLoggedIn(false);
           }

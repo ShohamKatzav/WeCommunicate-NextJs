@@ -1,6 +1,6 @@
 const express = require('express'),
-    PORT = 5000,
-    app = express();
+  PORT = 5000,
+  app = express();
 const cors = require('cors');
 const http = require('http');
 const server = http.createServer(app);
@@ -11,6 +11,10 @@ dotenv.config();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+const mongoose = require("mongoose");
+const { connectDB } = require("./database/MongoDB");
+connectDB();
 
 const accountRoutes = require("./routes/Account");
 app.use("/api/v1", accountRoutes);
@@ -26,6 +30,8 @@ app.use((err, req, res, next) => {
   }
 });
 
-server.listen(PORT, () => {
-    console.log(`WebSocket server listening on port ${PORT}`);
+
+mongoose.connection.once('open', () => {
+  server.listen(PORT, () =>
+    console.log(`WebSocket server listening on port ${PORT}`));
 });

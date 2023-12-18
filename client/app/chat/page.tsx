@@ -2,14 +2,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import io, { Socket } from 'socket.io-client';
+import useAxiosWithAuth from '../hooks/useAxiosWithAuth';
 import { del } from '../utils/cookie-actions';
 import fetchUserData, { isLoading } from '../utils/fetchUserData';
+import AsName from '../utils/asName';
 import Message from '../types/message';
 import User from '../types/user';
+import ChatUser from '../types/chatUser';
 import Loading from '../components/loading';
 import MessageBox from '../components/messageBox';
 import MessageInput from '../components/messageInput';
-import useAxiosWithAuth from '../hooks/useAxiosWithAuth';
+import Buttons from '../components/buttons';
+import UsersList from '../components/usersList';
 
 const Chat = () => {
   const router = useRouter();
@@ -20,12 +24,13 @@ const Chat = () => {
   const baseAddress = process.env.NEXT_PUBLIC_BASE_ADDRESS as string;
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH as string;
   const [user, setUser] = useState<User>({});
+  const [chatListActiveUsers, setChatListActiveUsers] = useState<ChatUser[]>([]);
 
   useEffect(() => {
 
     const connetIfVerified = async () => {
       const user = await fetchUserData() as User;
-      if (user.email) user.email = user.email?.charAt(0).toUpperCase() + user.email?.slice(1).toLowerCase();
+      if (user.email) user.email = AsName(user.email);
       setUser(user);
       const socketConfig = {
         autoConnect: false,
@@ -56,9 +61,11 @@ const Chat = () => {
   useEffect(() => {
 
     const onConnection = async () => {
-      const response = await useAxiosWithAuth().get(`${basePath}/get-data`);
-      const chatWithFormattedDates = response.data.chat.map((message: Message) =>
-        ({ ...message, date: new Date(message.date!).toLocaleString() }));
+      const response = await useAxiosWithAuth().get(`${basePath}/get-data`, {
+        params: { email: user.email }
+      });
+      const chatWithFormattedDates = response.data.chat.length ? response.data.chat?.map((message: Message) =>
+        ({ ...message, date: new Date(message.date!).toLocaleString() })) : [];
       setChat(chatWithFormattedDates);
     }
 
@@ -66,12 +73,18 @@ const Chat = () => {
       setChat((prevChat) => [...prevChat, { date: new Date(), sender: data.sender, value: data.value }])
     };
 
+    const updateUsersList = async (data: ChatUser[]) => {
+      setChatListActiveUsers(data);
+    };
+
     socket?.on("connect", onConnection);
     socket?.on("chat message", onChatMessage);
+    socket?.on("update users", updateUsersList);
 
     return () => {
-      socket?.on("connection", onConnection);
+      socket?.off("connect", onConnection);
       socket?.off("chat message", onChatMessage);
+      socket?.off("update users", updateUsersList);
     };
   }, [socket]);
 
@@ -93,6 +106,19 @@ const Chat = () => {
     }
   };
 
+  const handleInitHistory = async () => {
+    await useAxiosWithAuth().put(`${basePath}/init-history`, { email: user.email })
+      .then(async response => {
+        if ('success' === response.data.message) {
+          setChat([]);
+          console.log(chat.length);
+        }
+      })
+      .catch(error => {
+        window.alert("Error occured while initializing chat: " + error.response.data.message);
+      })
+  };
+
   const handleLogOut = async () => {
     await del();
     router.push("/");
@@ -102,36 +128,41 @@ const Chat = () => {
 
   else
     return (
-      <div className="grid grid-cols-3 mt-10">
-        <div className="col-start-2 col-span-1 gap-4">
-          <h1 className="row-start-6 mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-4xl lg:text-5xl text-center">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r to-red-600 from-amber-400">
-              Hello {user.email}</span></h1>
-          <MessageInput message={message} setMessage={setMessage} />
-          <div className="m-4">
-            <button className="disabled:opacity-50 disabled:cursor-not-allowed
-              bg-transparent hover:bg-blue-500 text-blue-700 font-semibold
-            hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded m-4"
-              onClick={handleSendMessage}
-              disabled={message.value?.trim() === ''}
-            >Send Message</button>
-            <button className="disabled:opacity-50 disabled:cursor-not-allowed
-              bg-transparent hover:bg-blue-500 text-blue-700 font-semibold
-            hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded m-4"
-              onClick={handleLogOut}
-            >Log Out</button>
-          </div>
-          <div className="mt-5">
-            <div ref={chatBox} className="w-full flex flex-col md:flex-cols-4 overflow-y-auto h-80">
-              <div className="grid md:grid-cols-5">
-                {chat.map((message, index) =>
-                  <MessageBox key={index} message={message} email={user.email} />)
-                }
+      <>
+        <div className="grid md:grid-cols-3 mt-10">
+          <div className="md:col-start-2 col-span-1 gap-4">
+            <h1 className="mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-4xl lg:text-5xl text-center">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r to-red-600 from-amber-400">
+                Hello {user.email}</span></h1>
+            <MessageInput message={message} setMessage={setMessage} />
+
+            <Buttons
+              handleSendMessage={handleSendMessage}
+              handleInitHistory={handleInitHistory}
+              handleLogOut={handleLogOut}
+              chat={chat}
+              message={message}
+            />
+            <div className="mt-5">
+              <div ref={chatBox} className="w-full flex flex-col md:flex-cols-4 overflow-y-auto h-80">
+                <div className="grid row-start-2 md:grid-cols-5">
+                  {chat.map((message, index) =>
+                    <MessageBox key={index} message={message} email={user.email} />)
+                  }
+                </div>
               </div>
             </div>
           </div>
+
         </div>
-      </div>
+        <div className="grid md:grid-cols-3 mt-10">
+          <div className="md:col-start-3 col-span-1 gap-4">
+            <div className="md:grid md:justify-start md:content-end md:mx-4">
+              <UsersList chatListActiveUsers={chatListActiveUsers} />
+            </div>
+          </div>
+        </div>
+      </>
     );
 };
 

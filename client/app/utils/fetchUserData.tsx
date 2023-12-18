@@ -10,10 +10,8 @@ const useFetchUserData = async () => {
 
         if (userString?.value.trim()) {
             user = JSON.parse(userString!.value);
-            // Now you can use the 'user' variable safely.
         } else {
-            // Handle the case when the value is undefined (optional)
-            console.error("No user data found in cookies");
+            //console.error("No user data found in cookies");
         }
         return user;
 

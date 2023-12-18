@@ -2,22 +2,19 @@ const jwt = require('jsonwebtoken');
 const jwtSecretKey = process.env.TOKEN_SECRET;
 const bcrypt = require("bcrypt")
 
-var low = require("lowdb");
-var FileSync = require("lowdb/adapters/FileSync");
-var adapter = new FileSync("./database/database.json");
-var db = low(adapter);
+const Account = require("../models/Account");
 
 const guard = require("../guards/guard")
 
-const Auth = (req, res) => {
+const Auth = async (req, res) => {
     const { email, password } = req.body;
 
     // Look up the user entry in the database
-    const user = db.get("users").value().filter(user => ciEquals(email, user.email))
+    const user = await findUserByEmail(email);
 
     // If found, compare the hashed passwords and generate the JWT token for the user
-    if (user.length === 1) {
-        bcrypt.compare(password, user[0].password, function (_err, result) {
+    if (user !== null) {
+        bcrypt.compare(password, user.password, function (_err, result) {
             if (!result) {
                 return res.status(401).json({ message: "Invalid password" });
             } else {
@@ -30,9 +27,14 @@ const Auth = (req, res) => {
             }
         });
         // If no user is found, hash the given password and create a new entry in the auth db with the email and hashed password
-    } else if (user.length === 0) {
-        bcrypt.hash(password, 10, function (_err, hash) {
-            db.get("users").push({ email, password: hash }).write()
+    } else if (user === null) {
+        bcrypt.hash(password, 10, async function (_err, hash) {
+            try {
+                await Account.create({ email, password: hash });
+            } catch (err) {
+                console.error('Failed to insert document:', err);
+                res.status(500).json({ error: 'Internal Server Error' });
+            }
 
             let loginData = {
                 email,
@@ -54,23 +56,43 @@ const Verify = (req, res) => {
 }
 
 // An endpoint to see if there's an existing account for a given email address
-const CheckAccount = (req, res) => {
+const CheckAccount = async (req, res) => {
     const { email } = req.body
-    const user = db.get("users").value().filter(user => ciEquals(email, user.email))
+
+    const user = await findUserByEmail(email);
 
     res.status(200).json({
-        status: user.length === 1 ? "User exists" : "User does not exist", userExists: user.length === 1
+        status: user !== null ? "User exists" : "User does not exist", userExists: user !== null
     })
 }
 
-const ciEquals = (a, b) => {
-    return typeof a === 'string' && typeof b === 'string'
-        ? a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0
-        : a === b;
+const GetUsernames = async (req, res) => {
+    guard(req, res, async () => {
+        try {
+            const users = await Account.find().exec();
+            const userNames = users.map(user => user.email)
+            res.status(200).json({ userNames: userNames, message: "success" });
+        } catch (err) {
+            console.error('Could not get usernames:', err);
+            throw err;
+        }
+    });
 }
+
+const findUserByEmail = async (email) => {
+    try {
+        return await Account.findOne({
+            email: { $regex: new RegExp("^" + email, "i") }
+        });
+    } catch (err) {
+        console.error('Failed to find user:', err);
+        throw err;
+    }
+};
 
 module.exports = {
     Auth,
     Verify,
-    CheckAccount
+    CheckAccount,
+    GetUsernames
 };
