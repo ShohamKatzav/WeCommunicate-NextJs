@@ -30,8 +30,6 @@ const Chat = () => {
 
     const connetIfVerified = async () => {
       const user = await fetchUserData() as User;
-      if (user.email) user.email = AsName(user.email);
-      setUser(user);
       const socketConfig = {
         autoConnect: false,
         reconnection: true,
@@ -43,11 +41,13 @@ const Chat = () => {
         }
       }
       const newSocket = io(baseAddress, socketConfig);
-      if (!user?.token) router.push("/");
+      if (!user?.token) router.replace("/");
       else {
         newSocket.connect();
         setSocket(newSocket);
+        user.email = AsName(user.email ?? "Anonymous");
       }
+      setUser(user);
       return () => {
         newSocket?.disconnect();
       };
@@ -124,7 +124,7 @@ const Chat = () => {
     router.push("/");
   };
 
-  if (isLoading()) return <Loading />
+  if (isLoading() || Object.keys(user).length === 0) return <Loading />
 
   else
     return (

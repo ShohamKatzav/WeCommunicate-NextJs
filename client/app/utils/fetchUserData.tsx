@@ -6,7 +6,7 @@ let loading: boolean = true;
 const FetchUserData = async () => {
     var user: User = {};
     try {
-        const userString = await get(); // Use await here
+        const userString = await get();
         if (userString?.value.trim()) {
             user = JSON.parse(userString!.value);
         } else {

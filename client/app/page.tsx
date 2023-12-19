@@ -31,7 +31,7 @@ function Home() {
       await AxiosWithAuth().post(`${baseUrl}/verify`)
         .then(response => {
           setLoggedIn(response.data.message === 'success');
-          setEmail(user.email || "");
+          setEmail(user?.email || "unknown");
           router.push("/chat");
         }).catch(error => {
           if (error?.response?.status === 401)
