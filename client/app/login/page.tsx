@@ -22,7 +22,7 @@ const Login = (props: any) => {
 
   // Log in a user using email and password
   const logIn = async () => {
-      await AxiosWithAuth().post(`${baseUrl}/auth`, { email, password })
+    await AxiosWithAuth().post(`${baseUrl}/auth`, { email, password })
       .then(async response => {
         if ('success' === response.data.message) {
           await create({ email, token: response.data.token });
@@ -32,7 +32,7 @@ const Login = (props: any) => {
         }
       })
       .catch(error => {
-        if(error.response.status === 401)
+        if (error.response.status === 401)
           window.alert("Wrong email or password");
         else
           window.alert("Error occured: " + error.response.data.message);
@@ -79,37 +79,36 @@ const Login = (props: any) => {
 
   }
 
-  return <div className={"mainContainer"}>
-    <div className={"titleContainer"}>
-      <h1 className="row-start-6 mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-3xl lg:text-6xl text-center">
-        <span className="text-transparent bg-clip-text bg-gradient-to-r to-indigo-700 from-pink-400">Login to WeCommunicate</span></h1>
-    </div>
-    <br />
-    <div className={"inputContainer"}>
-      <input
-        value={email}
-        placeholder="Enter your email here"
-        onChange={ev => setEmail(ev.target.value)}
-        className={"inputBox"} />
-      <label className="errorLabel">{emailError}</label>
-    </div>
-    <br />
-    <div className={"inputContainer"}>
-      <input
-        value={password}
-        placeholder="Enter your password here"
-        onChange={ev => setPassword(ev.target.value)}
-        className={"inputBox"} />
-      <label className="errorLabel">{passwordError}</label>
-    </div>
-    <br />
-    <div className={"inputContainer"}>
-      <input
-        className={"inputButton"}
-        type="button"
-        onClick={onButtonClick}
-        value={"Log in"} />
-    </div>
-  </div>
+  return (
+    <div className={"mainContainer grid grid-rows-6"}>
+      <div className="titleContainer grid row-start-2">
+        <h1 className="mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-3xl lg:text-6xl text-center">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r to-indigo-700 from-pink-400">Login to WeCommunicate</span>
+        </h1>
+      </div>
+      <div className={"inputContainer row-start-3 md:row-start-4 justify-self-center w-5/6"}>
+        <input
+          value={email}
+          placeholder="Enter your email here"
+          onChange={ev => setEmail(ev.target.value)}
+          className={"inputBox w-full"} />
+        <label className="errorLabel">{emailError}</label>
+      </div>
+      <div className={"inputContainer row-start-4 md:row-start-5 justify-self-center w-5/6"}>
+        <input
+          value={password}
+          placeholder="Enter your password here"
+          onChange={ev => setPassword(ev.target.value)}
+          className={"inputBox w-full"} />
+        <label className="errorLabel">{passwordError}</label>
+      </div>
+      <div className={"inputContainer row-start-5 md:row-start-7 justify-self-center"}>
+        <input
+          className={"inputButton"}
+          type="button"
+          onClick={onButtonClick}
+          value={"Log in"} />
+      </div>
+    </div>)
 }
 export default Login;
