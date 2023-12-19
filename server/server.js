@@ -23,8 +23,10 @@ const chatModule = require('./modules/Chat')(server);
 const route = chatModule.router;
 app.use("/api/v1", route);
 
-const testRoutes = require('./routes/Tests');
-app.use("/api/v1", testRoutes);
+const cronRoutes = require('./routes/WakeUp');
+app.use("/api/v1", cronRoutes);
+const myCronJob = require('./modules/Cron');
+myCronJob();
 
 app.use((err, req, res, next) => {
   if (err.name === 'UnauthorizedError') {
