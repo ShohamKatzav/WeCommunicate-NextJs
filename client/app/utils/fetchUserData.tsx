@@ -1,8 +1,6 @@
 import { get } from "./cookie-actions";
 import User from '../types/user'
 
-let loading: boolean = true;
-
 const FetchUserData = async () => {
     var user: User = {};
     try {
@@ -15,13 +13,8 @@ const FetchUserData = async () => {
     } catch (error) {
         console.error("Error fetching user data:", error);
     } finally {
-        loading = false;
         return user;
     }
-}
-
-export function isLoading() {
-    return loading;
 }
 
 export default FetchUserData;

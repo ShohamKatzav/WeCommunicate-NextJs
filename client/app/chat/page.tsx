@@ -2,18 +2,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import io, { Socket } from 'socket.io-client';
-import AxiosWithAuth from '../utils/AxiosWithAuth';
-import { del } from '../utils/cookie-actions';
-import fetchUserData, { isLoading } from '../utils/fetchUserData';
-import AsName from '../utils/asName';
+import AxiosWithAuth from '../utils/axiosWithAuth';
 import Message from '../types/message';
-import User from '../types/user';
 import ChatUser from '../types/chatUser';
 import Loading from '../components/loading';
 import MessageBox from '../components/messageBox';
 import MessageInput from '../components/messageInput';
 import Buttons from '../components/buttons';
 import UsersList from '../components/usersList';
+import { useUser } from '../hooks/useUser';
 
 const Chat = () => {
   const router = useRouter();
@@ -23,13 +20,11 @@ const Chat = () => {
   const chatBox = useRef<HTMLDivElement>(null);
   const baseAddress = process.env.NEXT_PUBLIC_BASE_ADDRESS as string;
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH as string;
-  const [user, setUser] = useState<User>({});
   const [chatListActiveUsers, setChatListActiveUsers] = useState<ChatUser[]>([]);
+  const { user, loading } = useUser();
 
   useEffect(() => {
-
     const connetIfVerified = async () => {
-      const user = await fetchUserData() as User;
       const socketConfig = {
         autoConnect: false,
         reconnection: true,
@@ -41,13 +36,11 @@ const Chat = () => {
         }
       }
       const newSocket = io(baseAddress, socketConfig);
-      if (!user?.token) router.replace("/");
+      if (!user || !user.token) router.replace("/");
       else {
         newSocket.connect();
         setSocket(newSocket);
-        user.email = AsName(user.email ?? "Anonymous");
       }
-      setUser(user);
       return () => {
         newSocket?.disconnect();
       };
@@ -56,13 +49,13 @@ const Chat = () => {
     return () => {
       cleanup.then(cleanupFunction => cleanupFunction()); // Execute the cleanup function
     };
-  }, []);
+  }, [loading]);
 
   useEffect(() => {
 
     const onConnection = async () => {
       const response = await AxiosWithAuth().get(`${basePath}/get-data`, {
-        params: { email: user.email }
+        params: { email: user?.email }
       });
       const chatWithFormattedDates = response.data.chat.length ? response.data.chat?.map((message: Message) =>
         ({ ...message, date: new Date(message.date!).toLocaleString() })) : [];
@@ -97,7 +90,7 @@ const Chat = () => {
     if (socket) {
       const newMessage: Message = {
         date: new Date(),
-        sender: user.email,
+        sender: user?.email,
         value: message.value?.trim(),
       };
       await AxiosWithAuth().post(`${basePath}/save-data`, newMessage);
@@ -107,11 +100,10 @@ const Chat = () => {
   };
 
   const handleInitHistory = async () => {
-    await AxiosWithAuth().put(`${basePath}/init-history`, { email: user.email })
+    await AxiosWithAuth().put(`${basePath}/init-history`, { email: user?.email })
       .then(async response => {
         if ('success' === response.data.message) {
           setChat([]);
-          console.log(chat.length);
         }
       })
       .catch(error => {
@@ -119,12 +111,7 @@ const Chat = () => {
       })
   };
 
-  const handleLogOut = async () => {
-    await del();
-    router.push("/");
-  };
-
-  if (isLoading() || Object.keys(user).length === 0) return <Loading />
+  if (loading || user !== null && Object.keys(user).length === 0) return <Loading />
 
   else
     return (
@@ -133,13 +120,12 @@ const Chat = () => {
           <div className="md:col-start-2 col-span-1 gap-4">
             <h1 className="mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-4xl lg:text-5xl text-center">
               <span className="text-transparent bg-clip-text bg-gradient-to-r to-red-600 from-amber-400">
-                Hello {user.email}</span></h1>
+                Hello {user?.email}</span></h1>
             <MessageInput message={message} setMessage={setMessage} />
 
             <Buttons
               handleSendMessage={handleSendMessage}
               handleInitHistory={handleInitHistory}
-              handleLogOut={handleLogOut}
               chat={chat}
               message={message}
             />
@@ -147,7 +133,7 @@ const Chat = () => {
               <div ref={chatBox} className="w-full flex flex-col md:flex-cols-4 overflow-y-auto h-80">
                 <div className="grid row-start-2 md:grid-cols-5">
                   {chat.map((message, index) =>
-                    <MessageBox key={index} message={message} email={user.email} />)
+                    <MessageBox key={index} message={message} email={user?.email} />)
                   }
                 </div>
               </div>

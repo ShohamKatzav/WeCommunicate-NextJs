@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import ChatListUser from "../types/chatUser";
 import { createChatUsersList, getChatUsersList } from "../utils/cookie-actions";
 import ciEquals from "../utils/ciEqual";
-import AxiosWithAuth from "../utils/AxiosWithAuth";
+import AxiosWithAuth from "../utils/axiosWithAuth";
 import ChatUser from "../types/chatUser";
 import AsName from "../utils/asName";
 
@@ -13,7 +13,7 @@ interface ListProps {
 const UsersList = ({ chatListActiveUsers }: ListProps) => {
     const basePath = process.env.NEXT_PUBLIC_BASE_PATH as string;
     const [chatListAllUsers, setChatListAllUsers] = useState<ChatListUser[]>([]);
-    const [toggle, setToggle] = useState(false);
+    const [toggle, setToggle] = useState(true);
 
     const dropupRef = useRef<HTMLUListElement>(null);
     const openRef = useRef<HTMLDivElement>(null);
@@ -58,9 +58,9 @@ const UsersList = ({ chatListActiveUsers }: ListProps) => {
 
     return (
         <>
-            <div className="relative">
+            <div>
                 {toggle &&
-                    <ul className="bg-white shadow overflow-hidden sm:rounded-md md:absolute md:transform md:-translate-y-full" ref={dropupRef}>
+                    <ul className="bg-white shadow sm:rounded-md md:absolute md:transform md:-translate-y-full overflow-auto h-1/2" ref={dropupRef}>
                         {chatListAllUsers?.sort((a, b) => a.email!.localeCompare(b.email!))
                             .map((user: ChatListUser, index) => (
                                 <li key={index}>

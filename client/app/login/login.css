@@ -75,11 +75,6 @@ input[type="button"] {
     height: 260px;
   }
   
-  .inputContainer {
-    align-items:center;
-    justify-content: center;
-  }
-  
   .inputContainer > .errorLabel {
     color: red;
     font-size: 12px;
