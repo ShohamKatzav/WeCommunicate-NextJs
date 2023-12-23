@@ -1,5 +1,5 @@
 import axios from 'axios';
-import fetchUserData from './fetchUserData';
+import FetchUserData from './fetchUserData';
 import User from '../types/user';
 
 const AxiosWithAuth = () => {
@@ -7,7 +7,7 @@ const AxiosWithAuth = () => {
 
     instance.interceptors.request.use(
         async (config) => {
-            const user = await fetchUserData() as User;
+            const user = await FetchUserData() as User;
             const token = user.token;
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
