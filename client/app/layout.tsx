@@ -25,10 +25,9 @@ export default function RootLayout({
           <div className='mt-10'>
             {children}
           </div>
+          <div className='h-1/5 mb-20'></div>
         </UserProvider>
-        <div className='mt-20'>
-          <Footer />
-        </div>
+        <Footer />
       </body>
     </html>
   )

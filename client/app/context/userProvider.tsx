@@ -2,7 +2,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import User from "../types/user";
 import UserContext from "./userContext";
-import { create, del } from "../utils/cookie-actions";
+import { create, del } from "../actions/cookie-actions";
 import FetchUserData from "../utils/fetchUserData";
 import AsName from "../utils/asName";
 

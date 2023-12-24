@@ -1,8 +1,9 @@
-import { get } from "./cookie-actions";
+"use server"
+import { get } from "../actions/cookie-actions";
 import User from '../types/user'
 
 const FetchUserData = async () => {
-    var user: User = {};
+    let user: User = {};
     try {
         const userString = await get();
         if (userString?.value.trim()) {

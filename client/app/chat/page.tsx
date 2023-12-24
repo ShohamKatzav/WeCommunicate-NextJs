@@ -6,11 +6,12 @@ import AxiosWithAuth from '../utils/axiosWithAuth';
 import Message from '../types/message';
 import ChatUser from '../types/chatUser';
 import Loading from '../components/loading';
-import MessageBox from '../components/messageBox';
 import MessageInput from '../components/messageInput';
 import Buttons from '../components/buttons';
 import UsersList from '../components/usersList';
 import { useUser } from '../hooks/useUser';
+import fetchMessages from '../actions/message-actions';
+import MessagesBox from '../components/messagesBox';
 
 const Chat = () => {
   const router = useRouter();
@@ -22,6 +23,8 @@ const Chat = () => {
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH as string;
   const [chatListActiveUsers, setChatListActiveUsers] = useState<ChatUser[]>([]);
   const { user, loading } = useUser();
+
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     const connetIfVerified = async () => {
@@ -54,10 +57,8 @@ const Chat = () => {
   useEffect(() => {
 
     const onConnection = async () => {
-      const response = await AxiosWithAuth().get(`${basePath}/get-data`, {
-        params: { email: user?.email }
-      });
-      const chatWithFormattedDates = response.data.chat.length ? response.data.chat?.map((message: Message) =>
+      const response = await fetchMessages(page, user?.email!);
+      const chatWithFormattedDates = response?.chat!.length ? response.chat?.map((message: Message) =>
         ({ ...message, date: new Date(message.date!).toLocaleString() })) : [];
       setChat(chatWithFormattedDates);
     }
@@ -116,30 +117,20 @@ const Chat = () => {
   else
     return (
       <>
-        <div className="grid md:grid-cols-3 mt-10">
+        <div className="grid md:grid-cols-3">
           <div className="md:col-start-2 col-span-1 gap-4">
             <h1 className="mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-4xl lg:text-5xl text-center">
               <span className="text-transparent bg-clip-text bg-gradient-to-r to-red-600 from-amber-400">
                 Hello {user?.email}</span></h1>
+            <MessagesBox messages={chat} chatBox={chatBox} />
             <MessageInput message={message} setMessage={setMessage} />
-
             <Buttons
               handleSendMessage={handleSendMessage}
               handleInitHistory={handleInitHistory}
               chat={chat}
               message={message}
             />
-            <div className="mt-5">
-              <div ref={chatBox} className="w-full flex flex-col md:flex-cols-4 overflow-y-auto h-80">
-                <div className="grid row-start-2 md:grid-cols-5">
-                  {chat.map((message, index) =>
-                    <MessageBox key={index} message={message} email={user?.email} />)
-                  }
-                </div>
-              </div>
-            </div>
           </div>
-
         </div>
         <div className="grid md:grid-cols-3 mt-10">
           <div className="md:col-start-3 col-span-1 gap-4">

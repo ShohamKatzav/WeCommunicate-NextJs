@@ -14,7 +14,7 @@ const Chat = (io) => (socket) => {
         } else {
             socket.join('chat room');
             console.log(`${socket.id} connected to the chat`);
-            connectedUsers.push({id: socket.id, email: socket.handshake.user.email});
+            connectedUsers.push({ id: socket.id, email: socket.handshake.user.email });
             io.to('chat room').emit('update users', connectedUsers);
 
             socket.on('chat message', (message) => {
@@ -33,7 +33,7 @@ const Chat = (io) => (socket) => {
 
 const GetData = (req, res) => {
     guard(req, res, async () => {
-        const email = req.query.email;
+        const { email, page, perPage } = req.query;
         try {
             const user = await Account.findOne({
                 email: { $regex: new RegExp("^" + email, "i") }
@@ -43,7 +43,19 @@ const GetData = (req, res) => {
             });
 
             const chatQuery = initHistoryTime ? { date: { $gt: initHistoryTime.date } } : {};
-            const chat = await Message.find(chatQuery).exec();
+            const tottalCount = await Message.find(chatQuery).count().exec();
+            if (tottalCount < perPage * page) {
+                if (perPage * page - perPage > tottalCount) {
+                    const chat = [];
+                    res.status(200).json({ message: "All data fetched", chat });
+                    return;
+                }
+                const limit = tottalCount % perPage;
+                const chat = await Message.find(chatQuery).limit(limit).exec();
+                res.status(200).json({ message: "All data fetched", chat });
+                return;
+            }
+            const chat = await Message.find(chatQuery).skip(tottalCount - perPage * page).limit(perPage).exec();
             res.status(200).json({ message: "success", chat });
         } catch (err) {
             console.error('Failed to retrieve messages:', err);

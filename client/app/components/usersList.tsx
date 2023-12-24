@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import ChatListUser from "../types/chatUser";
-import { createChatUsersList, getChatUsersList } from "../utils/cookie-actions";
+import { createChatUsersList, getChatUsersList } from "../actions/cookie-actions";
 import ciEquals from "../utils/ciEqual";
 import AxiosWithAuth from "../utils/axiosWithAuth";
 import ChatUser from "../types/chatUser";
