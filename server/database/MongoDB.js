@@ -1,11 +1,10 @@
 require('dotenv').config({ path: "../.env" })
 const mongoose = require("mongoose");
-const dbName = "WeCommunicateDB";
 
 async function connectDB() {
     try {
         await mongoose.connect(process.env.DB_URI, {
-            dbName: dbName
+            dbName: process.env.DB_NAME
         });
     }
     catch (e) {

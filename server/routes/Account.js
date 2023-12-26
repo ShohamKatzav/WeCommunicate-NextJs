@@ -4,13 +4,13 @@ const router = express.Router();
 const {
     Auth,
     Verify,
-    CheckAccount,
+    IsUserExists,
     GetUsernames }
     = require("../controllers/accountController");
 
 router.post("/auth", Auth);
 router.post("/verify", Verify);
-router.post("/check-account", CheckAccount);
+router.post("/is-exist", IsUserExists);
 router.get("/get-usernames", GetUsernames);
 
 module.exports = router;

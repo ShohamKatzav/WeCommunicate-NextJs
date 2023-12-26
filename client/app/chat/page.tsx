@@ -24,8 +24,6 @@ const Chat = () => {
   const [chatListActiveUsers, setChatListActiveUsers] = useState<ChatUser[]>([]);
   const { user, loading } = useUser();
 
-  const [page, setPage] = useState(1);
-
   useEffect(() => {
     const connetIfVerified = async () => {
       const socketConfig = {
@@ -57,7 +55,7 @@ const Chat = () => {
   useEffect(() => {
 
     const onConnection = async () => {
-      const response = await fetchMessages(page, user?.email!);
+      const response = await fetchMessages(1, user?.email!);
       const chatWithFormattedDates = response?.chat!.length ? response.chat?.map((message: Message) =>
         ({ ...message, date: new Date(message.date!).toLocaleString() })) : [];
       setChat(chatWithFormattedDates);

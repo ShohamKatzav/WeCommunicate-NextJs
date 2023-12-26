@@ -16,6 +16,7 @@ const mongoose = require("mongoose");
 const { connectDB } = require("./database/MongoDB");
 connectDB();
 
+
 const accountRoutes = require("./routes/Account");
 app.use("/api/v1", accountRoutes);
 

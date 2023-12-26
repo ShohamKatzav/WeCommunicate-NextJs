@@ -11,7 +11,8 @@ const guard = (requestOrSocket, response, next) => {
             authToken = requestOrSocket.auth.token;
         else {
             // Missing token
-            return response ? response.status(401).json({ error: 'Authentication error: Token missing' }) : next(new Error('Authentication error: Token missing'));
+            return response ? response.status(401).json({ error: 'Authentication error: Token missing' }) :
+                next(new Error('Authentication error: Token missing'));
         }
     }
 
@@ -22,11 +23,13 @@ const guard = (requestOrSocket, response, next) => {
             return next();
         } else {
             // Invalid token
-            return response ? response.status(401).json({ error: 'Authentication error: Invalid token' }) : next(new Error('Authentication error: Invalid token'));
+            return response ? response.status(401).json({ error: 'Authentication error: Invalid token' }) :
+                next(new Error('Authentication error: Invalid token'));
         }
     } catch (error) {
         // Invalid token
-        return response ? response.status(401).json({ error: 'Authentication error: Invalid token' }) : next(new Error('Authentication error: Invalid token'));
+        return response ? response.status(401).json({ error: 'Authentication error: Invalid token' }) :
+            next(new Error('Authentication error: Invalid token'));
     }
 };
 

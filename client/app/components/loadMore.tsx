@@ -11,9 +11,10 @@ import MessageViewer from "./messageViewer";
 
 interface LoadMoreProps {
   chatBox: RefObject<HTMLDivElement>
+  oldMessages: Message[]
 }
 
-function LoadMore({ chatBox }: LoadMoreProps) {
+function LoadMore({ chatBox, oldMessages }: LoadMoreProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [page, setPage] = useState(1);
   const [allDataFetched, setAllDataFetched] = useState(false);
@@ -58,6 +59,12 @@ function LoadMore({ chatBox }: LoadMoreProps) {
     }
   }, [messages]);
 
+  // aka intialize chat history
+  useEffect(() => {
+    if (oldMessages.length === 0) {
+      setMessages([]);
+    }
+  }, [oldMessages]);
 
   return (
     <>

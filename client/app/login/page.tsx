@@ -17,7 +17,7 @@ const Login = (props: any) => {
 
   // Call the server API to check if the given email ID already exists
   const checkAccountExists = async (callback: any) => {
-    const response = await AxiosWithAuth().post(`${baseUrl}/check-account`, { email });
+    const response = await AxiosWithAuth().post(`${baseUrl}/is-exist`, { email });
     callback(response.data.userExists);
   }
 
@@ -25,7 +25,7 @@ const Login = (props: any) => {
   const logIn = async () => {
     await AxiosWithAuth().post(`${baseUrl}/auth`, { email, password })
       .then(async response => {
-        if ('success' === response.data.message) {
+        if ('Success' === response.data.message) {
           updateUser({ email, token: response.data.token });
           props.setEmail(email)
           router.push("/chat");

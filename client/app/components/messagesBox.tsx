@@ -39,7 +39,7 @@ const MessagesBox = ({ messages, chatBox }: MessagesBoxProps) => {
             <div className="mt-8 md:mt-20">
                 <div ref={chatBox} className="w-full flex flex-col md:flex-cols-4 overflow-y-auto h-80">
                     {loadNew &&
-                        <LoadMore chatBox={chatBox}/>
+                        <LoadMore chatBox={chatBox} oldMessages={messages}/>
                     }
                     <div className="grid row-start-2 md:grid-cols-5">
                         {messages.map((message, index) =>
