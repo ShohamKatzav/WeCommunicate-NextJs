@@ -90,8 +90,9 @@ const useLocation = () => {
 
     const getAndPublishLocation = async () => {
       navigator.geolocation.getCurrentPosition(await handleSuccess, handleError, geolocationOptions);
-
     }
+
+    getAndPublishLocation();
 
     if (socketRef.current) {
       const intervalId = setInterval( () => {

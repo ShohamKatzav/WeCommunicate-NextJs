@@ -49,8 +49,9 @@ function Locations(props: any) {
     };
 
     if (!loadingSocket) {
-      getPositions();
+      
       socket?.on("get locations", updatePositions);
+      getPositions();
 
       const intervalId = setInterval(() => {
         getPositions();
