@@ -14,7 +14,7 @@ interface LoadMoreProps {
   oldMessages: Message[]
 }
 
-function LoadMore({ chatBox, oldMessages }: LoadMoreProps) {
+const LoadMore = ({ chatBox, oldMessages }: LoadMoreProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [page, setPage] = useState(1);
   const [allDataFetched, setAllDataFetched] = useState(false);

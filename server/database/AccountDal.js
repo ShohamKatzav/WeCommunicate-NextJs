@@ -12,6 +12,16 @@ class AccountRepository {
         }
     }
 
+    async getEmailById(accountID) {
+        try {
+            const user = await Account.findById(accountID).exec();
+            return user?.email;
+        } catch (err) {
+            console.error('Failed to find user:', err);
+            throw err;
+        }
+    }
+
     async addUser(email, hash) {
         try {
             const result = await Account.create({ email, password: hash });

@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const messageController = require("../controllers/messageController");
-const { Chat, GetData, SaveData, InitChatHistory } = messageController;
+const communicationController = require("../controllers/communicationController");
+const { Chat, GetData, SaveData, InitChatHistory } = communicationController;
 
 module.exports = (server) => {
   const io = require("socket.io")(server, {

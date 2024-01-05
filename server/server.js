@@ -21,8 +21,8 @@ const accountRoutes = require("./routes/Account");
 app.use("/api/v1", accountRoutes);
 
 const chatModule = require('./modules/Chat')(server);
-const route = chatModule.router;
-app.use("/api/v1", route);
+const chatRoutes = chatModule.router;
+app.use("/api/v1", chatRoutes);
 
 const cronRoutes = require('./routes/WakeUp');
 app.use("/api/v1", cronRoutes);

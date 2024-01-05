@@ -14,28 +14,30 @@ function About() {
                     WeCommunicate is the culmination of my journey into the depths of full-stack development,
                     a venture driven by a passion for exploring cutting-edge web technologies. Here are the key tools and technologies that bring my vision to life:
                 </p>
-                <li className="mt-4">
-                <strong>Next.js: </strong> 
-                    I chose Next.js for its server-side rendering and efficient routing capabilities,
-                    which are essential for a seamless user experience.
-                </li>
-                <li>
-                    <strong>Tailwind CSS: </strong> 
-                    This utility-first CSS framework is my tool of choice for designing a responsive and aesthetically pleasing user interface,
-                    thanks to its focus on productivity and customization.
-                </li>
-                <li>
-                    <strong>Socket.IO: </strong> 
-                    At the core of WeCommunicate is real-time communication, and Socket.IO enables this by facilitating instant and dynamic interactions.
-                </li>
-                <li>
-                    <strong>Express.js: </strong> 
-                    As a flexible server framework for Node.js, Express.js allows me to efficiently manage server-side logic and APIs.
-                </li>
-                <li>
-                <strong>MongoDB: </strong> 
-                I use MongoDB for its scalability and flexibility, which are crucial in handling the diverse data requirements of my application.
-                </li>
+                <ul className="mt-4 list-disc list-inside">
+                    <li>
+                        <strong>Next.js: </strong>
+                        I chose Next.js for its server-side rendering and efficient routing capabilities,
+                        which are essential for a seamless user experience.
+                    </li>
+                    <li>
+                        <strong>Tailwind CSS: </strong>
+                        This utility-first CSS framework is my tool of choice for designing a responsive and aesthetically pleasing user interface,
+                        thanks to its focus on productivity and customization.
+                    </li>
+                    <li>
+                        <strong>Socket.IO: </strong>
+                        At the core of WeCommunicate is real-time communication, and Socket.IO enables this by facilitating instant and dynamic interactions.
+                    </li>
+                    <li>
+                        <strong>Express.js: </strong>
+                        As a flexible server framework for Node.js, Express.js allows me to efficiently manage server-side logic and APIs.
+                    </li>
+                    <li>
+                        <strong>MongoDB: </strong>
+                        I use MongoDB for its scalability and flexibility, which are crucial in handling the diverse data requirements of my application.
+                    </li>
+                </ul>
 
                 <h2 className="mt-8 text-3xl text-center">My Journey as a Developer</h2>
                 <p className="mt-4">
@@ -49,9 +51,9 @@ function About() {
                 <h2 className="mt-8 text-3xl text-center">Let&apos;s Connect</h2>
                 <p className="mt-4">
                     Your feedback and suggestions are vital to the growth and improvement of WeCommunicate.
-                    I am always open to hearing your thoughts and experiences. Feel free to connect with me <a href="/contact"
-                    className="font-medium text-blue-600 dark:text-blue-500 hover:underline">here</a> and join me on this exciting journey of making digital
-                    communication more engaging and accessible.
+                    I am always open to hearing your thoughts and experiences. Feel free to connect with me through the <a href="/contact"
+                    className="font-medium text-blue-600 dark:text-blue-500 hover:underline">contact page</a>,
+                    and join me on this exciting journey to make digital communication more engaging and accessible.
                 </p>
             </div >
         </div>

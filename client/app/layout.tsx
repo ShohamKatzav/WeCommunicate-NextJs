@@ -4,6 +4,7 @@ import './globals.css'
 import Navbar from './components/navbar'
 import Footer from './components/footer'
 import { UserProvider } from './context/userProvider'
+import { SocketProvider } from './context/socketProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -23,7 +24,9 @@ export default function RootLayout({
         <UserProvider>
           <Navbar />
           <div className='mt-10'>
-            {children}
+            <SocketProvider>
+              {children}
+            </SocketProvider>
           </div>
           <div className='h-1/5 mb-20'></div>
         </UserProvider>

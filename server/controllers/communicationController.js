@@ -5,6 +5,11 @@ const {
     initChatHistory
 } = require("../services/messageService");
 
+const {
+    getLocations,
+    updateLocation
+} = require("../services/locationService");
+
 const connectedUsers = [];
 
 const Chat = (io) => (socket) => {
@@ -22,6 +27,19 @@ const Chat = (io) => (socket) => {
                 io.to('chat room').emit('chat message', message); // Broadcast the message to all connected clients
             });
 
+            socket.on('save location', async (location) => {
+                await updateLocation(socket.handshake.user.email, location)
+            });
+
+            socket.on('get locations', async () => {
+                const positions = await getLocations();
+                io.to(socket.id).emit('get locations', positions?.data?.locations);
+            });
+
+            socket.on('get connected users', async () => {
+                io.to(socket.id).emit('get connected users', connectedUsers);
+            });
+
             socket.on('disconnect', async () => {
                 console.log(`${socket.id} disconnected`);
                 const userIndex = connectedUsers.findIndex(user => user.id === socket.id);
@@ -31,6 +49,7 @@ const Chat = (io) => (socket) => {
         }
     });
 };
+
 
 const GetData = (req, res) => {
     guard(req, res, async () => {

@@ -5,7 +5,7 @@ import ciEquals from "../utils/ciEqual";
 import AxiosWithAuth from "../utils/axiosWithAuth";
 import ChatUser from "../types/chatUser";
 import AsName from "../utils/asName";
-import { useIsMedium } from "../hooks/useIsMedium";
+import useIsMedium from "../hooks/useIsMedium";
 
 interface ListProps {
     chatListActiveUsers: ChatListUser[];

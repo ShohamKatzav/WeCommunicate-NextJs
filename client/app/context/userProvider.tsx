@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import { ReactNode, useEffect, useState } from "react";
 import User from "../types/user";
 import UserContext from "./userContext";
@@ -15,7 +15,6 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        setLoading(true);
         const init = async () => {
             await fetchUser();
         };

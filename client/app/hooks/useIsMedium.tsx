@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export const useIsMedium = () => {
+const useIsMedium = () => {
     const [isMediumScreen, setIsMediumScreen] = useState(window.innerWidth >= 768);
 
     useEffect(() => {
@@ -15,3 +15,5 @@ export const useIsMedium = () => {
 
     return isMediumScreen;
 };
+
+export default useIsMedium;

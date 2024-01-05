@@ -23,18 +23,24 @@ const Navbar = () => {
     },
     {
       id: 3,
+      text: "locations",
+      link: "locations",
+      onclick: () => { }
+    },
+    {
+      id: 4,
       text: "about",
       link: "about",
       onclick: () => { }
     },
     {
-      id: 4,
+      id: 5,
       text: "contact",
       link: "contact",
       onclick: () => { }
     },
     {
-      id: 5,
+      id: 6,
       text: "Log out",
       link: "/",
       onclick: () => handleLogOut()
@@ -50,9 +56,9 @@ const Navbar = () => {
   }
 
   const shouldDisplayLink = (id: number) => {
-    if ((id === 2 || id === 5) && isUserConnected()) return true;
+    if ((id === 2 || id === 3 || id === 6) && isUserConnected()) return true;
     if (id === 1 && !isUserConnected()) return true;
-    if (id !== 1 && id !== 2 && id !== 5) return true;
+    if (id !== 1 && id !== 2 && id !== 3 && id !== 6) return true;
     return false;
   };
 

@@ -3,11 +3,11 @@ import AxiosWithAuth from "../utils/axiosWithAuth";
 
 async function fetchMessages(page: number, email: string) {
     if (typeof page !== 'number' || page < 1) {
-        console.error("Invalid page number");
+        //console.error("Invalid page number");
         return [];
     }
     if (typeof email !== 'string' || email.trim() === '') {
-        console.error("Invalid email address");
+        //console.error("Invalid email address");
         return [];
     }
 
