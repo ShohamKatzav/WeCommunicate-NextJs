@@ -77,7 +77,7 @@ function Locations(props: any) {
   return isLoaded ? (
     <>
       <h1 className="row-start-6 text-3xl font-extrabold text-gray-900 dark:text-white md:text-5xl lg:text-6xl text-center mb-4">
-        <span className="text-transparent bg-clip-text bg-gradient-to-r to-blue-900 from-teal-400">Friends' locations</span></h1>
+        <span className="text-transparent bg-clip-text bg-gradient-to-r to-blue-900 from-teal-400">Friends&apos; locations</span></h1>
       <GoogleMap
         mapContainerStyle={containerStyle}
         center={center}

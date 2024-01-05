@@ -21,12 +21,12 @@ const LocationAccessInformation = ({ information }: { information: string }) => 
                         </span>
                     </h1>
                     <p className="md:row-start-3 row-start-2 text-xl text-center">
-                        To use one of our newest features, sharing and viewing your friends' locations, please allow access to location services in your browser settings.
+                        To use one of our newest features, sharing and viewing your friends&apos; locations, please allow access to location services in your browser settings.
                     </p>
                     <p className="md:row-start-4 row-start-3 text-xl text-center">
                         You can read more about how to enable location access on<br/><a href="https://support.google.com/chrome/answer/142065?hl=en"
                             className="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline" target="_blank" rel="noopener noreferrer">
-                            Google's sharing location guide
+                            Google&apos;s sharing location guide
                         </a>.
                     </p>
                 </div>
