@@ -49,16 +49,9 @@ function Locations(props: any) {
     };
 
     if (!loadingSocket) {
-      
       socket?.on("get locations", updatePositions);
       getPositions();
-
-      const intervalId = setInterval(() => {
-        getPositions();
-      }, parseInt(process.env.NEXT_PUBLIC_LOCATION_INTERVAL!));
-
       return () => {
-        clearInterval(intervalId);
         socket?.off("get locations", updatePositions);
       };
     }

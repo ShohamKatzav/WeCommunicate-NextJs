@@ -97,10 +97,10 @@ const Chat = (props: any) => {
   return (
     <>
       <div className="grid md:grid-cols-3">
-        <div className="md:col-start-2 col-span-1 gap-4">
-          <h1 className="mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-4xl lg:text-5xl text-center">
+        <div className="md:col-start-2 col-span-1 gap-4 md:w-auto w-screen">
+          <h1 className="mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-4xl lg:text-5xl text-center break-words">
             <span className="text-transparent bg-clip-text bg-gradient-to-r to-red-600 from-amber-400">
-              Hello {props.user?.email}</span></h1>
+              Hello {props.user?.email.split('@')[0]}</span></h1>
           <MessagesBox messages={chat} chatBox={chatBox} />
           <MessageInput message={message} setMessage={setMessage} />
           <Buttons

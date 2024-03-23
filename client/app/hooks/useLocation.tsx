@@ -78,10 +78,7 @@ const useLocation = () => {
         time: new Date(Date.now())
       };
       setPosition(newPosition);
-      if (socketRef.current)
-        await socketRef.current.emit('save location', newPosition);
-      else
-        console.error("No socket");
+      await socketRef.current?.emit('save location', newPosition);
     };
 
     const handleError = (error: GeolocationPositionError) => {

@@ -29,6 +29,8 @@ const Chat = (io) => (socket) => {
 
             socket.on('save location', async (location) => {
                 await updateLocation(socket.handshake.user.email, location)
+                const positions = await getLocations();
+                io.to(socket.id).emit('get locations', positions?.data?.locations);
             });
 
             socket.on('get locations', async () => {
