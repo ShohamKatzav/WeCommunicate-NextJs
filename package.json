@@ -28,7 +28,10 @@
     "rimraf": "^5.0.7",
     "socket.io": "^4.7.5",
     "socket.io-client": "^4.7.2",
-    "util": "^0.12.5"
+    "util": "^0.12.5",
+    "@types/bcryptjs": "^2.4.6",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
     "@types/node": "^20",
