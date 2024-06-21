@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"],
+      "*": ["./*.d.ts"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "app/api/hello/route.ts",
+  "app/api/account/is-exist/route.ts", "app/api/database/route.js", "app/api/models/Account.ts",
+  "app/api/database/MongoDb.ts", "app/api/guards/guard.ts", "app/api/chat/route.ts", "app/api/chat/socket.js", "pages/api/socket/index.js"],
+  "exclude": ["node_modules"]
+}

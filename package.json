@@ -1,9 +1,46 @@
 {
-  "devDependencies": {
-    "concurrently": "^8.2.2"
-  },
+  "name": "client",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
-    "init": "concurrently \"cd ./server && npm i\" \"cd ./client && npm i\"",
-    "start": "concurrently \"cd ./server && npm run server\" \"cd ./client && npm run dev\""
+    "dev": "next dev",
+    "ws": "node socket",
+    "build": "next build",
+    "lint": "next lint",
+    "init": "concurrently \"cd ./app/api && npm i\" \"cd ./app && npm i\"",
+    "start": "concurrently \"cd ./app/api && npm run server.js\" \"cd ./app && npm run dev\""
+  },
+  "dependencies": {
+    "@react-google-maps/api": "^2.19.2",
+    "@types/google-map-react": "^2.1.10",
+    "aws4": "^1.13.0",
+    "axios": "^1.6.2",
+    "babel-preset-env": "^0.0.0",
+    "core-js": "^3.37.1",
+    "glob": "^10.4.1",
+    "lru-cache": "^10.2.2",
+    "mongoose": "^8.4.1",
+    "next": "^14.2.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-icons": "^4.12.0",
+    "react-intersection-observer": "^9.5.3",
+    "rimraf": "^5.0.7",
+    "socket.io": "^4.7.5",
+    "socket.io-client": "^4.7.2",
+    "util": "^0.12.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@types/ws": "^8.5.10",
+    "autoprefixer": "^10.0.1",
+    "concurrently": "^8.2.2",
+    "eslint": "^8",
+    "eslint-config-next": "^14.2.3",
+    "postcss": "^8",
+    "tailwindcss": "^3.3.0",
+    "typescript": "^5"
   }
 }
