@@ -1,7 +1,6 @@
 import { Server } from "socket.io";
 import guard from "@/app/api/guards/guard";
-import GetLocations from "@/app/api/location/get-locations/route";
-import SaveLocations from "@/app/api/location/save-location/route";
+import { GetLocations, SaveLocations } from "@/app/api/location/locations";
 
 const connectedUsers = [];
 
