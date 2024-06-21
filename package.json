@@ -3,12 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next",
     "ws": "node socket",
     "build": "next build",
     "lint": "next lint",
-    "init": "concurrently \"cd ./app/api && npm i\" \"cd ./app && npm i\"",
-    "start": "concurrently \"cd ./app/api && npm run server.js\" \"cd ./app && npm run dev\""
+    "start": "npm run build && next start"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.19.2",
@@ -40,7 +39,6 @@
     "@types/react-dom": "^18",
     "@types/ws": "^8.5.10",
     "autoprefixer": "^10.0.1",
-    "concurrently": "^8.2.2",
     "eslint": "^8",
     "eslint-config-next": "^14.2.3",
     "postcss": "^8",
