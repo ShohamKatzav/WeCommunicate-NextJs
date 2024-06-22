@@ -2,7 +2,7 @@
     "version": 2,
     "functions": {
       "pages/api/socket/index.js": {
-        "memory": 128,
+        "memory": 1024,
         "maxDuration": 60
       }
     },
