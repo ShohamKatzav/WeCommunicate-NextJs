@@ -9,7 +9,7 @@
     "routes": [
       {
         "src": "/api/socket/",
-        "dest": "/api/socket/index.js"
+        "dest": "pages/api/socket/index.js"
       }
     ]
   }
