@@ -17,7 +17,6 @@ const center = {
 
 
 function Locations(props: any) {
-
   const { locationAccessinfo } = useLocation();
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
