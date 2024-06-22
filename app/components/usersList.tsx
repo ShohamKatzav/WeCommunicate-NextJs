@@ -64,10 +64,10 @@ const UsersList = ({ chatListActiveUsers }: ListProps) => {
             <div className="flex flex-col-reverse md:flex-col">
                 <div>
                     {toggle &&
-                        <ul className="bg-white shadow sm:rounded-md md:absolute md:transform md:-translate-y-full md:h-1/2 overflow-auto" ref={dropRef}>
+                        <ul className="bg-white shadow sm:rounded-md md:absolute md:transform md:-translate-y-full md:max-h-2/5 overflow-auto" ref={dropRef}>
                             {chatListAllUsers.length > 0 &&
                                 chatListAllUsers?.sort((a, b) => a.email!.localeCompare(b.email!))
-                                .map((user: ChatListUser, index) => (
+                                    .map((user: ChatListUser, index) => (
                                         <li key={index}>
                                             <div className="px-4 py-5 sm:px-6">
                                                 <div className="flex items-center justify-between">

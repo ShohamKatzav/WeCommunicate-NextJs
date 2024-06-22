@@ -11,9 +11,7 @@ async function handler(requestOrSocket: RequestOrSocket) {
 
         } else {
             if ('handshake' in requestOrSocket)
-                console.log(requestOrSocket?.handshake?.auth?.token);
-            // WebSocket request
-            authToken = requestOrSocket?.handshake?.auth?.token! as string;
+                authToken = requestOrSocket?.handshake?.auth?.token! as string;
         }
     } else {
         // Token missing

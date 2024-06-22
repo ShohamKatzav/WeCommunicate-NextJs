@@ -21,7 +21,6 @@ const Home = () => {
 
     await AxiosWithAuth().post(`${baseUrl}/verify`)
       .then(response => {
-        console.log(response);
         setEmail(user?.email || "unknown");
         router.push("/chat");
       }).catch(error => {
