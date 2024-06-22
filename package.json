@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next",
+    "dev": "next dev",
     "ws": "node socket",
     "build": "next build",
     "lint": "next lint",
-    "start": "npm run build && next start"
+    "start": "next start"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.19.2",
@@ -22,7 +22,6 @@
     "jsonwebtoken": "^9.0.2",
     "lru-cache": "^10.2.2",
     "mongoose": "^8.4.1",
-    "next": "^14.2.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-icons": "^4.12.0",
