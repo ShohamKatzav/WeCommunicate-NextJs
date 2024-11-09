@@ -36,7 +36,7 @@ const Contact = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center">
                         <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 dark:text-white sm:text-5xl md:text-6xl">
-                            <span className="block">Get in Touch</span>
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-600">Get in Touch</span>
                         </h1>
                         <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-500 dark:text-gray-300">
                             If you have any questions or feedback, feel free to reach out!

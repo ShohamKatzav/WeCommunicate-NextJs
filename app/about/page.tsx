@@ -4,16 +4,14 @@ const About = () => {
     return (
         <div className="relative overflow-hidden">
             <div className="max-w-7xl mx-auto">
-                <div className="relative pb-2 sm:pb-4 md:pb-8 lg:pb-16 xl:pb-16">
-                    <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                        <div className="text-center">
-                            <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 dark:text-white sm:text-5xl md:text-6xl">
-                                <span className="block">About</span>
-                                <span className="block text-blue-600 dark:text-blue-400">We-Communicate</span>
-                            </h1>
-                        </div>
-                    </main>
-                </div>
+                <main className="max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <div className="text-center">
+                        <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 dark:text-white sm:text-5xl md:text-6xl">
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-800">About</span><br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-800">We-Communicate</span>
+                        </h1>
+                    </div>
+                </main>
             </div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
