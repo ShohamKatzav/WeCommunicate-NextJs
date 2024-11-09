@@ -1,8 +1,9 @@
-import { Document, Schema, models, model } from 'mongoose';
+import { Document, Schema, Types, models, model } from 'mongoose';
 interface IMessage extends Document {
     date: Number;
     sender: string;
     value: string;
+    conversation: Types.ObjectId;
 }
 
 const MessageSchema = new Schema<IMessage>({
@@ -16,6 +17,11 @@ const MessageSchema = new Schema<IMessage>({
     },
     value: {
         type: String,
+        required: true
+    },
+    conversation: {
+        type: Schema.Types.ObjectId,
+        ref: 'Conversation',
         required: true
     }
 });

@@ -1,10 +1,11 @@
-import { Document, Schema } from 'mongoose';
+import { Document, Schema, Types, models, model } from 'mongoose';
 interface ILocation extends Document {
-    latitude: Number;
-    longitude: Number;
-    accuracy: Number;
-    error: String;
+    latitude: number;
+    longitude: number;
+    accuracy: number;
+    error?: String;
     time: Date;
+    account: Types.ObjectId;
 }
 
 export const LocationSchema = new Schema<ILocation>({
@@ -27,5 +28,11 @@ export const LocationSchema = new Schema<ILocation>({
     time: {
         type: Date,
         required: true
+    },
+    account: {
+        type: Schema.Types.ObjectId,
+        ref: 'Account',
+        required: true
     }
 });
+export default models.Location || model<ILocation>('Location', LocationSchema);

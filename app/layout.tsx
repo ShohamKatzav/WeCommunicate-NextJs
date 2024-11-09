@@ -5,6 +5,7 @@ import Navbar from './components/navbar'
 import Footer from './components/footer'
 import { UserProvider } from './context/userProvider'
 import { SocketProvider } from './context/socketProvider'
+import { NotificationProvider } from './context/notificationProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -20,15 +21,18 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={inter.className +
+        "min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800"}>
         <UserProvider>
+          <SocketProvider>
           <Navbar />
-          <div className='mt-10'>
-            <SocketProvider>
-              {children}
-            </SocketProvider>
-          </div>
-          <div className='h-1/5 mb-20'></div>
+            <NotificationProvider>
+              <div className='mt-10'>
+                {children}
+              </div>
+              <div className='h-1/5 mb-20'></div>
+            </NotificationProvider>
+          </SocketProvider>
         </UserProvider>
         <Footer />
       </body>

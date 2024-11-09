@@ -1,12 +1,55 @@
 import Account from "../models/Account";
 import { Types } from 'mongoose';
+import jwt from 'jsonwebtoken';
+
+interface DecodedToken {
+    _id: string;
+    email: string;
+    signInTime: number;
+    iat: number;
+  }
+
+const jwtSecretKey = process.env.TOKEN_SECRET!;
 
 export default class AccountRepository {
+    
 
+    static async getUserByToken(authHeader: string) {
+        try {
+            const token = authHeader.split(' ')[1];
+            const decoded = jwt.verify(token, jwtSecretKey) as DecodedToken;
+            const { _id } = decoded;
+            return await Account.findById(_id).exec();
+            
+        } catch (err) {
+            console.error('Failed to find user by token:', err);
+            throw new Error('Failed to find user by token');
+        }
+    }
+    static async extractIDFromToken(authHeader: string) {
+        try {
+            const token = authHeader.split(' ')[1];
+            const decoded = jwt.verify(token, jwtSecretKey) as DecodedToken;
+            const { _id } = decoded;
+            return _id;
+            
+        } catch (err) {
+            console.error('Failed to extract id from token:', err);
+            throw new Error('Failed to extract id from token');
+        }
+    }
+    static async getUserByID(ID: string) {
+        try {
+            return await Account.findById(ID).exec();
+        } catch (err) {
+            console.error('Failed to find user by ID:', err);
+            throw new Error('Failed to find user by ID');
+        }
+    }
     static async getUserByEmail(email: string) {
         try {
             return await Account.findOne({
-                email: { $regex: new RegExp("^" + email, "i") }
+                email: { $regex: new RegExp("^" + email + "$", "i") }
             }).exec();
         } catch (err) {
             console.error('Failed to find user by email:', err);
@@ -34,8 +77,8 @@ export default class AccountRepository {
     static async getUsernames() {
         try {
             const users = await Account.find().exec();
-            const userNames = users.map(user => user.email);
-            return userNames;
+            const chatUsers = users.map(user => ({ _id: user._id, email: user.email }));
+            return chatUsers;
         } catch (err) {
             console.error('Could not get usernames:', err);
             throw new Error('Failed to create user');

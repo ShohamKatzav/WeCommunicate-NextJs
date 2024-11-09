@@ -15,11 +15,11 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
     const [loadingSocket, setLoadingSocket] = useState(true);
 
     useEffect(() => {
-        if (!loading) {
+        if (!loading && user?.email) {
             const setUp = () => {
                 const socketConfig = {
                     extraHeaders: {
-                        "email": user?.email as string
+                        "email": user.email as string
                     },
                     autoConnect: false,
                     reconnection: true,
@@ -40,12 +40,11 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
         }
         return () => {
             if (socket?.active) { // <-- This is important
-                socket.close();
+                socket.disconnect();
             }
         };
 
     }, [user?.token]);
-
 
     return (
         <SocketContext.Provider value={{ socket, loadingSocket }}>

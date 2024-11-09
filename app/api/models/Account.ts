@@ -1,11 +1,10 @@
-import { Document, Schema, models, model } from 'mongoose';
-import { LocationSchema } from './Location';
+import { Document, Schema, Types, models, model } from 'mongoose';
 
 interface IAccount extends Document {
     email: string;
     password: string;
-    location: Location;
-    initHistory: Date;
+    initHistory?: Date;
+    location?: Types.ObjectId;
 }
 
 const AccountSchema = new Schema<IAccount>({
@@ -17,10 +16,14 @@ const AccountSchema = new Schema<IAccount>({
         type: String,
         required: true
     },
-    location: LocationSchema,
-    initHistory:{
+    initHistory: {
         type: Date,
+        required: false
+    },
+    location: {
+        type: Schema.Types.ObjectId,
+        ref: 'Location',
         required: false
     }
 });
-export default models.Account || model('Account', AccountSchema);
+export default models.Account || model<IAccount>('Account', AccountSchema);

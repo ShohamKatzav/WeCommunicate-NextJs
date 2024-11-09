@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       const passwordMatch = await bcrypt.compare(password, user.password);
 
       if (passwordMatch) {
-        const loginData = { email, signInTime: Date.now() };
+        const loginData = { _id: user._id, email, signInTime: Date.now() };
         const token = jwt.sign(loginData, jwtSecretKey);
 
         return NextResponse.json({ message: "Success", token }, { status: 200 });
@@ -36,8 +36,8 @@ export async function POST(req: NextRequest) {
       const hash = await bcrypt.hash(password, 10);
 
       try {
-        await AccountRepository.addUser(email, hash);
-        const loginData = { email, signInTime: Date.now() };
+        const user = await AccountRepository.addUser(email, hash);
+        const loginData = { _id: user._id, email, signInTime: Date.now() };
         const token = jwt.sign(loginData, jwtSecretKey);
 
         return NextResponse.json({ message: "Success", token }, { status: 201 });

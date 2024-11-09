@@ -1,4 +1,5 @@
 import connectDB from "../../database/MongoDb";
+import AccountRepository from "../../database/AccountDal";
 import InitHistoryRepository from "../../database/InitHistoryDal"
 import { NextRequest, NextResponse } from 'next/server'
 import guard from "../../guards/guard"
@@ -6,19 +7,18 @@ import guard from "../../guards/guard"
 export async function PUT(
   req: NextRequest
 ) {
-  const verified = await guard(req);
-  if (verified) {
+  await guard(req);
+  try {
+    await connectDB();
     const body = await req.json();
-    const { email } = body;
-    try {
-      await connectDB();
-      const updatedDocument = await InitHistoryRepository.updateInitHistory(email);
+    if (body.currentConversationId) {
+      const userID = await AccountRepository.extractIDFromToken(req?.headers?.get('authorization')!);
+      const updatedDocument = await InitHistoryRepository.updateInitHistory(userID, body.currentConversationId);
       return NextResponse.json({ message: "success", updatedDocument }, { status: 200 });
     }
-    catch (err) {
-      console.error('Failed to retrieve messages:', err);
-      return NextResponse.json({ error: "Failed to initialize accounts chat history" }, { status: 500 });
-    }
   }
-  return NextResponse.json({ error: "error: 'Authentication error" }, { status: 401 });
+  catch (err) {
+    console.error('Failed to retrieve messages:', err);
+    return NextResponse.json({ error: "Failed to initialize accounts chat history" }, { status: 500 });
+  }
 }

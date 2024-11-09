@@ -7,6 +7,18 @@
   width: 100%;
 }
 
+.navbar {
+  color: #fff;
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  z-index: 100;
+}
+.container {
+  margin-bottom: 10rem;
+}
+
 .footer p {
   margin: 0;
 }
@@ -14,5 +26,9 @@
 @media screen and (max-width: 768px) {
   .container {
     padding: 0 20px;
+  }
+  .navbar
+  {
+    z-index: 1;
   }
 }

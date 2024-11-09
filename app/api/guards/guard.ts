@@ -1,34 +1,27 @@
+import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
+
 const jwtSecretKey = process.env.TOKEN_SECRET as jwt.Secret;
 
-async function handler(requestOrSocket: RequestOrSocket) {
+const guard = async (req: NextRequest) => {
     let authToken: string = '';
-    if ('headers' in requestOrSocket && typeof requestOrSocket?.headers?.get === 'function') {
-        // HTTP request
-        const authHeader = requestOrSocket.headers.get('authorization');
-        if (authHeader) {
-            authToken = authHeader.split(' ')[1];
 
-        } else {
-            if ('handshake' in requestOrSocket)
-                authToken = requestOrSocket?.handshake?.auth?.token! as string;
-        }
+    const authHeader = req?.headers?.get('authorization');
+    if (authHeader) {
+        authToken = authHeader.split(' ')[1];
     } else {
-        // Token missing
-        return false;
+        return NextResponse.json({ error: 'Authorization token missing' }, { status: 401 });
     }
+
     try {
         const verified = jwt.verify(authToken, jwtSecretKey);
-        if (verified) {
-            requestOrSocket.user = verified as string;
-            return true;
+        if (!verified) {
+            return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
         }
-        // Invalid token
-        return false;
+        return null;  // Return null or undefined if no error
     } catch (error) {
-        // Invalid token
-        return false;
+        return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 };
 
-export default handler;
+export default guard;

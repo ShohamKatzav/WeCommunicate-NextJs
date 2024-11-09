@@ -2,24 +2,26 @@
 import { useUser } from "../hooks/useUser";
 import Message from "../types/message";
 import MessageViewer from "./messageViewer";
-import LoadMore from "./loadMore";
+import LoadMoreMessages from "./loadMoreMessages";
 import { RefObject, useEffect, useState } from "react";
+import ChatUser from "../types/chatUser";
 
 interface MessagesBoxProps {
     messages: Message[],
     chatBox: RefObject<HTMLDivElement>
+    participant: ChatUser
 }
 
-const MessagesBox = ({ messages, chatBox }: MessagesBoxProps) => {
+const MessagesBox = ({ messages, chatBox, participant }: MessagesBoxProps) => {
     const { user } = useUser();
     const [loadNew, setLoadNew] = useState(false);
 
     const handleScroll = () => {
-        if (chatBox.current) {
-            const isAtTop = chatBox.current.scrollTop === 0;
-            if (isAtTop && !loadNew) {
-                setLoadNew(true);
-            }
+        if (chatBox.current?.scrollTop === 0) {
+            // this if fix for case I switch to conversation with less than 5 messages and dont need the fetching spinner
+            if (chatBox.current?.clientHeight != chatBox.current?.scrollHeight)
+                if (!loadNew)
+                    setLoadNew(true);
         }
     }
 
@@ -34,12 +36,17 @@ const MessagesBox = ({ messages, chatBox }: MessagesBoxProps) => {
             }
         };
     }, [chatBox]);
+
+    useEffect(() => {
+        setLoadNew(false);
+    }, [participant]);
+
     return (
         <>
             <div className="mt-8 md:mt-20">
-                <div ref={chatBox} className="w-full flex flex-col md:flex-cols-4 overflow-y-auto h-80">
+                <div ref={chatBox} className="w-full flex flex-col md:flex-cols-4 overflow-y-auto h-96">
                     {loadNew &&
-                        <LoadMore chatBox={chatBox} oldMessages={messages}/>
+                        <LoadMoreMessages chatBox={chatBox} oldMessages={messages} participant={participant} />
                     }
                     <div className="grid row-start-2 md:grid-cols-5">
                         {messages.map((message, index) =>

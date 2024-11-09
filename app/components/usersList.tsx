@@ -1,49 +1,60 @@
 import { useEffect, useRef, useState } from "react";
-import ChatListUser from "../types/chatUser";
+import { Users } from 'lucide-react';
 import { createChatUsersList, getChatUsersList } from "../actions/cookie-actions";
 import ciEquals from "../utils/ciEqual";
 import AxiosWithAuth from "../utils/axiosWithAuth";
 import ChatUser from "../types/chatUser";
 import AsName from "../utils/asName";
 import useIsMedium from "../hooks/useIsMedium";
+import { useUser } from "../hooks/useUser";
+import { useSocket } from "../hooks/useSocket";
+import { useNotification } from "../hooks/useNotification";
 
 interface ListProps {
-    chatListActiveUsers: ChatListUser[];
+    chatListActiveUsers: ChatUser[];
+    getLastMessages: (participantFromList: ChatUser) => Promise<void>;
 }
 
-const UsersList = ({ chatListActiveUsers }: ListProps) => {
+const UsersList = ({ chatListActiveUsers, getLastMessages }: ListProps) => {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_ADDRESS + "api/account";
-    const [chatListAllUsers, setChatListAllUsers] = useState<ChatListUser[]>([]);
+
+    const isMediumScreen = useIsMedium();
+    const { user } = useUser();
+    const { socket } = useSocket();
+
+    const [chatListAllUsers, setChatListAllUsers] = useState<ChatUser[]>([]);
     const [toggle, setToggle] = useState(true);
 
     const dropRef = useRef<HTMLUListElement>(null);
     const openRef = useRef<HTMLDivElement>(null);
     const closeRef = useRef<HTMLDivElement>(null);
 
-    const isMediumScreen = useIsMedium();
+
+    const { initializeRoomNotifications, newMessageNotification } = useNotification();
+
 
 
     useEffect(() => {
-        const init = async () => {
-            const chatUsers = await getChatUsersList();
-            if (chatUsers === undefined) {
-                const response: any = await AxiosWithAuth().get(`${baseUrl}/get-usernames`);
-                const arrayUsers: ChatUser[] = response?.data?.map((email: string) => ({ email }));
-                createChatUsersList(arrayUsers);
-                setChatListAllUsers([...arrayUsers]);
-            }
-            else {
-                const updatedChatUsers: ChatUser[] = JSON.parse(chatUsers.value);
-                chatListActiveUsers.forEach(user => {
-                    if (!updatedChatUsers.find(u => ciEquals(u.email as string, user.email as string)))
-                        updatedChatUsers.push(user);
-                });
-                createChatUsersList(updatedChatUsers);
-                setChatListAllUsers([...updatedChatUsers]);
-            }
-        }
         init();
     }, [chatListActiveUsers]);
+
+    const init = async () => {
+        const chatUsers = await getChatUsersList();
+        if (chatUsers === undefined) {
+            const response: any = await AxiosWithAuth().get(`${baseUrl}/get-usernames`);
+            createChatUsersList(response?.data);
+            setChatListAllUsers(response?.data);
+        }
+        else {
+            const updatedChatUsers: ChatUser[] = JSON.parse(chatUsers.value);
+            chatListActiveUsers.forEach(user => {
+                if (!updatedChatUsers.find(u => ciEquals(u.email as string, user.email as string)))
+                    updatedChatUsers.push(user);
+            });
+            createChatUsersList(updatedChatUsers);
+            setChatListAllUsers(updatedChatUsers);
+        }
+    }
 
 
     const dropupHandler = () => {
@@ -59,38 +70,67 @@ const UsersList = ({ chatListActiveUsers }: ListProps) => {
         setToggle(!toggle);
     };
 
+    const switchRoom = async (participant: ChatUser) => {
+        if (socket && participant) {
+            initializeRoomNotifications(participant.email!.toUpperCase());
+            await getLastMessages(participant);
+        }
+    };
+
     return (
         <>
-            <div className="flex flex-col-reverse md:flex-col">
+            <div className="flex flex-col-reverse md:flex-col mx-auto">
                 <div>
-                    {toggle &&
-                        <ul className="bg-white shadow sm:rounded-md md:absolute md:transform md:-translate-y-full md:max-h-2/5 overflow-auto" ref={dropRef}>
-                            {chatListAllUsers.length > 0 &&
-                                chatListAllUsers?.sort((a, b) => a.email!.localeCompare(b.email!))
-                                    .map((user: ChatListUser, index) => (
-                                        <li key={index}>
-                                            <div className="px-4 py-5 sm:px-6">
-                                                <div className="flex items-center justify-between">
-                                                    <h3 className="text-lg leading-6 font-medium text-gray-900">{AsName(user?.email as string)}</h3>
-                                                </div>
-                                                <div className="mt-4 flex items-center justify-between">
-                                                    <p className="text-sm font-medium text-gray-500">
-                                                        Status: <span className={chatListActiveUsers.find(u => ciEquals(u.email as string, user.email as string)) ?
-                                                            "text-green-600" : "text-red-600"}>
-                                                            {chatListActiveUsers.find(u => ciEquals(u.email as string, user.email as string)) ? "Active" : "Inactive"}
-                                                        </span>
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </li>
-                                    ))}
+                    {toggle && (
+                        <ul className="bg-white shadow sm:rounded-md md:absolute md:transform md:-translate-y-full overflow-auto" ref={dropRef}>
+                            {chatListAllUsers &&
+                                chatListAllUsers
+                                    ?.sort((a, b) => a.email!.localeCompare(b.email!))
+                                    .map((chatMember: ChatUser, index) => {
+                                        const incoming = newMessageNotification[chatMember.email?.toUpperCase()!];
+                                        return (
+                                            AsName(chatMember?.email as string) !== AsName(user?.email as string) && (
+                                                <li onClick={() => switchRoom(chatMember)} className="hover:bg-slate-100" key={index}>
+                                                    <div className="px-4 py-5 sm:px-6">
+                                                        <div className="flex items-center justify-between">
+                                                            <h3 className="text-lg leading-6 font-medium text-gray-900">
+                                                                {AsName(chatMember?.email as string)}
+                                                            </h3>
+
+                                                            {incoming > 0 && 
+                                                                <span className="inline-flex items-center justify-center px-2 py-1
+                                                                    text-xs font-bold leading-none
+                                                                    text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
+                                                                    {incoming}
+                                                                </span>
+                                                            }
+                                                        </div>
+                                                        <div className="mt-4 flex items-center justify-between">
+                                                            <p className="text-sm font-medium text-gray-500">
+                                                                Status: <span className={chatListActiveUsers.find(
+                                                                    u => ciEquals(u.email as string, chatMember.email as string)
+                                                                ) ? "text-green-600" : "text-red-600"}>
+                                                                    {chatListActiveUsers.find(
+                                                                        u => ciEquals(u.email as string, chatMember.email as string)
+                                                                    ) ? "Active" : "Inactive"}
+                                                                </span>
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            )
+                                        );
+                                    })}
                         </ul>
-                    }
+                    )}
                 </div>
                 <div className="md:my-1.5"></div>
-                <button className="w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 focus:bg-gray-100 p-4 shadow rounded
+                <button type="button" className="w-full md:w-72 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 focus:bg-gray-100 p-4 shadow rounded
              bg-white text-sm font-medium leading-none text-gray-800 flex items-center justify-between cursor-pointer" onClick={dropupHandler}>
-                    Users
+                                    <Users className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Friends
+                </h2>
                     <div>
 
                         <div ref={closeRef}>
@@ -122,6 +162,7 @@ const UsersList = ({ chatListActiveUsers }: ListProps) => {
             </div>
         </>
     );
+
 };
 
 export default UsersList;

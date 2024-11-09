@@ -7,17 +7,19 @@ import fetchMessages from "../actions/message-actions";
 import { Spinner } from "./spinner";
 import { useUser } from "../hooks/useUser";
 import MessageViewer from "./messageViewer";
+import ChatUser from "../types/chatUser";
 
 
 interface LoadMoreProps {
   chatBox: RefObject<HTMLDivElement>
   oldMessages: Message[]
+  participant: ChatUser
 }
 
-const LoadMore = ({ chatBox, oldMessages }: LoadMoreProps) => {
+const LoadMoreMessages = ({ chatBox, oldMessages, participant }: LoadMoreProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [page, setPage] = useState(1);
-  const [allDataFetched, setAllDataFetched] = useState(false);
+  const [allDataFetched, setAllDataFetched] = useState(true);
   const [fetching, setFetching] = useState(false);
 
   const { ref, inView } = useInView();
@@ -31,9 +33,10 @@ const LoadMore = ({ chatBox, oldMessages }: LoadMoreProps) => {
 
   const loadMoreMessages = async () => {
     setFetching(true);
+    setAllDataFetched(false);
     await delay(200);
     const nextPage = page + 1;
-    const res: any = await fetchMessages(nextPage, user?.email!);
+    const res: any = await fetchMessages(nextPage, participant._id!);
     if (res?.message !== "success") {
       setAllDataFetched(true);
     }
@@ -57,7 +60,7 @@ const LoadMore = ({ chatBox, oldMessages }: LoadMoreProps) => {
     if (!fetching && chatBox.current && newMessages.current) {
       chatBox.current.scrollTop = newMessages.current.offsetHeight;
     }
-  }, [messages]);
+  }, [messages, participant]);
 
   // aka intialize chat history
   useEffect(() => {
@@ -65,6 +68,11 @@ const LoadMore = ({ chatBox, oldMessages }: LoadMoreProps) => {
       setMessages([]);
     }
   }, [oldMessages]);
+
+  useEffect(() => {
+    setMessages([]);
+}, [participant]);
+
 
   return (
     <>
@@ -88,4 +96,4 @@ const LoadMore = ({ chatBox, oldMessages }: LoadMoreProps) => {
 
 
 }
-export default LoadMore;
+export default LoadMoreMessages;

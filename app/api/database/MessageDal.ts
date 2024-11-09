@@ -1,17 +1,19 @@
 import Message from "../models/Message";
+import ConversationRepository from "./ConversationDal";
+import { Schema, Types } from 'mongoose';
 
 interface MessageDTO {
     date: Number;
     sender: string;
+    participantID: string;
     value: string;
 }
 
 type ChatQuery = {
-    date: {
-        $gt: any;
+    date?: {
+        $gt?: any;
     };
-} | {
-    date?: undefined;
+    conversation: Schema.Types.ObjectId; // Ensure query includes conversation
 };
 
 export default class MessageRepository {
@@ -24,17 +26,38 @@ export default class MessageRepository {
         }
     }
 
-    static async SaveMessage(data: MessageDTO) {
+    static async SaveMessage(data: MessageDTO, userID: string) {
         try {
-            const { date, sender, value } = data;
-            return await Message.create({ date, sender, value });
+            const { date, sender, participantID, value } = data;
+
+            let conversation = await ConversationRepository.GetConversation([
+                new Types.ObjectId(userID),
+                new Types.ObjectId(participantID)
+              ]);
+
+            if (!conversation) {
+                conversation = await ConversationRepository.CreateConversation(
+                    [userID as unknown as Types.ObjectId , participantID as unknown as Types.ObjectId]);
+            }
+
+            return await Message.create({
+                date,
+                sender,
+                value,
+                conversation: conversation._id
+            });
         } catch (err) {
             console.error('Failed to save message:', err);
             throw err;
         }
-    };
+    }
 
     static async countMessages(query: ChatQuery) {
-        return await Message.countDocuments(query);
+        try {
+            return await Message.countDocuments(query);
+        } catch (err) {
+            console.error('Failed to count messages:', err);
+            throw err;
+        }
     }
 }

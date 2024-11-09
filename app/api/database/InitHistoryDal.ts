@@ -1,21 +1,24 @@
 import Account from "../models/Account"
-import AccountRepository from "./AccountDal";
+import InitHistory from "../models/InitHistory"
 import { Types } from 'mongoose';
 
 export default class InitHistoryRepository {
-    static async findInitHistory(accountId: Types.ObjectId) {
+    static async findInitHistory(accountID: Types.ObjectId, conversationID: string) {
         try {
-            const account = await Account.findById(accountId).exec();
-            return account.initHistory;
+            return await InitHistory.findOne(
+                { account: accountID, conversation: conversationID }).exec();
         } catch (err) {
             console.error('Failed to find Init History time:', err);
             throw err;
         }
     }
-    static async updateInitHistory(email: string) {
+    static async updateInitHistory(accountID: string, conversationID: string) {
         try {
-            const account = await AccountRepository.getUserByEmail(email);
-            return await Account.updateOne({ _id: account._id }, { $set: { initHistory:  Date.now() } });
+            return await InitHistory.updateOne(
+                { account: accountID, conversation: conversationID },
+                { $set: { date: Date.now() } },
+                { upsert: true }
+            );
         } catch (err) {
             console.error('Failed to update Init History time:', err);
             throw err;

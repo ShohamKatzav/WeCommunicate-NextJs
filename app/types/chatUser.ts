@@ -1,4 +1,6 @@
 export default interface ChatUser {
-    id: number;
+    _id?: string | undefined;
+    socketId: number;
     email?: string | undefined;
+    unreadCount: number;
  }

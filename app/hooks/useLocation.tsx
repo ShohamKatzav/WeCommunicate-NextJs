@@ -19,12 +19,19 @@ const useLocation = () => {
   const positionRef = useRef(position);
   const socketRef = useRef(socket);
   const [locationAccessinfo, setLocationAccessinfo] = useState('prompt');
+  const [socketReady, setSocketReady] = useState(false);
 
   const geolocationOptions: PositionOptions = {
     enableHighAccuracy: true,
     maximumAge: 0,
     timeout: 5000,
   };
+
+  useEffect(() => {
+    if (!loadingSocket) {
+      setSocketReady(true); 
+    }
+  }, [loadingSocket, socket]);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -86,7 +93,8 @@ const useLocation = () => {
     };
 
     const getAndPublishLocation = async () => {
-      navigator.geolocation.getCurrentPosition(await handleSuccess, handleError, geolocationOptions);
+      if (locationAccessinfo == "granted")
+        navigator.geolocation.getCurrentPosition(await handleSuccess, handleError, geolocationOptions);
     }
 
     getAndPublishLocation();
@@ -101,7 +109,7 @@ const useLocation = () => {
         clearInterval(intervalId);
       }
     }
-  }, [socket?.connected]);
+  }, [socketReady]);
 
   return { position, locationAccessinfo };
 };
