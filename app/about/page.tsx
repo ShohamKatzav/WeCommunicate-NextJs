@@ -4,8 +4,8 @@ const About = () => {
     return (
         <div className="relative overflow-hidden">
             <div className="max-w-7xl mx-auto">
-                <div className="relative z-10 pb-8 sm:pb-16 md:pb-20 lg:pb-28 xl:pb-32">
-                    <main className="mt-10 mx-auto max-w-7xl px-4 sm:mt-12 sm:px-6 md:mt-16 lg:mt-20 lg:px-8 xl:mt-28">
+                <div className="relative pb-2 sm:pb-4 md:pb-8 lg:pb-16 xl:pb-16">
+                    <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                         <div className="text-center">
                             <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 dark:text-white sm:text-5xl md:text-6xl">
                                 <span className="block">About</span>
