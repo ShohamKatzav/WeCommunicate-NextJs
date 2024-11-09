@@ -38,8 +38,9 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/deploym
 
 ## Next up:
 
-- Profile editing page
+- Implement a solution for messaging and notifications with a message broker.
 - Recent conversations panel
 - Group chats
+- Profile editing page
 - Send emails option
 - Email confirmation option on sign-up
