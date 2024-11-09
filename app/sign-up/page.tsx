@@ -41,12 +41,7 @@ function SignUp() {
                 }
             })
             .catch(error => {
-                if (error?.response?.status === 401)
-                    window.alert("Wrong email or password");
-                else
-                    window.alert("Error occured: " + error?.response?.data?.message);
-            })
-            .finally(() => {
+                window.alert("Error occured: " + error?.response?.data?.message);
                 setLoading(false);
             })
 

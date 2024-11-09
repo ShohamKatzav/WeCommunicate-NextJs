@@ -48,8 +48,6 @@ const Login = (props: any) => {
           window.alert("Wrong email or password");
         else
           console.error('An unexpected error occurred', error);
-      })
-      .finally(() => {
         setLoading(false);
       })
 
