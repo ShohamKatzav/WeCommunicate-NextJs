@@ -35,7 +35,6 @@ const useLocation = () => {
 
   useEffect(() => {
     if (navigator.geolocation) {
-
       const queryPermissions = async () => {
         try {
           const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
@@ -93,7 +92,6 @@ const useLocation = () => {
     };
 
     const getAndPublishLocation = async () => {
-      if (locationAccessinfo == "granted")
         navigator.geolocation.getCurrentPosition(await handleSuccess, handleError, geolocationOptions);
     }
 
