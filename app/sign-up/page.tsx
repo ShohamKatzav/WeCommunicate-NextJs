@@ -27,6 +27,8 @@ function SignUp() {
                 callback(false);
             else
                 console.error('An unexpected error occurred', error);
+        }
+        finally {
             setLoading(false);
         }
     }
