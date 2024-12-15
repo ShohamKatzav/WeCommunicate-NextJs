@@ -30,7 +30,7 @@ export default class MessageRepository {
         try {
             const { date, sender, participantID, value } = data;
 
-            let conversation = await ConversationRepository.GetConversation([
+            let conversation = await ConversationRepository.GetConversationByMembers([
                 new Types.ObjectId(userID),
                 new Types.ObjectId(participantID)
               ]);
@@ -40,12 +40,17 @@ export default class MessageRepository {
                     [userID as unknown as Types.ObjectId , participantID as unknown as Types.ObjectId]);
             }
 
-            return await Message.create({
+            const newMessage = await Message.create({
                 date,
                 sender,
                 value,
                 conversation: conversation._id
             });
+
+            conversation.messages.push(newMessage._id);
+            await conversation.save();
+
+            return newMessage;
         } catch (err) {
             console.error('Failed to save message:', err);
             throw err;

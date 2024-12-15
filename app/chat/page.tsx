@@ -13,6 +13,7 @@ import MessagesBox from '../components/messagesBox';
 import AuthGuard from '../guards/protected-page';
 import AsName from '../utils/asName';
 import { useNotification } from '../hooks/useNotification';
+import RecentConversationsPanel from '../components/RecentConversationsPanel';
 
 const Chat = (props: any) => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_ADDRESS + "api/chat";
@@ -23,6 +24,7 @@ const Chat = (props: any) => {
   const currentConversationId = useRef<string>();
   const participant = useRef<ChatUser | null>();
   const chatBox = useRef<HTMLDivElement>(null);
+  const [newMessage, setNewMessage] = useState<Message>();
 
   const { increaseNotifications } = useNotification();
 
@@ -43,6 +45,7 @@ const Chat = (props: any) => {
     }
     else
       increaseNotifications(data.sender as string);
+      setNewMessage(data);
   }
 
   const updateUsersList = (data: ChatUser[]) => {
@@ -74,6 +77,7 @@ const Chat = (props: any) => {
 
         socket.emit('chat message', newMessage);
         setMessage({ value: '' });
+        setNewMessage(newMessage);
       } catch (error) {
         console.error("Error sending message:", error);
       }
@@ -133,6 +137,9 @@ const Chat = (props: any) => {
   return (
     <form action={handleSendMessage}>
       <div className="grid md:grid-cols-3 gap-6 p-1 md:p-4 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+        <div className="md:col-start-1 col-span-1">
+          <RecentConversationsPanel getLastMessages={getLastMessages} newMessage={newMessage} participant={participant.current!} />
+        </div>
         <div className="md:col-start-2 col-span-1">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2 md:p-6">
             <h1 className="text-3xl font-bold text-center mb-2">
@@ -161,7 +168,11 @@ const Chat = (props: any) => {
             </div>
 
             <div className="space-y-4">
-              <MessageInput message={message} setMessage={setMessage} />
+              <MessageInput
+                message={message}
+                setMessage={setMessage}
+                participant={participant}
+              />
 
               <Buttons
                 handleInitHistory={handleInitHistory}

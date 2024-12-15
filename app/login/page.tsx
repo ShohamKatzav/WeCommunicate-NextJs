@@ -29,28 +29,29 @@ const Login = (props: any) => {
         window.alert("Wrong email or password");
       else
         console.log(err);
+    }
+    finally {
       setLoading(false);
     }
   }
 
   // Log in a user using email and password
   const logIn = async () => {
-    await AxiosWithAuth().post(`${baseUrl}/auth`, { email, password })
-      .then(async response => {
-        if ('Success' === response.data.message) {
-          updateUser({ email, token: response.data.token });
-          props.setEmail(email)
-          router.push("/chat");
-        }
-      })
-      .catch(error => {
-        if (error?.response?.status === 401)
-          window.alert("Wrong email or password");
-        else
-          console.error('An unexpected error occurred', error);
-        setLoading(false);
-      })
-
+    try {
+      const logInResponse = await AxiosWithAuth().post(`${baseUrl}/auth`, { email, password });
+      if ('Success' === logInResponse.data.message) {
+        updateUser({ email, token: logInResponse.data.token });
+        router.push("/chat");
+      }
+    } catch (error: any) {
+      if (error?.response?.status === 401)
+        window.alert("Wrong email or password");
+      else
+        console.error('An unexpected error occurred', error);
+    }
+    finally {
+      setLoading(false);
+    }
   }
 
   const onButtonClick = () => {
@@ -61,21 +62,25 @@ const Login = (props: any) => {
 
     if ("" === email) {
       setEmailError("Please enter your email")
+      setLoading(false);
       return
     }
 
     if (!/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
       setEmailError("Please enter a valid email")
+      setLoading(false);
       return
     }
 
     if ("" === password) {
       setPasswordError("Please enter a password")
+      setLoading(false);
       return
     }
 
-    if (password.length < 7) {
+    if (password.length < 8) {
       setPasswordError("The password must be 8 characters or longer")
+      setLoading(false);
       return
     }
 

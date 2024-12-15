@@ -9,7 +9,7 @@ async function fetchMessages(page: number, participantId: string) {
     const perPage = 5;
 
     try {
-        const response = await AxiosWithAuth().get(`${baseUrl}/get-data`, {
+        const response = await AxiosWithAuth().get(`${baseUrl}/get-messages`, {
             params: { participantId, page, perPage }
         });
         // Assuming response.data is an array of messages

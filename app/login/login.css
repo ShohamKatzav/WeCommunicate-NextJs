@@ -76,7 +76,7 @@ code {
   
   .inputContainer > .errorLabel {
     color: red;
-    font-size: 12px;
+    font-size: large;
   }
   
   .inputBox {

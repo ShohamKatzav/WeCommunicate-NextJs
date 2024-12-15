@@ -77,39 +77,40 @@ const ioHandler = (req, res) => {
                 const room = `chat_room_${message.conversationID}`;
                 io.to(room).emit('chat message', message);
                 const roomies = io.sockets.adapter.rooms.get(room);
-                const socketIds = Array.from(roomies);
-                const connectedRecipient = connectedUsers.find(
-                    user => user.email.toUpperCase() !== message.sender.toUpperCase()
-                );
-
-
-                //2
-                if (connectedRecipient) {
-                    const recipientSocketId = connectedRecipient.socketId;
-                    const isInRoom = socketIds.includes(recipientSocketId);
-                    if (!isInRoom) {
-                        io.to(recipientSocketId).emit('chat message', message);
-                        const AsName = connectedRecipient?.email.charAt(0).toUpperCase() + connectedRecipient?.email.slice(1);
-                        initializeNotificationKey(AsName, message);
-                        ++notifications[AsName][message.sender.toUpperCase()];
-                    }
-                }
-                //3
-                if (!connectedRecipient) {
-                    // Fetch from MongoDB only if the recipient isn't connected
-                    const conversation = await Conversation.findById(message.conversationID).populate('members', 'email');
-                    if (!conversation) return;
-
-                    const recipient = conversation.members.find(
-                        member => member.email.toUpperCase() !== message.sender.toUpperCase()
+                if (roomies) {
+                    const socketIds = Array.from(roomies);
+                    const connectedRecipient = connectedUsers.find(
+                        user => user.email.toUpperCase() !== message.sender.toUpperCase()
                     );
+                    //2
+                    if (connectedRecipient) {
+                        const recipientSocketId = connectedRecipient.socketId;
+                        const isInRoom = socketIds.includes(recipientSocketId);
+                        if (!isInRoom) {
+                            io.to(recipientSocketId).emit('chat message', message);
+                            const AsName = connectedRecipient?.email.charAt(0).toUpperCase() + connectedRecipient?.email.slice(1);
+                            initializeNotificationKey(AsName, message);
+                            ++notifications[AsName][message.sender.toUpperCase()];
+                        }
+                    }
+                    //3
+                    if (!connectedRecipient) {
+                        // Fetch from MongoDB only if the recipient isn't connected
+                        const conversation = await Conversation.findById(message.conversationID).populate('members', 'email');
+                        if (!conversation) return;
 
-                    if (recipient) {
-                        const AsName = recipient.email.charAt(0).toUpperCase() + recipient.email.slice(1);
-                        initializeNotificationKey(AsName, message);
-                        ++notifications[AsName][message.sender.toUpperCase()];
+                        const recipient = conversation.members.find(
+                            member => member.email.toUpperCase() !== message.sender.toUpperCase()
+                        );
+
+                        if (recipient) {
+                            const AsName = recipient.email.charAt(0).toUpperCase() + recipient.email.slice(1);
+                            initializeNotificationKey(AsName, message);
+                            ++notifications[AsName][message.sender.toUpperCase()];
+                        }
                     }
                 }
+
             });
 
             socket.on('save location', async (location) => {

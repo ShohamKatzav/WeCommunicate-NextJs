@@ -20,8 +20,8 @@ function SignUp() {
     // Call the server API to check if the given email ID already exists
     const checkAccountExists = async (callback: any) => {
         try {
-            const response = await AxiosWithAuth().post(`${baseUrl}/is-exist`, { email });
-            callback(response.data.accountExists);
+            const existsResponse = await AxiosWithAuth().post(`${baseUrl}/is-exist`, { email });
+            callback(existsResponse.data.accountExists);
         } catch (error: any) {
             if (error?.response?.status === 401)
                 callback(false);
@@ -35,18 +35,18 @@ function SignUp() {
 
     // Log in a user using email and password
     const logIn = async () => {
-        await AxiosWithAuth().post(`${baseUrl}/auth`, { email, password })
-            .then(async response => {
-                if ('Success' === response.data.message) {
-                    updateUser({ email, token: response.data.token });
-                    router.push("/chat");
-                }
-            })
-            .catch(error => {
-                window.alert("Error occured: " + error?.response?.data?.message);
-                setLoading(false);
-            })
-
+        try {
+            const logInResponse = await AxiosWithAuth().post(`${baseUrl}/auth`, { email, password });
+            if ('Success' === logInResponse.data.message) {
+                updateUser({ email, token: logInResponse.data.token });
+                router.push("/chat");
+            }
+        } catch (error: any) {
+            window.alert("Error occured: " + error?.response?.data?.message);
+        }
+        finally {
+            setLoading(false);
+        }
     }
 
     const onButtonClick = () => {
@@ -56,22 +56,26 @@ function SignUp() {
         setPasswordError("");
 
         if ("" === email) {
-            setEmailError("Please enter your email")
+            setEmailError("Please enter your email");
+            setLoading(false);
             return
         }
 
         if (!/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
-            setEmailError("Please enter a valid email")
+            setEmailError("Please enter a valid email");
+            setLoading(false);
             return
         }
 
         if ("" === password) {
-            setPasswordError("Please enter a password")
+            setPasswordError("Please enter a password");
+            setLoading(false);
             return
         }
 
-        if (password.length < 7) {
-            setPasswordError("The password must be 8 characters or longer")
+        if (password.length < 8) {
+            setPasswordError("The password must be 8 characters or longer");
+            setLoading(false);
             return
         }
 

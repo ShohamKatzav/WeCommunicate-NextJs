@@ -1,18 +1,45 @@
 import Conversation from "../models/Conversation";
-import { Schema, Types } from 'mongoose';
+import { Types } from 'mongoose';
+import Message from "../models/Message";
 
 export default class ConversationRepository {
 
-    static async GetConversation(members: Types.ObjectId[]) {
+    static async GetConversationByMembers(members: Types.ObjectId[]) {
         try {
             const conversation = await Conversation.findOne({
                 members: { $all: members },
             });
-            
+
             return conversation;
         } catch (error) {
             console.error('Error finding conversation:', error);
             throw new Error('Unable to find conversation');
+        }
+    }
+    static async GetRecentConversations(user: Types.ObjectId) {
+        try {
+            const conversations = await Conversation.find({
+                members: { $in: [user] },
+            }).populate('members', 'email').populate({
+                path: 'messages',
+                model: Message,
+                options: { sort: { date: -1 }, limit: 1 },
+            });
+            const sortedConversations = conversations.sort((a, b) => {
+                const aLastMessageDate = a.messages[0]?.date;
+                const bLastMessageDate = b.messages[0]?.date;
+    
+                // If no messages exist, treat the date as the earliest possible date
+                if (!aLastMessageDate) return 1;
+                if (!bLastMessageDate) return -1;
+    
+                return new Date(bLastMessageDate).getTime() - new Date(aLastMessageDate).getTime();
+            });
+    
+            return sortedConversations;
+        } catch (error) {
+            console.error('Error finding conversations:', error);
+            throw new Error('Unable to find conversations');
         }
     }
     static async CreateConversation(members: Types.ObjectId[]) {

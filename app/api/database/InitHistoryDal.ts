@@ -1,4 +1,3 @@
-import Account from "../models/Account"
 import InitHistory from "../models/InitHistory"
 import { Types } from 'mongoose';
 

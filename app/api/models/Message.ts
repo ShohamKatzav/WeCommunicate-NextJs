@@ -1,4 +1,5 @@
 import { Document, Schema, Types, models, model } from 'mongoose';
+
 interface IMessage extends Document {
     date: Number;
     sender: string;
@@ -25,4 +26,4 @@ const MessageSchema = new Schema<IMessage>({
         required: true
     }
 });
-export default models.Message || model('Message', MessageSchema);
+export default models.Message || model<IMessage>('Message', MessageSchema);

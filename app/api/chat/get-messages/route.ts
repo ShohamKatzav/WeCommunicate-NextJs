@@ -5,7 +5,7 @@ import InitHistoryRepository from "../../database/InitHistoryDal";
 import MessageRepository from "../../database/MessageDal";
 import ConversationRepository from "../../database/ConversationDal";
 import guard from "../../guards/guard";
-import { Types, Schema } from "mongoose";
+import { Types } from "mongoose";
 
 export async function GET(
   req: NextRequest
@@ -31,7 +31,7 @@ export async function GET(
     }
 
     // Check for existing conversation between the two users
-    const conversation = await ConversationRepository.GetConversation([
+    const conversation = await ConversationRepository.GetConversationByMembers([
       new Types.ObjectId(userID),
       new Types.ObjectId(participantId)
     ]);

@@ -6,7 +6,7 @@ import { useSocket } from '../hooks/useSocket';
 import Location from '../types/location';
 import ciEquals from '../utils/ciEqual';
 import useLocation from '../hooks/useLocation';
-import LocationAccessInformation from '../components/locationAccessInformation';
+import LocationAccessInformation from '../components/locationAccessStatus';
 import useIsMedium from '../hooks/useIsMedium';
 
 
