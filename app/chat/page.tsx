@@ -66,10 +66,11 @@ const Chat = (props: any) => {
 
       try {
         const result = await AxiosWithAuth().post(`${baseUrl}/save-data`, newMessage);
+        let newConversationId;
 
         if (!currentConversationId.current) {
           socket.disconnect();
-          const newConversationId = result.data.messageDoc.conversation;
+          newConversationId = result.data.messageDoc.conversation;
           socket.io.opts.extraHeaders = { email: props.user?.email, conversationId: newConversationId }
           socket.connect();
           currentConversationId.current = newConversationId;
@@ -77,7 +78,7 @@ const Chat = (props: any) => {
 
         socket.emit('chat message', newMessage);
         setMessage({ value: '' });
-        setNewMessage(newMessage);
+        setNewMessage({...newMessage, conversationID: currentConversationId.current || newConversationId});
       } catch (error) {
         console.error("Error sending message:", error);
       }

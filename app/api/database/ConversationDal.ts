@@ -23,13 +23,13 @@ export default class ConversationRepository {
             }).populate('members', 'email').populate({
                 path: 'messages',
                 model: Message,
-                options: { sort: { date: -1 }, limit: 1 },
+                options: { sort: { date: -1 }, limit: 3 },
             });
+    
             const sortedConversations = conversations.sort((a, b) => {
                 const aLastMessageDate = a.messages[0]?.date;
                 const bLastMessageDate = b.messages[0]?.date;
     
-                // If no messages exist, treat the date as the earliest possible date
                 if (!aLastMessageDate) return 1;
                 if (!bLastMessageDate) return -1;
     

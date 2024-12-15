@@ -28,12 +28,12 @@ const RecentConversationsPanel = ({ getLastMessages, newMessage, participant }: 
     }, []);
 
     useEffect(() => {
-        if (newMessage) {
+        if (newMessage && newMessage?.conversationID) {
             setConversations((prevConversations: any[]) => {
                 const updatedConversations = [...prevConversations];
 
                 const conversationIndex = updatedConversations.findIndex(
-                    (conversation) => conversation._id === newMessage.conversationID
+                    conversation => conversation._id.toUpperCase() === newMessage.conversationID?.toUpperCase()
                 );
 
                 if (conversationIndex > -1) {
@@ -62,7 +62,7 @@ const RecentConversationsPanel = ({ getLastMessages, newMessage, participant }: 
                 return updatedConversations;
             });
         }
-    }, [newMessage]);
+    }, [newMessage, newMessage?.conversationID]);
 
     const switchRoom = (otherMember: chatUser) => {
         initializeRoomNotifications(otherMember?.email!);
