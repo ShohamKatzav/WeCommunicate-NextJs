@@ -28,9 +28,6 @@ function SignUp() {
             else
                 console.error('An unexpected error occurred', error);
         }
-        finally {
-            setLoading(false);
-        }
     }
 
     // Log in a user using email and password
@@ -42,10 +39,8 @@ function SignUp() {
                 router.push("/chat");
             }
         } catch (error: any) {
-            window.alert("Error occured: " + error?.response?.data?.message);
-        }
-        finally {
             setLoading(false);
+            window.alert("Error occured: " + error?.response?.data?.message);
         }
     }
 
@@ -84,7 +79,10 @@ function SignUp() {
                 logIn();
             }
             else
+            {
+                setLoading(false);
                 window.alert("An account with this email is already in use");
+            }
         })
 
     }

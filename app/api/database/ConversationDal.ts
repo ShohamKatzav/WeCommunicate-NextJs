@@ -23,7 +23,7 @@ export default class ConversationRepository {
             }).populate('members', 'email').populate({
                 path: 'messages',
                 model: Message,
-                options: { sort: { date: -1 }, limit: 3 },
+                options: { sort: { date: -1 }, perDocumentLimit: 1 },
             });
     
             const sortedConversations = conversations.sort((a, b) => {

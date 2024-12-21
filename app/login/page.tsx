@@ -24,14 +24,12 @@ const Login = (props: any) => {
       callback(response.data.accountExists);
     }
     catch (err: any) {
+      setLoading(false);
       console.log(err);
       if (err.response && err.response.status === 401)
         window.alert("Wrong email or password");
       else
         console.log(err);
-    }
-    finally {
-      setLoading(false);
     }
   }
 

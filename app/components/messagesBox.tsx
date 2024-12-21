@@ -44,7 +44,7 @@ const MessagesBox = ({ messages, chatBox, participant }: MessagesBoxProps) => {
     return (
         <>
             <div className="mt-8 md:mt-20">
-                <div ref={chatBox} className="w-full flex flex-col md:flex-cols-4 overflow-y-auto h-96">
+                <div ref={chatBox} className="w-full flex flex-col md:flex-cols-4 overflow-y-auto h-[45vh]">
                     {loadNew &&
                         <LoadMoreMessages chatBox={chatBox} oldMessages={messages} participant={participant} />
                     }

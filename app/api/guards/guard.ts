@@ -4,12 +4,9 @@ import jwt from 'jsonwebtoken';
 const jwtSecretKey = process.env.TOKEN_SECRET as jwt.Secret;
 
 const guard = async (req: NextRequest) => {
-    let authToken: string = '';
 
-    const authHeader = req?.headers?.get('authorization');
-    if (authHeader) {
-        authToken = authHeader.split(' ')[1];
-    } else {
+    const authToken = req?.headers?.get('authorization')?.split(' ')[1];
+    if (!authToken) {
         return NextResponse.json({ error: 'Authorization token missing' }, { status: 401 });
     }
 
@@ -18,7 +15,7 @@ const guard = async (req: NextRequest) => {
         if (!verified) {
             return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
         }
-        return null;  // Return null or undefined if no error
+        return null;
     } catch (error) {
         return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }

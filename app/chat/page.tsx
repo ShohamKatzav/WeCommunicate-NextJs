@@ -137,11 +137,11 @@ const Chat = (props: any) => {
 
   return (
     <form action={handleSendMessage}>
-      <div className="grid md:grid-cols-3 gap-6 p-1 md:p-4 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
-        <div className="md:col-start-1 col-span-1">
+      <div className="grid md:grid-cols-4 gap-6 p-1 md:p-4 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+        <div className="md:col-start-1 md:col-span-1 col-span-2">
           <RecentConversationsPanel getLastMessages={getLastMessages} newMessage={newMessage} participant={participant.current!} />
         </div>
-        <div className="md:col-start-2 col-span-1">
+        <div className="md:col-start-2 col-span-2">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2 md:p-6">
             <h1 className="text-3xl font-bold text-center mb-2">
               Welcome, {' '}
