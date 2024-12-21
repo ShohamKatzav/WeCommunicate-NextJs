@@ -6,7 +6,7 @@ import AxiosWithAuth from '../utils/axiosWithAuth';
 import { useUser } from '../hooks/useUser';
 import Loading from '../components/loading';
 
-const Login = () => {
+const Login = (props: any) => {
   const router = useRouter();
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
