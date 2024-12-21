@@ -17,12 +17,10 @@ const MessagesBox = ({ messages, chatBox, participant }: MessagesBoxProps) => {
     const [loadNew, setLoadNew] = useState(false);
 
     const handleScroll = () => {
-        if (chatBox.current?.scrollTop === 0) {
-            // this if fix for case I switch to conversation with less than 5 messages and dont need the fetching spinner
-            if (chatBox.current?.clientHeight != chatBox.current?.scrollHeight)
-                if (!loadNew)
-                    setLoadNew(true);
-        }
+        const isAtTop = (chatBox.current?.clientHeight! + 1) + (chatBox.current?.scrollTop! * -1) >= chatBox.current?.scrollHeight!;
+        if (isAtTop)
+            setLoadNew(true);
+
     }
 
     useEffect(() => {
@@ -44,15 +42,15 @@ const MessagesBox = ({ messages, chatBox, participant }: MessagesBoxProps) => {
     return (
         <>
             <div className="mt-8 md:mt-20">
-                <div ref={chatBox} className="w-full flex flex-col md:flex-cols-4 overflow-y-auto h-[45vh]">
-                    {loadNew &&
-                        <LoadMoreMessages chatBox={chatBox} oldMessages={messages} participant={participant} />
-                    }
+                <div ref={chatBox} className="overflow-y-scroll h-[30vh] w-full flex md:flex-cols-4 flex-col-reverse">
                     <div className="grid row-start-2 md:grid-cols-5">
                         {messages.map((message, index) =>
                             <MessageViewer key={index} message={message} email={user?.email} />)
                         }
                     </div>
+                    {chatBox.current?.scrollTop != 0 && loadNew &&
+                        <LoadMoreMessages chatBox={chatBox} oldMessages={messages} participant={participant} />
+                    }
                 </div>
             </div>
         </>

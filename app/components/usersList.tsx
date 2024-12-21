@@ -122,7 +122,7 @@ const UsersList = ({ chatListActiveUsers, getLastMessages }: ListProps) => {
             <div className="md:my-1.5 my-0.5"></div>
             <button type="button" className="min-w-full w-72 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 focus:bg-gray-100 p-4 shadow rounded
              bg-white text-sm font-medium leading-none text-gray-800 flex items-center justify-between" onClick={dropupHandler}>
-                <Users className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                <Users size={32} />
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                     Friends
                 </h2>

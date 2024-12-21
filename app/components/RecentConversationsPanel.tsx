@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import fetchRecentConversations from "../actions/conversation-actions";
-import chatUser from "../types/chatUser";
 import { useUser } from "../hooks/useUser";
-import AsName from "../utils/asName";
 import ChatUser from "../types/chatUser";
 import Message from "../types/message";
-import { useNotification } from "../hooks/useNotification";
 import useIsMedium from "../hooks/useIsMedium";
+import ConversationSummary from "./conversationSummary";
 
 interface ConversationsPanelProps {
     getLastMessages: (participantFromList: ChatUser) => Promise<void>;
@@ -18,7 +16,6 @@ const RecentConversationsPanel = ({ getLastMessages, newMessage, participant }: 
     const [conversations, setConversations] = useState<any>([]);
     const [loading, setLoading] = useState(true);
     const { user } = useUser();
-    const { initializeRoomNotifications, newMessageNotification } = useNotification();
     const isMediumScreen = useIsMedium();
 
     const [toggle, setToggle] = useState(isMediumScreen);
@@ -86,13 +83,6 @@ const RecentConversationsPanel = ({ getLastMessages, newMessage, participant }: 
         }
     }, [newMessage, newMessage?.conversationID]);
 
-    const switchRoom = (otherMember: chatUser) => {
-        initializeRoomNotifications(otherMember?.email!);
-        getLastMessages(otherMember);
-        if (!isMediumScreen)
-            setToggle(!toggle);
-    }
-
     return (
         <>
             <button type="button" className="min-w-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 focus:bg-gray-100 p-4 shadow rounded
@@ -124,53 +114,12 @@ const RecentConversationsPanel = ({ getLastMessages, newMessage, participant }: 
 
             {toggle && conversations.length > 0 && (
                 <ul className="md:space-y-5 space-y-2">
-                    {conversations.map((conversation: any, conversationIndex: number) => {
-                        const otherMember = conversation.members.find(
-                            (member: chatUser) =>
-                                member.email?.toUpperCase() !== user?.email?.toUpperCase()
-                        );
-                        const incoming = newMessageNotification[otherMember.email?.toUpperCase()!];
-
-                        return (
-                            otherMember && <li
-                                key={conversationIndex}
-                                className="bg-white p-4 rounded-lg shadow-md flex items-center gap-4 hover:shadow-lg transition-shadow"
-                                onClick={() => switchRoom(otherMember)}
-                            >
-                                <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-lg font-semibold text-gray-600">
-                                    {otherMember?.email?.charAt(0).toUpperCase() || "?"}
-                                </div>
-                                <div className="flex-1">
-                                    <div className="text-gray-800 font-medium text-lg">
-                                        {AsName(otherMember?.email).split("@")[0] || "Unknown User"}
-                                    </div>
-                                    {conversation.messages && conversation.messages.length > 0 ? (
-                                        <div className="text-gray-600 text-sm relative">
-                                            <span className="font-semibold text-gray-800">
-                                                {conversation.messages[0].sender.toUpperCase() === user?.email?.toUpperCase() ? 'You' :
-                                                    conversation.messages[0].sender.split("@")[0]}
-                                            </span>
-                                            : {conversation.messages[0].value}
-                                            <div className="text-xs text-gray-400">
-                                                {conversation.messages[0].date &&
-                                                    new Date(conversation.messages[0].date).toLocaleString()}
-                                            </div>
-                                            {incoming > 0 &&
-                                                <span className="inline-flex items-center justify-center px-2 py-1
-                                                text-xl font-bold leading-none text-white 
-                                                bg-red-600 rounded-full absolute top-0 right-0 transform translate-x-1/2 -translate-y-1/2">
-                                                    {incoming}
-                                                </span>
-                                            }
-                                        </div>
-                                    ) : (
-                                        <div className="text-gray-500 text-sm italic">
-                                            No messages yet.
-                                        </div>
-                                    )}
-                                </div>
-                            </li>
-                        );
+                    {conversations.map((conversation: any) => {
+                        return <ConversationSummary
+                            conversation={conversation}
+                            getLastMessages={getLastMessages}
+                            setToggle={setToggle}
+                            key={conversation._id} />
                     })}
                 </ul>
             )

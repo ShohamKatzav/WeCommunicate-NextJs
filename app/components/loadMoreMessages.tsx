@@ -19,7 +19,7 @@ interface LoadMoreProps {
 const LoadMoreMessages = ({ chatBox, oldMessages, participant }: LoadMoreProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [page, setPage] = useState(1);
-  const [allDataFetched, setAllDataFetched] = useState(true);
+  const [allDataFetched, setAllDataFetched] = useState(false);
   const [fetching, setFetching] = useState(false);
 
   const { ref, inView } = useInView();
@@ -41,8 +41,7 @@ const LoadMoreMessages = ({ chatBox, oldMessages, participant }: LoadMoreProps) 
       setAllDataFetched(true);
     }
     const newMessages = res?.chat ?? [];
-    if (newMessages.length > 0)
-    {
+    if (newMessages.length > 0) {
       setNewMessagesCount(res.chat.length);
       setMessages((prevMessages: Message[]) => [...newMessages, ...prevMessages]);
     }
@@ -56,12 +55,6 @@ const LoadMoreMessages = ({ chatBox, oldMessages, participant }: LoadMoreProps) 
     }
   }, [inView]);
 
-  useEffect(() => {
-    if (!fetching && chatBox.current && newMessages.current) {
-      chatBox.current.scrollTop = newMessages.current.offsetHeight;
-    }
-  }, [messages, participant]);
-
   // aka intialize chat history
   useEffect(() => {
     if (oldMessages.length === 0) {
@@ -71,26 +64,26 @@ const LoadMoreMessages = ({ chatBox, oldMessages, participant }: LoadMoreProps) 
 
   useEffect(() => {
     setMessages([]);
-}, [participant]);
+  }, [participant]);
 
 
   return (
     <>
-      <div
-        className="flex justify-center items-center"
-        ref={ref}
-      >
-        {!allDataFetched && <Spinner />}
+      <div className="grid row-start-2 md:grid-cols-5">
+        {messages.slice(newMessagesCount).map((message, index) =>
+          <MessageViewer key={index + 5} message={message} email={user?.email} />)
+        }
       </div>
       <div ref={newMessages} className="grid row-start-2 md:grid-cols-5">
         {messages.slice(0, newMessagesCount).map((message, index) =>
           <MessageViewer key={index} message={message} email={user?.email} />)
         }
       </div>
-      <div className="grid row-start-2 md:grid-cols-5">
-        {messages.slice(newMessagesCount).map((message, index) =>
-          <MessageViewer key={index + 5} message={message} email={user?.email} />)
-        }
+      <div
+        className="flex justify-center items-center"
+        ref={ref}
+      >
+        {!allDataFetched && <Spinner />}
       </div>
     </>);
 
