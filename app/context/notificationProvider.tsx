@@ -34,19 +34,19 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     }, [newMessageNotification, socket]);
 
     // DEL
-    const initializeRoomNotifications = async (email: string) => {
-        await socket?.emit("notifications checked", email.toUpperCase());
+    const initializeRoomNotifications = async (roomID: string) => {
+        await socket?.emit("notifications checked", roomID);
         setNewMessageNotification(prevState => ({
             ...prevState,
-            [email.toUpperCase()]: 0,
+            [roomID]: 0,
         }));
     };
 
-    const increaseNotifications = (email: string) => {
-        if (email) {
+    const increaseNotifications = (roomID: string) => {
+        if (roomID) {
             setNewMessageNotification(prevState => ({
                 ...prevState,
-                [email.toUpperCase()]: (prevState[email.toUpperCase()] || 0) + 1,
+                [roomID]: (prevState[roomID] || 0) + 1,
             }));
         }
     };
@@ -54,8 +54,8 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     const notificationsUpdate = (data: Record<string, number>) => {
         if (data) {
             const updatedNotifications: Record<string, number> = {};
-            for (const [email, count] of Object.entries(data)) {
-                updatedNotifications[email.toUpperCase()] = Number(count);
+            for (const [roomID, count] of Object.entries(data)) {
+                updatedNotifications[roomID] = Number(count);
             }
             setNewMessageNotification(() => updatedNotifications); // Replace state completely
         }

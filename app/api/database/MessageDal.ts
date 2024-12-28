@@ -5,7 +5,7 @@ import { Schema, Types } from 'mongoose';
 interface MessageDTO {
     date: Number;
     sender: string;
-    participantID: string;
+    participantID: string[];
     value: string;
 }
 
@@ -29,15 +29,18 @@ export default class MessageRepository {
     static async SaveMessage(data: MessageDTO, userID: string) {
         try {
             const { date, sender, participantID, value } = data;
+            const participantIDArray = Array.isArray(participantID) ? participantID : [];
 
-            let conversation = await ConversationRepository.GetConversationByMembers([
+            const memberIDs = [
                 new Types.ObjectId(userID),
-                new Types.ObjectId(participantID)
-              ]);
+                ...participantIDArray.map(id => new Types.ObjectId(id))
+            ];
+
+            let conversation = await ConversationRepository.GetConversationByMembers(memberIDs);
 
             if (!conversation) {
                 conversation = await ConversationRepository.CreateConversation(
-                    [userID as unknown as Types.ObjectId , participantID as unknown as Types.ObjectId]);
+                    memberIDs);
             }
 
             const newMessage = await Message.create({

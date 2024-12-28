@@ -8,6 +8,7 @@ export default class ConversationRepository {
         try {
             const conversation = await Conversation.findOne({
                 members: { $all: members },
+                $expr: { $eq: [{ $size: "$members" }, members.length] }
             });
 
             return conversation;

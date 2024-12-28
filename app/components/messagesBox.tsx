@@ -9,10 +9,10 @@ import ChatUser from "../types/chatUser";
 interface MessagesBoxProps {
     messages: Message[],
     chatBox: RefObject<HTMLDivElement>
-    participant: ChatUser
+    participants: ChatUser[]
 }
 
-const MessagesBox = ({ messages, chatBox, participant }: MessagesBoxProps) => {
+const MessagesBox = ({ messages, chatBox, participants }: MessagesBoxProps) => {
     const { user } = useUser();
     const [loadNew, setLoadNew] = useState(false);
 
@@ -37,7 +37,7 @@ const MessagesBox = ({ messages, chatBox, participant }: MessagesBoxProps) => {
 
     useEffect(() => {
         setLoadNew(false);
-    }, [participant]);
+    }, [participants]);
 
     return (
         <>
@@ -49,7 +49,7 @@ const MessagesBox = ({ messages, chatBox, participant }: MessagesBoxProps) => {
                         }
                     </div>
                     {chatBox.current?.scrollTop != 0 && loadNew &&
-                        <LoadMoreMessages chatBox={chatBox} oldMessages={messages} participant={participant} />
+                        <LoadMoreMessages chatBox={chatBox} oldMessages={messages} participants={participants} />
                     }
                 </div>
             </div>

@@ -7,18 +7,18 @@ interface ButtonsProps {
   handleLeaveRoom: () => void;
   chat: Message[],
   message: Message,
-  participant: MutableRefObject<ChatUser | null | undefined>
+  participants: MutableRefObject<ChatUser[] | null | undefined>
 }
 
 
-const Buttons = ({ handleInitHistory, handleLeaveRoom, chat, message, participant }: ButtonsProps) => {
+const Buttons = ({ handleInitHistory, handleLeaveRoom, chat, message, participants }: ButtonsProps) => {
 
   return (
     <div className="m-4">
       <input className="disabled:opacity-50 disabled:cursor-not-allowed
               bg-transparent hover:bg-blue-500 text-blue-700 font-semibold
             hover:text-white py-2 px-1 md:px-4 border border-blue-500 hover:border-transparent rounded m-4"
-        disabled={message.value?.trim() === '' || !participant.current}
+        disabled={message.value?.trim() === '' || !participants.current}
         autoFocus={true}
         type="submit" value="Send Message" />
       <input type="button" value={"Init Room History"} className="disabled:opacity-50 disabled:cursor-not-allowed
@@ -31,7 +31,7 @@ const Buttons = ({ handleInitHistory, handleLeaveRoom, chat, message, participan
               bg-transparent hover:bg-blue-500 text-blue-700 font-semibold
             hover:text-white py-2 px-1 md:px-4 border border-blue-500 hover:border-transparent rounded m-4"
         onClick={handleLeaveRoom}
-        disabled={!participant.current}
+        disabled={!participants.current}
       />
     </div>
   );

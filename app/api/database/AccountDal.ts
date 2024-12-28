@@ -46,6 +46,15 @@ export default class AccountRepository {
             throw new Error('Failed to find user by ID');
         }
     }
+    static async getUsersByID(IDs: string[]) {
+        try {
+            var obj_ids = IDs.map(function(id) { return new Types.ObjectId(id); });
+            return await Account.find({_id: {$in: obj_ids}}).exec();
+        } catch (err) {
+            console.error('Failed to find users by ID:', err);
+            throw new Error('Failed to find users by ID');
+        }
+    }
     static async getUserByEmail(email: string) {
         try {
             return await Account.findOne({

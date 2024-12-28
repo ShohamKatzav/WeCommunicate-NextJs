@@ -1,6 +1,5 @@
 'use client';
 import { memo, useEffect, useRef, useState } from 'react';
-import { MessageCircle } from 'lucide-react';
 import AxiosWithAuth from '../utils/axiosWithAuth';
 import Message from '../types/message';
 import ChatUser from '../types/chatUser';
@@ -11,11 +10,12 @@ import { useSocket } from '../hooks/useSocket';
 import fetchMessages from '../actions/message-actions';
 import MessagesBox from '../components/messagesBox';
 import AuthGuard from '../guards/protected-page';
-import AsName from '../utils/asName';
+import { AsShortName } from '../utils/asName';
 import { useNotification } from '../hooks/useNotification';
 import RecentConversationsPanel from '../components/recentConversationsPanel';
 import GroupCreationForm from '../components/groupCreationForm';
 import { MessageSquareDiff } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 
 const Chat = (props: any) => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_ADDRESS + "api/chat";
@@ -24,30 +24,32 @@ const Chat = (props: any) => {
   const [message, setMessage] = useState<Message>({ date: undefined, sender: '', value: '' });
   const [chatListActiveUsers, setChatListActiveUsers] = useState<ChatUser[]>([]);
   const currentConversationId = useRef<string>();
-  const participant = useRef<ChatUser | null>();
+  const participants = useRef<ChatUser[] | null>();
   const chatBox = useRef<HTMLDivElement>(null);
   const [newMessage, setNewMessage] = useState<Message>();
   const [isModalOpen, setModalOpen] = useState(false);
 
   const { increaseNotifications } = useNotification();
 
-  const getLastMessages = async (participantFromList: ChatUser) => {
+  const getLastMessages = async (roomParticipants: ChatUser[]) => {
     await socket?.emit('leave room', { conversationId: currentConversationId });
-    const response = await fetchMessages(1, participantFromList._id!);
+    const response = await fetchMessages(1, roomParticipants.map(p => p._id!));
     await socket?.emit('join room', { conversationId: response.conversation });
     const chatWithFormattedDates = response?.chat?.length ? response.chat?.map((message: Message) =>
       ({ ...message, date: new Date(message.date!).toLocaleString() })) : [];
     currentConversationId.current = response.conversation;
     setChat(chatWithFormattedDates);
-    participant.current = participantFromList;
+    participants.current = roomParticipants;
   }
 
   const handleIncomingMessage = (data: Message) => {
-    if (data.sender?.toUpperCase() === participant.current?.email?.toUpperCase()) {
-      setChat((prevChat) => [...prevChat, { date: new Date(), sender: data.sender, value: data.value }]);
+    if (data.conversationID === currentConversationId.current) {
+      if (data.sender?.toUpperCase() !== props.user?.email.toUpperCase()) {
+        setChat((prevChat) => [...prevChat, { date: new Date(), sender: data.sender, value: data.value }]);
+      }
     }
     else
-      increaseNotifications(data.sender as string);
+      increaseNotifications(data.conversationID as string);
     setNewMessage(data);
   }
 
@@ -56,11 +58,11 @@ const Chat = (props: any) => {
   };
 
   const handleSendMessage = async () => {
-    if (socket && participant.current?._id) {
+    if (socket && participants.current?.length) {
       const newMessage: Message = {
         date: new Date(),
         sender: props.user?.email,
-        participantID: participant.current._id,
+        participantID: participants.current.map(p => p._id!),
         value: message.value?.trim(),
         conversationID: currentConversationId.current
       };
@@ -100,9 +102,10 @@ const Chat = (props: any) => {
       })
   };
   const handleLeaveRoom = async () => {
+    currentConversationId.current = undefined;
     await socket?.emit('leave room', { conversationId: currentConversationId });
     setChat([]);
-    participant.current = null;
+    participants.current = null;
   }
 
   useEffect(() => {
@@ -159,27 +162,41 @@ const Chat = (props: any) => {
             <h2 className="text-xl font-semibold text-white text-center flex-1">
               Create Group
             </h2>
-            <MessageSquareDiff size={32} />
+            <MessageSquareDiff size={28} />
           </button>
-          <GroupCreationForm isOpen={isModalOpen} onClose={handleCloseModal} />
-          <RecentConversationsPanel getLastMessages={getLastMessages} newMessage={newMessage} participant={participant.current!} />
+          <GroupCreationForm
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+            participants={participants}
+            conversationId={currentConversationId}
+            setChat={setChat} />
+          <RecentConversationsPanel getLastMessages={getLastMessages} newMessage={newMessage} participants={participants.current!} />
         </div>
         <div className="md:col-start-2 col-span-2">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2 md:p-6">
             <h1 className="text-3xl font-bold text-center mb-2">
               Welcome, {' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-red-600">
-                {props.user?.email?.split('@')[0]}
+                {AsShortName(props.user?.email as string)}
               </span>
             </h1>
 
             <div className="flex items-center justify-center space-x-2 text-gray-600 dark:text-gray-300">
               <MessageCircle size={32} />
               <p className="text-lg">
-                {participant.current
-                  ? `Chatting with ${AsName(participant.current?.email?.split('@')[0] as string)}`
-                  : "Please select a participant to chat with"
-                }
+                {participants.current?.length! > 0 ? (
+                  <>
+                    Chatting with:{" "}
+                    {participants.current?.map((p, index) => (
+                      <span key={index}>
+                        {AsShortName(p.email!)}
+                        {index < participants.current?.length! - 1 ? ", " : ""}
+                      </span>
+                    ))}
+                  </>
+                ) : (
+                  "Please select a participant to chat with"
+                )}
               </p>
             </div>
 
@@ -187,7 +204,7 @@ const Chat = (props: any) => {
               <MessagesBox
                 messages={chat}
                 chatBox={chatBox}
-                participant={participant.current!}
+                participants={participants.current!}
               />
             </div>
 
@@ -195,7 +212,7 @@ const Chat = (props: any) => {
               <MessageInput
                 message={message}
                 setMessage={setMessage}
-                participant={participant}
+                participants={participants}
               />
 
               <Buttons
@@ -203,7 +220,7 @@ const Chat = (props: any) => {
                 handleLeaveRoom={handleLeaveRoom}
                 chat={chat}
                 message={message}
-                participant={participant}
+                participants={participants}
               />
             </div>
           </div>
@@ -215,6 +232,7 @@ const Chat = (props: any) => {
             <UsersList
               chatListActiveUsers={chatListActiveUsers}
               getLastMessages={getLastMessages}
+              conversationId={currentConversationId.current}
             />
           </div>
         </div>

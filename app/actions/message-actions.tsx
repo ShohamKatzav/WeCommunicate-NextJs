@@ -1,8 +1,12 @@
 import AxiosWithAuth from "../utils/axiosWithAuth";
 
-async function fetchMessages(page: number, participantId: string) {
+async function fetchMessages(page: number, participantsId: string[]) {
     if (typeof page !== 'number' || page < 1) {
         //console.error("Invalid page number");
+        return [];
+    }
+    if (!Array.isArray(participantsId) || participantsId.some(id => typeof id !== "string")) {
+        console.error("Invalid participantsId");
         return [];
     }
     const baseUrl = process.env.NEXT_PUBLIC_BASE_ADDRESS + "api/chat";
@@ -10,7 +14,7 @@ async function fetchMessages(page: number, participantId: string) {
 
     try {
         const response = await AxiosWithAuth().get(`${baseUrl}/get-messages`, {
-            params: { participantId, page, perPage }
+            params: { participantsId, page, perPage }
         });
         // Assuming response.data is an array of messages
         if (response.data) {

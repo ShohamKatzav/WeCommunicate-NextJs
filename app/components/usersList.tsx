@@ -12,16 +12,17 @@ import { useNotification } from "../hooks/useNotification";
 
 interface ListProps {
     chatListActiveUsers: ChatUser[];
-    getLastMessages: (participantFromList: ChatUser) => Promise<void>;
+    getLastMessages: (participantFromList: ChatUser[]) => Promise<void>;
+    conversationId: string | undefined;
 }
 
-const UsersList = ({ chatListActiveUsers, getLastMessages }: ListProps) => {
+const UsersList = ({ chatListActiveUsers, getLastMessages, conversationId }: ListProps) => {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_ADDRESS + "api/account";
 
     const isMediumScreen = useIsMedium();
     const { user } = useUser();
     const { socket } = useSocket();
-    const { initializeRoomNotifications, newMessageNotification } = useNotification();
+    const { initializeRoomNotifications } = useNotification();
 
     const [chatListAllUsers, setChatListAllUsers] = useState<ChatUser[]>([]);
 
@@ -48,6 +49,11 @@ const UsersList = ({ chatListActiveUsers, getLastMessages }: ListProps) => {
         init();
     }, [chatListActiveUsers]);
 
+    useEffect(() => {
+        if(conversationId)
+            initializeRoomNotifications(conversationId);
+    }, [conversationId]);
+
     const init = async () => {
         const chatUsers = await getChatUsersList();
         if (chatUsers === undefined) {
@@ -68,8 +74,7 @@ const UsersList = ({ chatListActiveUsers, getLastMessages }: ListProps) => {
 
     const switchRoom = async (participant: ChatUser) => {
         if (socket && participant) {
-            initializeRoomNotifications(participant.email!.toUpperCase());
-            await getLastMessages(participant);
+            await getLastMessages([participant]);
         }
     };
 
@@ -82,7 +87,6 @@ const UsersList = ({ chatListActiveUsers, getLastMessages }: ListProps) => {
                             chatListAllUsers
                                 ?.sort((a, b) => a.email!.localeCompare(b.email!))
                                 .map((chatMember: ChatUser, index) => {
-                                    const incoming = newMessageNotification[chatMember.email?.toUpperCase()!];
                                     return (
                                         AsName(chatMember?.email as string) !== AsName(user?.email as string) && (
                                             <li onClick={() => switchRoom(chatMember)} className="hover:bg-slate-100" key={index}>
@@ -91,14 +95,6 @@ const UsersList = ({ chatListActiveUsers, getLastMessages }: ListProps) => {
                                                         <h3 className="text-lg leading-6 font-medium text-gray-900">
                                                             {AsName(chatMember?.email as string)}
                                                         </h3>
-
-                                                        {incoming > 0 &&
-                                                            <span className="inline-flex items-center justify-center px-2 py-1
-                                                                    text-xs font-bold leading-none
-                                                                    text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
-                                                                {incoming}
-                                                            </span>
-                                                        }
                                                     </div>
                                                     <div className="mt-4 flex items-center justify-between">
                                                         <p className="text-sm font-medium text-gray-500">

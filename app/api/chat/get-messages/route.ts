@@ -6,6 +6,7 @@ import MessageRepository from "../../database/MessageDal";
 import ConversationRepository from "../../database/ConversationDal";
 import guard from "../../guards/guard";
 import { Types } from "mongoose";
+import {IAccount} from "../../models/Account";
 
 export async function GET(
   req: NextRequest
@@ -13,7 +14,7 @@ export async function GET(
   await guard(req);
   const url = new URL(req.url);
   const searchParams = new URLSearchParams(url.search);
-  const participantId = searchParams.get("participantId") as string;
+  const participantsId = searchParams.getAll('participantsId[]');
   const page = parseInt(searchParams.get("page") as string);
   const perPage = parseInt(searchParams.get("perPage") as string);
 
@@ -21,19 +22,19 @@ export async function GET(
     await connectDB();
     let chatQuery: any;
     let chat: any = [];
-    let totalCount = 0;
+    let totalMessagesCount = 0;
 
     const userID = await AccountRepository.extractIDFromToken(req?.headers?.get('authorization')!);
-    const partner = await AccountRepository.getUserByID(participantId!);
+    const partners = await AccountRepository.getUsersByID(participantsId!);
 
-    if (!userID || !partner) {
+    if (!userID || !partners) {
       return NextResponse.json({ message: "Users not found", chat: [] });
     }
 
-    // Check for existing conversation between the two users
+    // Check for existing conversation between the users
     const conversation = await ConversationRepository.GetConversationByMembers([
       new Types.ObjectId(userID),
-      new Types.ObjectId(participantId)
+      ...partners.map((partner: IAccount) => partner._id)
     ]);
 
     // If no conversation exists, return an empty response
@@ -48,18 +49,18 @@ export async function GET(
       if (initHistoryTime) {
         chatQuery.date = { $gt: initHistoryTime.date }; // Filter messages after init history time
       }
-      totalCount = await MessageRepository.countMessages(chatQuery);
+      totalMessagesCount = await MessageRepository.countMessages(chatQuery);
     }
 
     const skipCount: number = perPage * page;
 
-    if (totalCount < skipCount) {
-      if (skipCount - perPage < totalCount)
-        chat = await MessageRepository.GetMessages(chatQuery, totalCount % perPage, 0);
+    if (totalMessagesCount < skipCount) {
+      if (skipCount - perPage < totalMessagesCount)
+        chat = await MessageRepository.GetMessages(chatQuery, totalMessagesCount % perPage, 0);
       return NextResponse.json({ message: "All data fetched", chat, conversation: conversation._id });
     }
 
-    chat = await MessageRepository.GetMessages(chatQuery, perPage, totalCount - perPage * page);
+    chat = await MessageRepository.GetMessages(chatQuery, perPage, totalMessagesCount - perPage * page);
     return NextResponse.json({ message: "success", chat, conversation: conversation._id });
 
   } catch (err) {

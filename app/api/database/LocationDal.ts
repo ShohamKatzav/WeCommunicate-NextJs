@@ -1,6 +1,6 @@
 import Account from "../models/Account";
 import Location from "../models/Location";
-import mongoose, { Types } from 'mongoose';
+import { Types } from 'mongoose';
 
 interface LocationData {
     latitude: number;

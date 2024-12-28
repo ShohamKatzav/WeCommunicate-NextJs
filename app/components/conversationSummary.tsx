@@ -1,49 +1,83 @@
-import { Dispatch, SetStateAction } from "react";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { useNotification } from "../hooks/useNotification";
 import { useUser } from "../hooks/useUser";
 import useIsMedium from "../hooks/useIsMedium";
 import ChatUser from "../types/chatUser";
 import Conversation from "../types/conversation";
-import AsName from "../utils/asName";
+import { AsShortName } from "../utils/asName";
 
 interface ConversationConversationSummaryProps {
 
     conversation: Conversation;
-    getLastMessages: (participantFromList: ChatUser) => Promise<void>;
+    getLastMessages: (participantsFromList: ChatUser[]) => Promise<void>;
     setToggle: Dispatch<SetStateAction<boolean>>
 }
 
 const ConversationSummary = ({ conversation, getLastMessages, setToggle }: ConversationConversationSummaryProps) => {
 
+    const [otherMembers, setOtherMembers] = useState<ChatUser[]>();
 
     const { user } = useUser();
     const { initializeRoomNotifications, newMessageNotification } = useNotification();
     const isMediumScreen = useIsMedium();
 
-    const otherMember = conversation.members.find(
-        (member: ChatUser) =>
-            member.email?.toUpperCase() !== user?.email?.toUpperCase()
-    );
-    const incoming = newMessageNotification[otherMember?.email?.toUpperCase()!];
+    const incoming = newMessageNotification[conversation._id!];
 
-    const switchRoom = (otherMember: ChatUser) => {
-        initializeRoomNotifications(otherMember?.email!);
-        getLastMessages(otherMember);
+    useEffect(() => {
+        const temp = conversation.members.filter(
+            (member: ChatUser) =>
+                member.email?.toUpperCase() !== user?.email?.toUpperCase()
+        );
+        setOtherMembers(temp);
+        }, [conversation.members]);
+
+    const switchRoom = (otherMembers: ChatUser[]) => {
+        initializeRoomNotifications(conversation._id!);
+        getLastMessages(otherMembers);
         if (!isMediumScreen)
             setToggle(false);
     }
 
     return (
-        otherMember && <li
+        otherMembers && <li
             className="bg-white p-4 rounded-lg shadow-md flex items-center gap-4 hover:shadow-lg transition-shadow"
-            onClick={() => switchRoom(otherMember)}
+            onClick={() => switchRoom(otherMembers)}
         >
             <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-lg font-semibold text-gray-600">
-                {otherMember?.email?.charAt(0).toUpperCase() || "?"}
+                {otherMembers.length <= 3 ? (
+                    otherMembers.map((member, index) => (
+                        <span key={index}>
+                            {AsShortName(member.email!)[0]}
+                            {index < otherMembers.length - 1 ? ", " : ""}
+                        </span>
+                    ))
+                ) : (
+                    <>
+                        {AsShortName(otherMembers[0].email!)[0]},
+                        {AsShortName(otherMembers[1].email!)[0]}
+                        <span> +{otherMembers.length - 2}</span>
+                    </>
+                )}
             </div>
             <div className="flex-1">
                 <div className="text-gray-800 font-medium text-lg">
-                    {AsName(otherMember?.email!).split("@")[0] || "Unknown User"}
+                {otherMembers.length <= 3 ? (
+                    otherMembers.map((member, index) => (
+                        <span key={index}>
+                            {AsShortName(member.email!)}
+                            {index < otherMembers.length - 1 ? ", " : ""}
+                        </span>
+                    ))
+                ) : (
+                    <>
+                        {AsShortName(otherMembers[0].email!)}
+                        {", "}
+                        {AsShortName(otherMembers[1].email!)}
+                        {", "}
+                        {AsShortName(otherMembers[2].email!)}
+                        <span> +{otherMembers.length - 3}</span>
+                    </>
+                )}
                 </div>
                 {conversation.messages && conversation.messages.length > 0 ? (
                     <div className="text-gray-600 text-sm relative">

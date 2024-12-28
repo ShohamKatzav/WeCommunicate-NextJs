@@ -7,12 +7,12 @@ import useIsMedium from "../hooks/useIsMedium";
 import ConversationSummary from "./conversationSummary";
 
 interface ConversationsPanelProps {
-    getLastMessages: (participantFromList: ChatUser) => Promise<void>;
+    getLastMessages: (participantFromList: ChatUser[]) => Promise<void>;
     newMessage: Message | undefined;
-    participant: ChatUser | undefined;
+    participants: ChatUser[] | undefined;
 }
 
-const RecentConversationsPanel = ({ getLastMessages, newMessage, participant }: ConversationsPanelProps) => {
+const RecentConversationsPanel = ({ getLastMessages, newMessage, participants }: ConversationsPanelProps) => {
     const [conversations, setConversations] = useState<any>([]);
     const [loading, setLoading] = useState(true);
     const { user } = useUser();
@@ -61,18 +61,9 @@ const RecentConversationsPanel = ({ getLastMessages, newMessage, participant }: 
                     conversation.messages = [newMessage, ...conversation.messages];
                     updatedConversations.unshift(conversation);
                 } else {
-                    const isCurrentUserSender = newMessage.sender?.toUpperCase() === user?.email?.toUpperCase();
                     const newConversation = {
                         _id: newMessage.conversationID,
-                        members: isCurrentUserSender
-                            ? [
-                                { email: user?.email },
-                                { _id: participant?._id, email: participant?.email },
-                            ]
-                            : [
-                                { email: user?.email },
-                                { email: newMessage?.sender },
-                            ],
+                        members: participants,
                         messages: [newMessage],
                     };
                     updatedConversations.unshift(newConversation);
@@ -81,7 +72,7 @@ const RecentConversationsPanel = ({ getLastMessages, newMessage, participant }: 
                 return updatedConversations;
             });
         }
-    }, [newMessage, newMessage?.conversationID]);
+    }, [newMessage?.conversationID]);
 
     return (
         <>

@@ -13,10 +13,10 @@ import ChatUser from "../types/chatUser";
 interface LoadMoreProps {
   chatBox: RefObject<HTMLDivElement>
   oldMessages: Message[]
-  participant: ChatUser
+  participants: ChatUser[]
 }
 
-const LoadMoreMessages = ({ chatBox, oldMessages, participant }: LoadMoreProps) => {
+const LoadMoreMessages = ({ chatBox, oldMessages, participants }: LoadMoreProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [page, setPage] = useState(1);
   const [allDataFetched, setAllDataFetched] = useState(false);
@@ -36,7 +36,10 @@ const LoadMoreMessages = ({ chatBox, oldMessages, participant }: LoadMoreProps) 
     setAllDataFetched(false);
     await delay(200);
     const nextPage = page + 1;
-    const res: any = await fetchMessages(nextPage, participant._id!);
+    const res: any = await fetchMessages(
+      nextPage,
+      participants.map(p => p._id).filter((id): id is string => id !== undefined)
+    );
     if (res?.message !== "success") {
       setAllDataFetched(true);
     }
@@ -64,7 +67,7 @@ const LoadMoreMessages = ({ chatBox, oldMessages, participant }: LoadMoreProps) 
 
   useEffect(() => {
     setMessages([]);
-  }, [participant]);
+  }, [participants]);
 
 
   return (

@@ -52,18 +52,18 @@ const ioHandler = (req, res) => {
             //SET
             socket.on("update notifications count", async (unreadMessages) => {
                 if (unreadMessages && email)
-                    for (const [sender, count] of Object.entries(unreadMessages)) {
+                    for (const [roomID, count] of Object.entries(unreadMessages)) {
                         if (notifications[email] === undefined)
                             notifications[email] = {};
-                        notifications[email][sender.toUpperCase()] = Number(count);
+                        notifications[email][roomID] = Number(count);
                     }
             });
 
             //DELETE
-            socket.on("notifications checked", async (sender) => {
-                if (sender && email) {
-                    if (notifications[email] !== undefined && notifications[email][sender.toUpperCase()] !== undefined)
-                        delete notifications[email][sender.upperCaseSender];
+            socket.on("notifications checked", async (roomID) => {
+                if (roomID && email) {
+                    if (notifications[email] !== undefined && notifications[email][roomID] !== undefined)
+                        delete notifications[email][roomID];
                 }
             });
 
@@ -90,7 +90,7 @@ const ioHandler = (req, res) => {
                             io.to(recipientSocketId).emit('chat message', message);
                             const AsName = connectedRecipient?.email.charAt(0).toUpperCase() + connectedRecipient?.email.slice(1);
                             initializeNotificationKey(AsName, message);
-                            ++notifications[AsName][message.sender.toUpperCase()];
+                            ++notifications[AsName][message.conversationID];
                         }
                     }
                     //3
@@ -106,7 +106,7 @@ const ioHandler = (req, res) => {
                         if (recipient) {
                             const AsName = recipient.email.charAt(0).toUpperCase() + recipient.email.slice(1);
                             initializeNotificationKey(AsName, message);
-                            ++notifications[AsName][message.sender.toUpperCase()];
+                            ++notifications[AsName][message.conversationID];
                         }
                     }
                 }
@@ -156,8 +156,8 @@ const initializeNotificationKey = (recieverEmail, message) => {
     if (!notifications[recieverEmail]) {
         notifications[recieverEmail] = {};
     }
-    if (!notifications[recieverEmail][message.sender.toUpperCase()]) {
-        notifications[recieverEmail][message.sender.toUpperCase()] = 0;
+    if (!notifications[recieverEmail][message.conversationID]) {
+        notifications[recieverEmail][message.conversationID] = 0;
     }
 }
 
