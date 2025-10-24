@@ -1,4 +1,3 @@
-"use server"
 import { get } from "../actions/cookie-actions";
 import User from '../types/user'
 

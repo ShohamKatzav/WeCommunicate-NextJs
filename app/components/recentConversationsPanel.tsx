@@ -1,6 +1,7 @@
+"use client"
+import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from "react";
 import fetchRecentConversations from "../actions/conversation-actions";
-import { useUser } from "../hooks/useUser";
 import ChatUser from "../types/chatUser";
 import Message from "../types/message";
 import useIsMedium from "../hooks/useIsMedium";
@@ -10,18 +11,22 @@ interface ConversationsPanelProps {
     getLastMessages: (participantFromList: ChatUser[]) => Promise<void>;
     newMessage: Message | undefined;
     participants: ChatUser[] | undefined;
+    reloadKey: boolean;
 }
 
-const RecentConversationsPanel = ({ getLastMessages, newMessage, participants }: ConversationsPanelProps) => {
+const RecentConversationsPanel = ({ getLastMessages, newMessage, participants, reloadKey }: ConversationsPanelProps) => {
     const [conversations, setConversations] = useState<any>([]);
     const [loading, setLoading] = useState(true);
-    const { user } = useUser();
+    const [fetchCode, setFetchCode] = useState(200);
     const isMediumScreen = useIsMedium();
 
     const [toggle, setToggle] = useState(isMediumScreen);
     const dropRef = useRef<HTMLUListElement>(null);
     const openRef = useRef<HTMLDivElement>(null);
     const closeRef = useRef<HTMLDivElement>(null);
+
+    const router = useRouter();
+
 
     const dropupHandler = () => {
         if (!toggle) {
@@ -37,14 +42,27 @@ const RecentConversationsPanel = ({ getLastMessages, newMessage, participants }:
     };
 
     useEffect(() => {
-        const fetchData = async () => {
+        setToggle(isMediumScreen);
+    }, [isMediumScreen]);
+
+    const fetchData = async () => {
+        try {
             const fetchedConversations = await fetchRecentConversations();
             setConversations(fetchedConversations.recentConversations);
+        } catch (error: any) {
+            setFetchCode(401);
+        } finally {
             setLoading(false);
-        };
+        }
+    };
 
+    useEffect(() => {
         fetchData();
-    }, []);
+    }, [reloadKey]);
+
+    useEffect(() => {
+        if (fetchCode === 401) router.replace('/login');
+    }, [fetchCode, router]);
 
     useEffect(() => {
         if (newMessage && newMessage?.conversationID) {
@@ -95,15 +113,15 @@ const RecentConversationsPanel = ({ getLastMessages, newMessage, participants }:
                 </div>
             </button>
             {
-                conversations.length < 1 && loading ?
+                conversations?.length < 1 && loading ?
                     <div className="bg-white p-4 rounded-lg shadow-md flex items-center gap-4 hover:shadow-lg transition-shadow">
                         <p className="text-gray-600 text-center">Loading...</p></div> :
-                    conversations.length < 1 && !loading &&
+                    conversations?.length < 1 && !loading &&
                     <div className="bg-white p-4 rounded-lg shadow-md flex items-center gap-4 hover:shadow-lg transition-shadow">
                         <p className="text-gray-600 text-center">No recent conversations available.</p></div>
             }
 
-            {toggle && conversations.length > 0 && (
+            {toggle && conversations?.length > 0 && (
                 <ul className="md:space-y-5 space-y-2">
                     {conversations.map((conversation: any) => {
                         return <ConversationSummary

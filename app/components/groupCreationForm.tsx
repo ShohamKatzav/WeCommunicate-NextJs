@@ -1,6 +1,6 @@
-import React, { Dispatch, MutableRefObject, SetStateAction, useEffect, useState } from "react";
+import { Dispatch, RefObject, SetStateAction, useEffect, useState } from "react";
 import ChatUser from "../types/chatUser";
-import { getChatUsersList } from '../actions/cookie-actions';
+import { getCoockieChatUsersList } from '../actions/cookie-actions';
 import { AsShortName } from "../utils/asName";
 import Message from "../types/message";
 import { useUser } from "../hooks/useUser";
@@ -9,8 +9,8 @@ import AxiosWithAuth from "../utils/axiosWithAuth";
 interface GroupCreationProps {
     isOpen: boolean;
     onClose: () => void;
-    participants: MutableRefObject<ChatUser[] | null | undefined>;
-    conversationId: MutableRefObject<string | null | undefined>;
+    participants: RefObject<ChatUser[] | null | undefined>;
+    conversationId: RefObject<string | null | undefined>;
     setChat: Dispatch<SetStateAction<Message[]>>;
 }
 
@@ -26,15 +26,21 @@ const GroupCreationForm = ({ isOpen, onClose, participants, conversationId, setC
 
 
     useEffect(() => {
-        getUsersListFromCoockie();
-    }, []);
+        // only fetch remote usernames when user (and token) is available
+        if (user?.email) {
+            getUsersListFromCoockie();
+        }
+    }, [user?.email]);
 
     useEffect(() => {
         setSelectedParticipants([]);
     }, [isOpen]);
 
     const getUsersListFromCoockie = async () => {
-        const chatUsers = await getChatUsersList();
+        // guard: ensure user is available before making authenticated requests
+        if (!user?.email) return;
+
+        const chatUsers = await getCoockieChatUsersList();
         if (chatUsers)
             setparticipantsList(JSON.parse(chatUsers?.value));
         else {

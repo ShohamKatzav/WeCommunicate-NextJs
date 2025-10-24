@@ -1,6 +1,6 @@
 import Account from "../models/Account";
 import Location from "../models/Location";
-import { Types } from 'mongoose';
+import { Types } from "mongoose";
 
 interface LocationData {
     latitude: number;
@@ -61,21 +61,21 @@ export default class LocationRepository {
 
     static async updateLocation(accountId: Types.ObjectId, location: LocationData): Promise<void> {
         const accountLockKey = accountId.toString();
-    
+
         if (lockMap[accountLockKey]) {
             return;
         }
-    
+
         lockMap[accountLockKey] = true;
-    
+
         try {
             const account = await Account.findById(accountId).populate('location').exec();
             if (!account) {
                 throw new Error(`Account with ID ${accountId} not found`);
             }
-    
+
             let locationId;
-    
+
             if (account.location) {
                 // Update the existing location
                 await Location.updateOne({ _id: account.location._id }, {
@@ -91,11 +91,11 @@ export default class LocationRepository {
                 });
                 locationId = savedLocation._id;
             }
-    
+
             await Account.updateOne({ _id: accountId }, {
                 $set: { location: locationId }
             });
-    
+
         } catch (err) {
             console.error('Failed to update location:', err);
             throw err;

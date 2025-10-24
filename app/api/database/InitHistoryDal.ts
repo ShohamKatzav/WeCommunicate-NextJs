@@ -1,5 +1,5 @@
 import InitHistory from "../models/InitHistory"
-import { Types } from 'mongoose';
+import { Types } from "mongoose";
 
 export default class InitHistoryRepository {
     static async findInitHistory(accountID: Types.ObjectId, conversationID: string) {

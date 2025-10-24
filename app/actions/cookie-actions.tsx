@@ -3,8 +3,10 @@ import { cookies } from 'next/headers'
 import User from '../types/user'
 import ChatUser from '../types/chatUser';
 
+
 export async function create(data: User): Promise<any> {
-  await cookies().set({
+  const cookieStore = await cookies();
+  cookieStore.set({
     name: 'user',
     value: JSON.stringify({ email: data.email, token: data.token }),
     httpOnly: true
@@ -12,21 +14,25 @@ export async function create(data: User): Promise<any> {
 }
 
 export async function get(): Promise<any> {
-  return await cookies().get('user');
+  const cookieStore = await cookies();
+  return cookieStore.get('user');
 }
 
 export async function del(): Promise<any> {
-  await cookies().set('user', "");
+  const cookieStore = await cookies();
+  cookieStore.set('user', "");
 }
 
-export async function createChatUsersList(data: ChatUser[]): Promise<any> {
-  await cookies().set({
+export async function createCoockieChatUsersList(data: ChatUser[]): Promise<any> {
+  const cookieStore = await cookies();
+  cookieStore.set({
     name: 'chatUsersList',
     value: JSON.stringify(data),
     httpOnly: true
   });
 }
 
-export async function getChatUsersList(): Promise<any> {
-  return await cookies().get('chatUsersList');
+export async function getCoockieChatUsersList(): Promise<any> {
+  const cookieStore = await cookies();
+  return cookieStore.get('chatUsersList');
 }

@@ -4,14 +4,12 @@ import AccountRepository from "../../database/AccountDal";
 import InitHistoryRepository from "../../database/InitHistoryDal";
 import MessageRepository from "../../database/MessageDal";
 import ConversationRepository from "../../database/ConversationDal";
-import guard from "../../guards/guard";
-import { Types } from "mongoose";
-import {IAccount} from "../../models/Account";
+import mongoose from "mongoose";
+import { IAccount } from "../../models/Account";
 
 export async function GET(
   req: NextRequest
 ) {
-  await guard(req);
   const url = new URL(req.url);
   const searchParams = new URLSearchParams(url.search);
   const participantsId = searchParams.getAll('participantsId[]');
@@ -25,6 +23,9 @@ export async function GET(
     let totalMessagesCount = 0;
 
     const userID = await AccountRepository.extractIDFromToken(req?.headers?.get('authorization')!);
+    if (typeof userID !== "string") {
+      return NextResponse.redirect(new URL('/login', req.url));
+    }
     const partners = await AccountRepository.getUsersByID(participantsId!);
 
     if (!userID || !partners) {
@@ -33,8 +34,8 @@ export async function GET(
 
     // Check for existing conversation between the users
     const conversation = await ConversationRepository.GetConversationByMembers([
-      new Types.ObjectId(userID),
-      ...partners.map((partner: IAccount) => partner._id)
+      new mongoose.Types.ObjectId(userID),
+      ...partners.map((partner: IAccount) => new mongoose.Types.ObjectId(partner._id.toString()))
     ]);
 
     // If no conversation exists, return an empty response
@@ -45,7 +46,10 @@ export async function GET(
     chatQuery = { conversation: conversation._id };
 
     if (conversation) {
-      const initHistoryTime = await InitHistoryRepository.findInitHistory(userID as unknown as Types.ObjectId, conversation._id);
+      const initHistoryTime = await InitHistoryRepository.findInitHistory(
+        new mongoose.Types.ObjectId(userID),
+        conversation._id
+      );
       if (initHistoryTime) {
         chatQuery.date = { $gt: initHistoryTime.date }; // Filter messages after init history time
       }

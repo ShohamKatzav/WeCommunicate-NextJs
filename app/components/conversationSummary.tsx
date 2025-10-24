@@ -29,7 +29,7 @@ const ConversationSummary = ({ conversation, getLastMessages, setToggle }: Conve
                 member.email?.toUpperCase() !== user?.email?.toUpperCase()
         );
         setOtherMembers(temp);
-        }, [conversation.members]);
+    }, [conversation.members]);
 
     const switchRoom = (otherMembers: ChatUser[]) => {
         initializeRoomNotifications(conversation._id!);
@@ -61,23 +61,23 @@ const ConversationSummary = ({ conversation, getLastMessages, setToggle }: Conve
             </div>
             <div className="flex-1">
                 <div className="text-gray-800 font-medium text-lg">
-                {otherMembers.length <= 3 ? (
-                    otherMembers.map((member, index) => (
-                        <span key={index}>
-                            {AsShortName(member.email!)}
-                            {index < otherMembers.length - 1 ? ", " : ""}
-                        </span>
-                    ))
-                ) : (
-                    <>
-                        {AsShortName(otherMembers[0].email!)}
-                        {", "}
-                        {AsShortName(otherMembers[1].email!)}
-                        {", "}
-                        {AsShortName(otherMembers[2].email!)}
-                        <span> +{otherMembers.length - 3}</span>
-                    </>
-                )}
+                    {otherMembers.length <= 3 ? (
+                        otherMembers.map((member, index) => (
+                            <span key={index}>
+                                {AsShortName(member.email!)}
+                                {index < otherMembers.length - 1 ? ", " : ""}
+                            </span>
+                        ))
+                    ) : (
+                        <>
+                            {AsShortName(otherMembers[0].email!)}
+                            {", "}
+                            {AsShortName(otherMembers[1].email!)}
+                            {", "}
+                            {AsShortName(otherMembers[2].email!)}
+                            <span> +{otherMembers.length - 3}</span>
+                        </>
+                    )}
                 </div>
                 {conversation.messages && conversation.messages.length > 0 ? (
                     <div className="text-gray-600 text-sm relative">

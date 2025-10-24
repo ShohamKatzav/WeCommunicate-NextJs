@@ -1,11 +1,11 @@
-import { Document, Schema, Types, models, model } from 'mongoose';
+import { Document, Schema, models, model } from 'mongoose';
 
 export interface IAccount extends Document {
-    _id: Types.ObjectId;
+    _id: Schema.Types.ObjectId;
     email: string;
     password: string;
     initHistory?: Date;
-    location?: Types.ObjectId;
+    location?: Schema.Types.ObjectId;
 }
 
 const AccountSchema = new Schema<IAccount>({

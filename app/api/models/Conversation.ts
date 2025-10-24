@@ -1,8 +1,8 @@
 import { Document, Schema, Types, models, model } from 'mongoose';
 
 interface IConversation extends Document {
-    members?: Types.ObjectId[];
-    messages?: Types.ObjectId[];
+    members?: Schema.Types.ObjectId[];
+    messages?: Schema.Types.ObjectId[];
 }
 
 const ConversationSchema = new Schema<IConversation>({

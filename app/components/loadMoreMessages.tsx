@@ -1,6 +1,6 @@
 "use client";
 
-import { RefObject, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import Message from "../types/message";
 import fetchMessages from "../actions/message-actions";
@@ -11,12 +11,11 @@ import ChatUser from "../types/chatUser";
 
 
 interface LoadMoreProps {
-  chatBox: RefObject<HTMLDivElement>
   oldMessages: Message[]
   participants: ChatUser[]
 }
 
-const LoadMoreMessages = ({ chatBox, oldMessages, participants }: LoadMoreProps) => {
+const LoadMoreMessages = ({ oldMessages, participants }: LoadMoreProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [page, setPage] = useState(1);
   const [allDataFetched, setAllDataFetched] = useState(false);
@@ -38,7 +37,7 @@ const LoadMoreMessages = ({ chatBox, oldMessages, participants }: LoadMoreProps)
     const nextPage = page + 1;
     const res: any = await fetchMessages(
       nextPage,
-      participants.map(p => p._id).filter((id): id is string => id !== undefined)
+      participants?.map(p => p._id).filter((id): id is string => id !== undefined)
     );
     if (res?.message !== "success") {
       setAllDataFetched(true);

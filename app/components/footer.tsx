@@ -1,5 +1,4 @@
-import React from 'react';
-import './Bars.css';
+import './bars.css';
 
 const Footer = () => {
     return (

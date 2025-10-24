@@ -1,5 +1,5 @@
 'use client';
-import { memo, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import AxiosWithAuth from '../utils/axiosWithAuth';
 import Message from '../types/message';
 import ChatUser from '../types/chatUser';
@@ -9,27 +9,33 @@ import UsersList from '../components/usersList';
 import { useSocket } from '../hooks/useSocket';
 import fetchMessages from '../actions/message-actions';
 import MessagesBox from '../components/messagesBox';
-import AuthGuard from '../guards/protected-page';
 import { AsShortName } from '../utils/asName';
 import { useNotification } from '../hooks/useNotification';
 import RecentConversationsPanel from '../components/recentConversationsPanel';
 import GroupCreationForm from '../components/groupCreationForm';
 import { MessageSquareDiff } from 'lucide-react';
 import { MessageCircle } from 'lucide-react';
+import { useUser } from '../hooks/useUser';
+import { usePathname } from 'next/navigation';
+import Loading from '../components/loading';
 
-const Chat = (props: any) => {
+const Chat = () => {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_ADDRESS + "api/chat";
   const { socket, loadingSocket } = useSocket();
+  const { user, loading } = useUser();
   const [chat, setChat] = useState<Message[]>([]);
   const [message, setMessage] = useState<Message>({ date: undefined, sender: '', value: '' });
   const [chatListActiveUsers, setChatListActiveUsers] = useState<ChatUser[]>([]);
-  const currentConversationId = useRef<string>();
-  const participants = useRef<ChatUser[] | null>();
-  const chatBox = useRef<HTMLDivElement>(null);
+  const currentConversationId = useRef<string>("");
+  const participants = useRef<ChatUser[] | null>(null);
+  const chatBox = useRef<HTMLDivElement | null>(null);
   const [newMessage, setNewMessage] = useState<Message>();
   const [isModalOpen, setModalOpen] = useState(false);
 
   const { increaseNotifications } = useNotification();
+  const [reloadKey, setReloadKey] = useState(true);
+  const pathname = usePathname();
+
 
   const getLastMessages = async (roomParticipants: ChatUser[]) => {
     await socket?.emit('leave room', { conversationId: currentConversationId });
@@ -43,25 +49,23 @@ const Chat = (props: any) => {
   }
 
   const handleIncomingMessage = (data: Message) => {
+    if (data.sender?.toUpperCase() === user?.email!.toUpperCase()) return;
     if (data.conversationID === currentConversationId.current) {
-      if (data.sender?.toUpperCase() !== props.user?.email.toUpperCase()) {
-        setChat((prevChat) => [...prevChat, { date: new Date(), sender: data.sender, value: data.value }]);
-      }
+      setChat((prevChat) => [...prevChat, { date: new Date(), sender: data.sender, value: data.value }]);
     }
-    else
+    else {
+      setReloadKey(prev => !prev);
       increaseNotifications(data.conversationID as string);
+    }
     setNewMessage(data);
   }
 
-  const updateUsersList = (data: ChatUser[]) => {
-    setChatListActiveUsers(data);
-  };
 
   const handleSendMessage = async () => {
     if (socket && participants.current?.length) {
       const newMessage: Message = {
         date: new Date(),
-        sender: props.user?.email,
+        sender: user?.email,
         participantID: participants.current.map(p => p._id!),
         value: message.value?.trim(),
         conversationID: currentConversationId.current
@@ -76,7 +80,7 @@ const Chat = (props: any) => {
         if (!currentConversationId.current) {
           socket.disconnect();
           newConversationId = result.data.messageDoc.conversation;
-          socket.io.opts.extraHeaders = { email: props.user?.email, conversationId: newConversationId }
+          socket.io.opts.extraHeaders = { email: user!.email!, conversationId: newConversationId }
           socket.connect();
           currentConversationId.current = newConversationId;
         }
@@ -102,37 +106,53 @@ const Chat = (props: any) => {
       })
   };
   const handleLeaveRoom = async () => {
-    currentConversationId.current = undefined;
+    currentConversationId.current = "";
     await socket?.emit('leave room', { conversationId: currentConversationId });
     setChat([]);
     participants.current = null;
   }
 
   useEffect(() => {
+    if (!socket) return;
 
-    if (!loadingSocket) {
-      const IntializeChat = async () => {
-        await socket?.on("get connected users", updateUsersList);
-        await socket?.emit("get connected users");
-        return () => {
-          socket?.off("get connected users", updateUsersList);
-        };
+    const handler = (data: ChatUser[]) => {
+      setChatListActiveUsers(data);
+    };
+
+    const onConnect = () => {
+      // ensure no duplicate handlers
+      socket.off('update connected users', handler);
+      socket.on('update connected users', handler);
+      socket.emit('update connected users');
+    };
+
+    // attach now if already connected, otherwise wait for connect event
+    try {
+      if (!loadingSocket) {
+        onConnect();
+      } else {
+        socket.off('connect', onConnect);
+        socket.on('connect', onConnect);
       }
-      IntializeChat();
+    } catch (e) {
+      console.error('[client] socket attach error', e);
     }
-  }, []);
+
+    return () => {
+      socket.off('connect', onConnect);
+      socket.off('update connected users', handler);
+    };
+  }, [socket, pathname]);
+
 
   useEffect(() => {
     if (!loadingSocket) {
       socket?.on("chat message", handleIncomingMessage);
-      socket?.on("update users", updateUsersList);
-
       return () => {
         socket?.off("chat message", handleIncomingMessage);
-        socket?.off("update users", updateUsersList);
       };
     }
-  }, [loadingSocket, props.user?.token]);
+  }, [loadingSocket, user?.token]);
 
   useEffect(() => {
     if (chatBox.current)
@@ -151,9 +171,12 @@ const Chat = (props: any) => {
     document.body.classList.remove("overflow-hidden");
   };
 
+  if (loading)
+    return (<Loading />)
+
   return (
     <form action={handleSendMessage}>
-      <div className="grid md:grid-cols-4 gap-6 p-1 md:p-4 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+      <div className="grid md:grid-cols-4 gap-6 p-1 md:p-4 bg-linear-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
         <div className="md:col-start-1 md:col-span-1 col-span-2">
           <button type="button"
             onClick={handleOpenModal}
@@ -170,14 +193,14 @@ const Chat = (props: any) => {
             participants={participants}
             conversationId={currentConversationId}
             setChat={setChat} />
-          <RecentConversationsPanel getLastMessages={getLastMessages} newMessage={newMessage} participants={participants.current!} />
+          <RecentConversationsPanel getLastMessages={getLastMessages} newMessage={newMessage} participants={participants.current!} reloadKey={reloadKey} />
         </div>
         <div className="md:col-start-2 col-span-2">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2 md:p-6">
             <h1 className="text-3xl font-bold text-center mb-2">
               Welcome, {' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-red-600">
-                {AsShortName(props.user?.email as string)}
+              <span className="text-transparent bg-clip-text bg-linear-to-r from-amber-400 to-red-600">
+                {AsShortName(user?.email as string)}
               </span>
             </h1>
 
@@ -241,4 +264,4 @@ const Chat = (props: any) => {
   );
 };
 
-export default AuthGuard(memo(Chat));
+export default Chat;

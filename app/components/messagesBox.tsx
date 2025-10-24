@@ -8,7 +8,7 @@ import ChatUser from "../types/chatUser";
 
 interface MessagesBoxProps {
     messages: Message[],
-    chatBox: RefObject<HTMLDivElement>
+    chatBox: RefObject<HTMLDivElement | null>
     participants: ChatUser[]
 }
 
@@ -17,14 +17,14 @@ const MessagesBox = ({ messages, chatBox, participants }: MessagesBoxProps) => {
     const [loadNew, setLoadNew] = useState(false);
 
     const handleScroll = () => {
-        const isAtTop = (chatBox.current?.clientHeight! + 1) + (chatBox.current?.scrollTop! * -1) >= chatBox.current?.scrollHeight!;
+        const isAtTop = (chatBox?.current?.clientHeight! + 1) + (chatBox?.current?.scrollTop! * -1) >= chatBox?.current?.scrollHeight!;
         if (isAtTop)
             setLoadNew(true);
 
     }
 
     useEffect(() => {
-        const currentChatBox = chatBox.current;
+        const currentChatBox = chatBox?.current;
         if (currentChatBox) {
             currentChatBox.addEventListener('scroll', handleScroll);
         }
@@ -48,8 +48,8 @@ const MessagesBox = ({ messages, chatBox, participants }: MessagesBoxProps) => {
                             <MessageViewer key={index} message={message} email={user?.email} />)
                         }
                     </div>
-                    {chatBox.current?.scrollTop != 0 && loadNew &&
-                        <LoadMoreMessages chatBox={chatBox} oldMessages={messages} participants={participants} />
+                    {chatBox?.current?.scrollTop != 0 && loadNew &&
+                        <LoadMoreMessages oldMessages={messages} participants={participants} />
                     }
                 </div>
             </div>

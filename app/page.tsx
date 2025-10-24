@@ -12,34 +12,33 @@ const Home = () => {
   const [email, setEmail] = useState("");
   const baseUrl = process.env.NEXT_PUBLIC_BASE_ADDRESS + "api/account";
   const { user, updateUser, loading } = useUser();
+  const [navigated, setNavigated] = useState(false);
 
   const verifyCookie = async () => {
-    // If the token/email does not exist, mark the user as logged out
-    if (!user || !user.token) {
-      return;
-    }
+    if (!user?.token || navigated) return
 
-    await AxiosWithAuth().post(`${baseUrl}/verify`)
-      .then(response => {
-        setEmail(user?.email || "unknown");
-        router.push("/chat");
-      }).catch(error => {
-        if (error?.response?.status === 401) {
-          window.alert("Wrong email or password");
-          updateUser(null);
-        }
-        else {
-          window.alert("Error occured: " + error?.response?.data?.message);
-          updateUser(null);
-        }
-      })
+    try {
+      await AxiosWithAuth().post(`${baseUrl}/verify`);
+      setEmail(user.email || "unknown");
+      setNavigated(true);
+      router.push("/chat");
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        window.alert("Wrong email or password");
+      } else {
+        window.alert("Error occurred: " + error.response?.data?.message);
+      }
+      updateUser(null);
+    }
   };
 
   useEffect(() => {
-    verifyCookie();
-  }, [loading]);
+    if (user && user.token) {
+      verifyCookie();
+    }
+  }, [user]);
 
-  if (loading || user !== null && Object.keys(user).length > 0) return <Loading />
+  if (loading || (user && Object.keys(user).length > 0)) return <Loading />;
   else
     return <Login setEmail={setEmail} />
 }

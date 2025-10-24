@@ -30,13 +30,13 @@ const Contact = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+        <div className="min-h-screen bg-linear-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
             {/* Hero Section */}
             <div className="pt-4 pb-12">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center">
                         <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 dark:text-white sm:text-5xl md:text-6xl">
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-600">Get in Touch</span>
+                            <span className="text-transparent bg-clip-text bg-linear-to-r from-emerald-400 to-cyan-600">Get in Touch</span>
                         </h1>
                         <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-500 dark:text-gray-300">
                             If you have any questions or feedback, feel free to reach out!
@@ -56,7 +56,7 @@ const Contact = () => {
                             rel="noopener noreferrer"
                             className="group bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transform hover:scale-105 transition-all duration-200 flex items-center space-x-4"
                         >
-                            <div className="flex-shrink-0">
+                            <div className="shrink-0">
                                 <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-full group-hover:bg-blue-200 dark:group-hover:bg-blue-800 transition-colors duration-200">
                                     {method.icon}
                                 </div>

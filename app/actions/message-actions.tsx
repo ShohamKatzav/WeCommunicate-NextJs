@@ -16,7 +16,6 @@ async function fetchMessages(page: number, participantsId: string[]) {
         const response = await AxiosWithAuth().get(`${baseUrl}/get-messages`, {
             params: { participantsId, page, perPage }
         });
-        // Assuming response.data is an array of messages
         if (response.data) {
             return response.data;
         } else {

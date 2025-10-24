@@ -1,4 +1,4 @@
-import { Types } from 'mongoose';
+import mongoose from 'mongoose';
 import { NextRequest as OriginalNextRequest } from 'next/server'
 import { NextResponse as OriginalNextResponse } from 'next/server'
 import { NextApiResponse } from 'next';
@@ -10,7 +10,7 @@ declare global {
         longitude: Number;
         accuracy: Number;
         error: String;
-        accountID: Types.ObjectId;
+        accountID: mongoose.Types.ObjectId;
         time: Date;
     }
     interface RequestOrSocket extends OriginalNextRequest {

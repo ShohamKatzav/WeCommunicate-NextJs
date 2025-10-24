@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 
 const useIsMedium = () => {
-    const [isMediumScreen, setIsMediumScreen] = useState(window.innerWidth >= 768);
+    const [isMediumScreen, setIsMediumScreen] = useState(false);
 
     useEffect(() => {
         const handleResize = () => {
-            setIsMediumScreen(window.innerWidth >= 768);
+            setIsMediumScreen(window?.innerWidth >= 768);
         };
 
         window.addEventListener('resize', handleResize);

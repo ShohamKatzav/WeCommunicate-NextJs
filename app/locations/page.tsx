@@ -1,13 +1,13 @@
 'use client';
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from '@react-google-maps/api';
-import AuthGuard from '../guards/protected-page';
 import { useSocket } from '../hooks/useSocket';
 import Location from '../types/location';
 import ciEquals from '../utils/ciEqual';
 import useLocation from '../hooks/useLocation';
 import LocationAccessInformation from '../components/locationAccessStatus';
 import useIsMedium from '../hooks/useIsMedium';
+import { useUser } from '../hooks/useUser';
 
 
 const center = {
@@ -29,6 +29,8 @@ function Locations(props: any) {
   const [positions, setPositions] = useState<Location[] | null>(null)
   const positionsRef = useRef(positions);
   const [showInfoWindow, setShowInfoWindow] = useState<boolean[]>([]);
+
+  const { user } = useUser();
 
   const getPositions = () => {
     socket?.emit('get locations');
@@ -70,7 +72,7 @@ function Locations(props: any) {
   return isLoaded ? (
     <>
       <h1 className="row-start-6 text-3xl font-extrabold text-gray-900 dark:text-white md:text-5xl lg:text-6xl text-center mb-4">
-        <span className="text-transparent bg-clip-text bg-gradient-to-r to-blue-900 from-teal-400">Friends&apos; locations</span></h1>
+        <span className="text-transparent bg-clip-text bg-linear-to-r to-blue-900 from-teal-400">Friends&apos; locations</span></h1>
       <GoogleMap
         mapContainerStyle={containerStyle}
         center={center}
@@ -82,7 +84,7 @@ function Locations(props: any) {
           positions?.map((position, index) =>
             !position?.loading &&
             (<Marker key={index}
-              icon={!ciEquals(position.username!, props.user.email) ? 'https://maps.gstatic.com/mapfiles/ms2/micons/man.png' : ''}
+              icon={!ciEquals(position.username!, user?.email) ? 'https://maps.gstatic.com/mapfiles/ms2/micons/man.png' : ''}
               position={{
                 lat: position.latitude as number,
                 lng: position.longitude as number
@@ -107,7 +109,7 @@ function Locations(props: any) {
                 >
                   <div>
                     <p>Location Details:</p>
-                    <p>User: {ciEquals(position.username!, props.user.email) ? 'You' : position.username}</p>
+                    <p>User: {ciEquals(position.username!, props.user?.email) ? 'You' : position.username}</p>
                     {position?.time &&
                       <p>Last update: {new Date(position?.time).toLocaleString()}</p>}
                     {position?.accuracy! > 200 &&
@@ -115,7 +117,7 @@ function Locations(props: any) {
                   </div>
                 </InfoWindow>
 
-              )} : <></>
+              )}
 
             </Marker>)
           )
@@ -125,4 +127,4 @@ function Locations(props: any) {
     : <></>
 }
 
-export default AuthGuard(memo(Locations))
+export default Locations;

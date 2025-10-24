@@ -14,17 +14,25 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
 
     // GET
     useEffect(() => {
-        if (!loadingSocket) {
-            const FetchNotifications = async () => {
-                socket?.on("notifications update", notificationsUpdate);
-                await socket?.emit("notifications update");
-            };
+        if (!socket) return;
+
+        const FetchNotifications = async () => {
+            socket.emit("notifications update");
+        };
+
+        socket.on("notifications update", notificationsUpdate);
+        socket.on("connect", FetchNotifications); // 👈 run again on reconnect
+
+        // initial fetch
+        if (socket.connected) {
             FetchNotifications();
-            return () => {
-                socket?.off("notifications update", notificationsUpdate);
-            };
         }
-    }, [socket, loadingSocket]);
+
+        return () => {
+            socket.off("connect", FetchNotifications);
+            socket.off("notifications update", notificationsUpdate);
+        };
+    }, [socket]);
 
     // SET
     useEffect(() => {
@@ -53,6 +61,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
 
     const notificationsUpdate = (data: Record<string, number>) => {
         if (data) {
+            console.log(data);
             const updatedNotifications: Record<string, number> = {};
             for (const [roomID, count] of Object.entries(data)) {
                 updatedNotifications[roomID] = Number(count);

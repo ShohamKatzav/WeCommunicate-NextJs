@@ -5,7 +5,7 @@ interface ILocation extends Document {
     accuracy: number;
     error?: String;
     time: Date;
-    account: Types.ObjectId;
+    account: Schema.Types.ObjectId;
 }
 
 export const LocationSchema = new Schema<ILocation>({

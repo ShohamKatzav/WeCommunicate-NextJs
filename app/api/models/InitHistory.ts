@@ -2,8 +2,8 @@ import { Document, Schema, Types, models, model } from 'mongoose';
 
 interface IInitHistory extends Document {
     date?: Date;
-    account?: Types.ObjectId;
-    conversation?: Types.ObjectId;
+    account?: Schema.Types.ObjectId;
+    conversation?: Schema.Types.ObjectId;
 }
 
 const InitHistorySchema = new Schema<IInitHistory>({

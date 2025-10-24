@@ -3,6 +3,7 @@ import { ReactNode, useEffect, useState } from "react";
 import io, { Socket } from 'socket.io-client';
 import { useUser } from "../hooks/useUser";
 import SocketContext from "./socketContext";
+import { useRouter } from 'next/navigation';
 
 type SocketProviderProps = {
     children: ReactNode;
@@ -10,9 +11,10 @@ type SocketProviderProps = {
 
 export const SocketProvider = ({ children }: SocketProviderProps) => {
     const baseAddress = process.env.NEXT_PUBLIC_BASE_ADDRESS as string;
-    const { user, loading } = useUser();
+    const { user, loading, updateUser } = useUser();
     const [socket, setSocket] = useState<Socket | null>(null);
     const [loadingSocket, setLoadingSocket] = useState(true);
+    const router = useRouter();
 
     useEffect(() => {
         if (!loading && user?.email) {
@@ -32,6 +34,12 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
                     }
                 }
                 const newSocket = io(baseAddress, socketConfig);
+                newSocket.on('unauthorized', () => {
+                    updateUser(null);
+                    setSocket(null);
+                    router.push('/');
+                    setLoadingSocket(false);
+                });
                 newSocket.connect();
                 setSocket(newSocket);
                 setLoadingSocket(false);
@@ -39,7 +47,7 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
             setUp();
         }
         return () => {
-            if (socket?.active) { // <-- This is important
+            if (socket?.active) {
                 socket.disconnect();
             }
         };

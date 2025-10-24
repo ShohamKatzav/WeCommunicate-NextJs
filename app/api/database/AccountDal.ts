@@ -1,5 +1,5 @@
 import Account from "../models/Account";
-import { Types } from 'mongoose';
+import { Types } from "mongoose";
 import jwt from 'jsonwebtoken';
 
 interface DecodedToken {
@@ -7,12 +7,12 @@ interface DecodedToken {
     email: string;
     signInTime: number;
     iat: number;
-  }
+}
 
 const jwtSecretKey = process.env.TOKEN_SECRET!;
 
 export default class AccountRepository {
-    
+
 
     static async getUserByToken(authHeader: string) {
         try {
@@ -20,7 +20,7 @@ export default class AccountRepository {
             const decoded = jwt.verify(token, jwtSecretKey) as DecodedToken;
             const { _id } = decoded;
             return await Account.findById(_id).exec();
-            
+
         } catch (err) {
             console.error('Failed to find user by token:', err);
             throw new Error('Failed to find user by token');
@@ -32,10 +32,8 @@ export default class AccountRepository {
             const decoded = jwt.verify(token, jwtSecretKey) as DecodedToken;
             const { _id } = decoded;
             return _id;
-            
         } catch (err) {
-            console.error('Failed to extract id from token:', err);
-            throw new Error('Failed to extract id from token');
+            throw new Error('Unauthorized');
         }
     }
     static async getUserByID(ID: string) {
@@ -48,8 +46,8 @@ export default class AccountRepository {
     }
     static async getUsersByID(IDs: string[]) {
         try {
-            var obj_ids = IDs.map(function(id) { return new Types.ObjectId(id); });
-            return await Account.find({_id: {$in: obj_ids}}).exec();
+            const obj_ids = IDs.map(id => new Types.ObjectId(id));
+            return await Account.find({ _id: { $in: obj_ids } }).exec();
         } catch (err) {
             console.error('Failed to find users by ID:', err);
             throw new Error('Failed to find users by ID');
@@ -89,8 +87,9 @@ export default class AccountRepository {
             const chatUsers = users.map(user => ({ _id: user._id, email: user.email }));
             return chatUsers;
         } catch (err) {
-            console.error('Could not get usernames:', err);
-            throw new Error('Failed to create user');
+            console.error('Could not get usernames:', err instanceof Error ? err.stack || err.message : err);
+            // rethrow the original error for clearer diagnostics upstream
+            throw err;
         }
     }
 }

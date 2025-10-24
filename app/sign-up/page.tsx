@@ -78,8 +78,7 @@ function SignUp() {
             if (!accountExists) {
                 logIn();
             }
-            else
-            {
+            else {
                 setLoading(false);
                 window.alert("An account with this email is already in use");
             }
@@ -93,7 +92,7 @@ function SignUp() {
                 <div className={"mainContainer grid grid-rows-6 p-4"}>
                     <div className="titleContainer grid md:row-start-2">
                         <h1 className="mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-3xl lg:text-6xl text-center">
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r to-indigo-700 from-pink-400">Create Your Account on WeCommunicate</span>
+                            <span className="text-transparent bg-clip-text bg-linear-to-r to-indigo-700 from-pink-400">Create Your Account on WeCommunicate</span>
                         </h1>
                     </div>
                     <div className={"inputContainer row-start-2 md:row-start-4 row-span-2 space-y-4 md:grid grid-cols-6"}>

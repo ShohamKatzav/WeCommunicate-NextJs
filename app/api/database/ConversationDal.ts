@@ -26,17 +26,17 @@ export default class ConversationRepository {
                 model: Message,
                 options: { sort: { date: -1 }, perDocumentLimit: 1 },
             });
-    
+
             const sortedConversations = conversations.sort((a, b) => {
                 const aLastMessageDate = a.messages[0]?.date;
                 const bLastMessageDate = b.messages[0]?.date;
-    
+
                 if (!aLastMessageDate) return 1;
                 if (!bLastMessageDate) return -1;
-    
+
                 return new Date(bLastMessageDate).getTime() - new Date(aLastMessageDate).getTime();
             });
-    
+
             return sortedConversations;
         } catch (error) {
             console.error('Error finding conversations:', error);

@@ -11,9 +11,8 @@ async function fetchRecentConversations() {
             console.error("Invalid response format", response);
             return [];
         }
-    } catch (error) {
-        console.error("Error fetching data:", error);
-        return [];
+    } catch (error: any) {
+        throw error;
     }
 }
 export default fetchRecentConversations;

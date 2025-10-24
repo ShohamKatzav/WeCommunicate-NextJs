@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Users } from 'lucide-react';
-import { createChatUsersList, getChatUsersList } from "../actions/cookie-actions";
+import { createCoockieChatUsersList, getCoockieChatUsersList } from "../actions/cookie-actions";
 import ciEquals from "../utils/ciEqual";
 import AxiosWithAuth from "../utils/axiosWithAuth";
 import ChatUser from "../types/chatUser";
@@ -46,19 +46,24 @@ const UsersList = ({ chatListActiveUsers, getLastMessages, conversationId }: Lis
 
 
     useEffect(() => {
-        init();
-    }, [chatListActiveUsers]);
+        // don't try to fetch usernames until user data (and token) is loaded
+        if (user?.email) {
+            init();
+        }
+    }, [chatListActiveUsers, user?.email]);
 
     useEffect(() => {
-        if(conversationId)
+        if (conversationId)
             initializeRoomNotifications(conversationId);
     }, [conversationId]);
 
     const init = async () => {
-        const chatUsers = await getChatUsersList();
+        // guard: ensure user (and token) exists before making authenticated request
+        if (!user?.email) return;
+        const chatUsers = await getCoockieChatUsersList();
         if (chatUsers === undefined) {
             const response: any = await AxiosWithAuth().get(`${baseUrl}/get-usernames`);
-            createChatUsersList(response?.data);
+            createCoockieChatUsersList(response?.data);
             setChatListAllUsers(response?.data);
         }
         else {
@@ -67,7 +72,7 @@ const UsersList = ({ chatListActiveUsers, getLastMessages, conversationId }: Lis
                 if (!updatedChatUsers.find(u => ciEquals(u.email as string, user.email as string)))
                     updatedChatUsers.push(user);
             });
-            createChatUsersList(updatedChatUsers);
+            createCoockieChatUsersList(updatedChatUsers);
             setChatListAllUsers(updatedChatUsers);
         }
     }

@@ -1,14 +1,15 @@
 import { Server } from "socket.io";
-import guard from "@/app/api/guards/guard";
+import proxy from "../../../proxy"
 import { GetLocations, SaveLocations } from "@/app/api/location/locations";
 import Conversation from '@/app/api/models/Conversation'
+import RedisService from "../redis/RedisService";
 
-const connectedUsers = [];
-const notifications = {};
+let redis = null;
+let io = null;
 
-const ioHandler = (req, res) => {
-    if (!res.socket.server.io) {
-        const io = new Server(res.socket.server, {
+const ioHandler = async (req, res) => {
+    if (!io) {
+        io = new Server(res.socket.server, {
             path: "/api/socket/",
             connectionStateRecovery: {
                 maxDisconnectionDuration: 2 * 60 * 1000,
@@ -20,145 +21,136 @@ const ioHandler = (req, res) => {
             },
         });
 
-        const verified = guard(req.socket);
-        if (!verified) return new Error("Authentication error");
+        redis = RedisService.getInstance();
 
-        io.on('connection', (socket) => {
-            const { email, conversationId } = socket.handshake.headers;
+        io.on('connection', async (socket) => {
+            const authHeader = socket.handshake.auth;
+            const email = socket.handshake.headers?.email;
+            const conversationId = socket.handshake.headers?.conversationid;
 
-            const existingUserIndex = connectedUsers.findIndex(
-                user => (user.email.toUpperCase() === email?.toUpperCase()));
-
-            if (existingUserIndex !== -1) {
-                // Update the socketId if the user is already connected
-                connectedUsers[existingUserIndex].socketId = socket.id;
-            } else {
-                // Add a new user if they are not already connected
-                const newUser = { socketId: socket.id, email, conversationId };
-                connectedUsers.push(newUser);
+            try {
+                await proxy(authHeader);
+            } catch (error) {
+                // emit then disconnect and cleanup
+                const emailFromEntry = socket.handshake?.headers?.email;
+                await RedisService.deleteUser(emailFromEntry);
+                socket.emit("unauthorized");
+                socket.disconnect(true);
+                return;
             }
 
-            io.emit('update users', connectedUsers);
+            try {
+                // === Store socket in redis on connection ===
+                await redis.hset("user_sockets", { [email]: socket.id });
 
-            if (notifications[email]) {
-                io.emit('notifications update');
-            }
+                // emit fresh users list
+                const allUsers = await RedisService.getUsers();
+                io.emit('update connected users', allUsers);
 
-            //GET
-            socket.on("notifications update", async () => {
-                io.to(socket.id).emit("notifications update", notifications[email]);
-            });
+                // allow client to request an up-to-date list (re-query on each request)
+                socket.on('update connected users', async () => {
+                    const fresh = await RedisService.getUsers();
+                    io.emit('update connected users', fresh);
+                });
 
-            //SET
-            socket.on("update notifications count", async (unreadMessages) => {
-                if (unreadMessages && email)
-                    for (const [roomID, count] of Object.entries(unreadMessages)) {
-                        if (notifications[email] === undefined)
-                            notifications[email] = {};
-                        notifications[email][roomID] = Number(count);
-                    }
-            });
-
-            //DELETE
-            socket.on("notifications checked", async (roomID) => {
-                if (roomID && email) {
-                    if (notifications[email] !== undefined && notifications[email][roomID] !== undefined)
-                        delete notifications[email][roomID];
+                //=== Join room if provided ===
+                if (conversationId) {
+                    const room = `chat_room_${conversationId}`;
+                    socket.join(room);
                 }
-            });
 
-            // 3 cases:
-            // 1 - User connected and in the room - chats messages updated
-            // 2 - User connected but not in the room - chats message event will create notification
-            // 3 - User disconnected - we'll store notification update for the users next connection
-            socket.on('chat message', async (message) => {
+                socket.on('save location', async (location) => {
+                    await SaveLocations(location);
+                    const positions = await GetLocations();
+                    io.to(socket.id).emit('get locations', positions);
+                });
 
-                //1
-                const room = `chat_room_${message.conversationID}`;
-                io.to(room).emit('chat message', message);
-                const roomies = io.sockets.adapter.rooms.get(room);
-                if (roomies) {
-                    const socketIds = Array.from(roomies);
-                    const connectedRecipient = connectedUsers.find(
-                        user => user.email.toUpperCase() !== message.sender.toUpperCase()
+                socket.on('get locations', async () => {
+                    const positions = await GetLocations();
+                    io.to(socket.id).emit('get locations', positions);
+                });
+
+                socket.on("notifications update", async () => {
+                    const notifications = await RedisService.getNotifications(email) || {};
+                    socket.emit("notifications update", notifications);
+                });
+
+                socket.on("update notifications count", async (unreadMessages) => {
+                    if (!unreadMessages || !email) return;
+
+                    // Upstash may not support pipeline; set fields concurrently
+                    const promises = Object.entries(unreadMessages).map(([roomID, count]) =>
+                        redis.hset(`notifications:${email}`, { [roomID]: String(Number(count)) })
                     );
-                    //2
-                    if (connectedRecipient) {
-                        const recipientSocketId = connectedRecipient.socketId;
-                        const isInRoom = socketIds.includes(recipientSocketId);
-                        if (!isInRoom) {
-                            io.to(recipientSocketId).emit('chat message', message);
-                            const AsName = connectedRecipient?.email.charAt(0).toUpperCase() + connectedRecipient?.email.slice(1);
-                            initializeNotificationKey(AsName, message);
-                            ++notifications[AsName][message.conversationID];
+                    await Promise.all(promises);
+                });
+
+                socket.on("notifications checked", async (roomID) => {
+                    if (roomID && email) {
+                        await redis.hdel(`notifications:${email}`, roomID);
+                    }
+                });
+
+                socket.on('chat message', async (message) => {
+                    const room = `chat_room_${message.conversationID}`;
+                    io.to(room).emit('chat message', message);
+
+                    // Handle notifications
+                    const conversation = await Conversation.findById(message.conversationID).populate('members', 'email');
+
+                    if (conversation) {
+                        for (const member of conversation.members) {
+                            if (member.email.toUpperCase() === message.sender.toUpperCase()) continue;
+                            const normalizeEmail = RedisService.normalizeEmail(member.email);
+                            const memberSocketId = await redis.hget('user_sockets', normalizeEmail);
+                            const roomSockets = await io.in(room).allSockets();
+                            const isInRoom = memberSocketId && roomSockets.has(memberSocketId);
+
+                            if (!isInRoom) {
+                                // increment Redis notification counter per user/conversation
+                                await RedisService.incrNotification(member.email, message.conversationID, 1);
+
+                                if (memberSocketId) {
+                                    io.to(memberSocketId).emit('chat message', message);
+                                    // push updated notifications map for that user:
+                                    const notifications = await RedisService.getNotifications(member.email);
+                                    io.to(memberSocketId).emit('notifications update', notifications);
+                                }
+                            }
                         }
                     }
-                    //3
-                    if (!connectedRecipient) {
-                        // Fetch from MongoDB only if the recipient isn't connected
-                        const conversation = await Conversation.findById(message.conversationID).populate('members', 'email');
-                        if (!conversation) return;
+                });
 
-                        const recipient = conversation.members.find(
-                            member => member.email.toUpperCase() !== message.sender.toUpperCase()
-                        );
+                socket.on('join room', async (body) => {
+                    const room = `chat_room_${body.conversationId}`;
+                    socket.join(room);
+                });
 
-                        if (recipient) {
-                            const AsName = recipient.email.charAt(0).toUpperCase() + recipient.email.slice(1);
-                            initializeNotificationKey(AsName, message);
-                            ++notifications[AsName][message.conversationID];
-                        }
+                socket.on('leave room', async (body) => {
+                    const room = `chat_room_${body.conversationId}`;
+                    socket.leave(room);
+                });
+
+                socket.on('disconnect', async () => {
+                    try {
+                        const emailFromEntry = socket.handshake?.headers?.email;
+                        await RedisService.deleteUser(emailFromEntry);
+                        const allUsers = await RedisService.getUsers();
+                        io.emit('update connected users', allUsers);
+                    } catch (err) {
+                        console.error('Error during disconnect cleanup:', err);
                     }
-                }
+                });
 
-            });
-
-            socket.on('save location', async (location) => {
-                await SaveLocations(location);
-                const positions = await GetLocations();
-                io.to(socket.id).emit('get locations', positions);
-            });
-
-            socket.on('get locations', async () => {
-                const positions = await GetLocations();
-                io.to(socket.id).emit('get locations', positions);
-            });
-
-            socket.on('get connected users', () => {
-                io.to(socket.id).emit('get connected users', connectedUsers.filter(user => user.conversationId === conversationId));
-            });
-
-            socket.on('join room', (body) => {
-                const room = `chat_room_${body.conversationId}`;
-                socket.join(room);
-            });
-
-            socket.on('leave room', (body) => {
-                const room = `chat_room_${body.conversationId}`;
-                socket.leave(room);
-            });
-
-
-            socket.on('disconnect', () => {
-                const userIndex = connectedUsers.findIndex(user => user.socketId === socket.id);
-                if (userIndex !== -1) {
-                    connectedUsers.splice(userIndex, 1);
-                }
-            });
+            } catch (error) {
+                console.error('Socket connection error:', error);
+                socket.disconnect(true);
+            }
         });
 
         res.socket.server.io = io;
     }
     res.end();
 };
-
-const initializeNotificationKey = (recieverEmail, message) => {
-    if (!notifications[recieverEmail]) {
-        notifications[recieverEmail] = {};
-    }
-    if (!notifications[recieverEmail][message.conversationID]) {
-        notifications[recieverEmail][message.conversationID] = 0;
-    }
-}
 
 export default ioHandler;

@@ -1,23 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from "../../database/MongoDb";
-import AccountRepository from "../../database/AccountDal";
 import ConversationRepository from "../../database/ConversationDal";
-import guard from "../../guards/guard";
-import { Types } from "mongoose";
+import { Types } from 'mongoose';
+import AccountRepository from '../../database/AccountDal';
 
 export async function GET(
   req: NextRequest
 ) {
-  await guard(req);
-
   try {
     await connectDB();
-    const userID = await AccountRepository.extractIDFromToken(req?.headers?.get('authorization')!);
-    const recentConversations = await ConversationRepository.GetRecentConversations(userID as unknown as Types.ObjectId);
-    return NextResponse.json({ message: "success", recentConversations }, { status: 200 });
+    try {
+      const userID = await AccountRepository.extractIDFromToken(req?.headers?.get('authorization')!);
+      const recentConversations = await ConversationRepository.GetRecentConversations(
+        Types.ObjectId.createFromHexString(userID)
+      );
+      return NextResponse.json({ message: "success", recentConversations }, { status: 200 });
+    }
+    catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-  } catch (err) {
-    console.error('Failed to retrieve conversations:', err);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  } catch (err: any) {
+    if (err.message === "Internal Server Error") {
+      return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
   }
 }
