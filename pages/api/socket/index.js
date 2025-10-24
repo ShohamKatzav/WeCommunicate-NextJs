@@ -2,7 +2,7 @@ import { Server } from "socket.io";
 import proxy from "../../../proxy"
 import { GetLocations, SaveLocations } from "@/app/api/location/locations";
 import Conversation from '@/app/api/models/Conversation'
-import RedisService from "../../RedisService";
+import RedisService from '@/services/RedisService'
 
 let redis = null;
 let io = null;
