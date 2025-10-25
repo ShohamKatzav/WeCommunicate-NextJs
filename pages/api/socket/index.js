@@ -1,5 +1,5 @@
 import { Server } from "socket.io";
-import proxy from "../../../proxy"
+import proxy from "@/proxy"
 import { GetLocations, SaveLocations } from "@/app/api/location/locations";
 import Conversation from '@/app/api/models/Conversation'
 import RedisService from '@/services/RedisService'
@@ -41,7 +41,7 @@ const ioHandler = async (req, res) => {
 
             try {
                 // === Store socket in redis on connection ===
-                await redis.hset("user_sockets", { [email]: socket.id });
+                await RedisService.addUserSocket(email, socket.id);
 
                 // emit fresh users list
                 const allUsers = await RedisService.getUsers();
@@ -70,25 +70,14 @@ const ioHandler = async (req, res) => {
                     io.to(socket.id).emit('get locations', positions);
                 });
 
-                socket.on("notifications update", async () => {
-                    const notifications = await RedisService.getNotifications(email) || {};
+
+                socket.on('notifications update', async () => {
+                    const notifications = await RedisService.getNotifications(email);
                     socket.emit("notifications update", notifications);
                 });
 
-                socket.on("update notifications count", async (unreadMessages) => {
-                    if (!unreadMessages || !email) return;
-
-                    // Upstash may not support pipeline; set fields concurrently
-                    const promises = Object.entries(unreadMessages).map(([roomID, count]) =>
-                        redis.hset(`notifications:${email}`, { [roomID]: String(Number(count)) })
-                    );
-                    await Promise.all(promises);
-                });
-
                 socket.on("notifications checked", async (roomID) => {
-                    if (roomID && email) {
-                        await redis.hdel(`notifications:${email}`, roomID);
-                    }
+                    await RedisService.clearNotification(email, roomID);
                 });
 
                 socket.on('chat message', async (message) => {
@@ -101,8 +90,7 @@ const ioHandler = async (req, res) => {
                     if (conversation) {
                         for (const member of conversation.members) {
                             if (member.email.toUpperCase() === message.sender.toUpperCase()) continue;
-                            const normalizeEmail = RedisService.normalizeEmail(member.email);
-                            const memberSocketId = await redis.hget('user_sockets', normalizeEmail);
+                            const memberSocketId = await RedisService.getUserSocketByEmail(member.email);
                             const roomSockets = await io.in(room).allSockets();
                             const isInRoom = memberSocketId && roomSockets.has(memberSocketId);
 

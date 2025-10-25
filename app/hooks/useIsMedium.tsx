@@ -4,13 +4,11 @@ const useIsMedium = () => {
     const [isMediumScreen, setIsMediumScreen] = useState(false);
 
     useEffect(() => {
-        const handleResize = () => {
-            setIsMediumScreen(window?.innerWidth >= 768);
-        };
+        const checkScreen = () => setIsMediumScreen(window.innerWidth >= 768);
+        checkScreen();
 
-        window.addEventListener('resize', handleResize);
-
-        return () => window.removeEventListener('resize', handleResize);
+        window.addEventListener('resize', checkScreen);
+        return () => window.removeEventListener('resize', checkScreen);
     }, []);
 
     return isMediumScreen;

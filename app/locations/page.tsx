@@ -27,14 +27,13 @@ function Locations(props: any) {
   const { socket, loadingSocket } = useSocket();
 
   const [positions, setPositions] = useState<Location[] | null>(null)
-  const positionsRef = useRef(positions);
   const [showInfoWindow, setShowInfoWindow] = useState<boolean[]>([]);
 
   const { user } = useUser();
 
-  const getPositions = () => {
+  const getPositions = useCallback(() => {
     socket?.emit('get locations');
-  }
+  }, [socket]);
 
   const isMediumScreen = useIsMedium();
 
@@ -45,18 +44,23 @@ function Locations(props: any) {
   }), [isMediumScreen]);
 
   useEffect(() => {
+    setShowInfoWindow(positions?.map(() => false) || []);
+  }, [positions]);
+
+  useEffect(() => {
+    if (loadingSocket) return;
+
     const updatePositions = (data: Location[]) => {
       setPositions(data);
     };
 
-    if (!loadingSocket) {
-      socket?.on("get locations", updatePositions);
-      getPositions();
-      return () => {
-        socket?.off("get locations", updatePositions);
-      };
-    }
-  }, [loadingSocket, socket, positionsRef.current]);
+    socket?.on("get locations", updatePositions);
+    getPositions();
+
+    return () => {
+      socket?.off("get locations", updatePositions);
+    };
+  }, [loadingSocket, socket]);
 
   const onLoad = useCallback(async function callback(map: any) {
 
@@ -118,7 +122,6 @@ function Locations(props: any) {
                 </InfoWindow>
 
               )}
-
             </Marker>)
           )
         }

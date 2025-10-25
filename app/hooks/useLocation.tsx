@@ -1,5 +1,5 @@
-"use client";
-import { useState, useEffect, useRef } from 'react';
+'use client';
+import { useEffect, useRef, useState } from 'react';
 import Location from '../types/location';
 import { useUser } from './useUser';
 import { useSocket } from './useSocket';
@@ -18,7 +18,7 @@ const useLocation = () => {
   });
   const positionRef = useRef(position);
   const socketRef = useRef(socket);
-  const [locationAccessinfo, setLocationAccessinfo] = useState('prompt');
+  const [locationAccessinfo, setLocationAccessinfo] = useState<'granted' | 'denied' | 'prompt'>('prompt');
   const [socketReady, setSocketReady] = useState(false);
 
   const geolocationOptions: PositionOptions = {
@@ -28,86 +28,49 @@ const useLocation = () => {
   };
 
   useEffect(() => {
-    if (!loadingSocket) {
-      setSocketReady(true); 
-    }
+    if (!loadingSocket) setSocketReady(true);
   }, [loadingSocket, socket]);
 
   useEffect(() => {
-    if (navigator.geolocation) {
-      const queryPermissions = async () => {
-        try {
-          const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
-          setLocationAccessinfo(permissionStatus.state);
-
-          const handlePermissionChange = () => {
-            setLocationAccessinfo(permissionStatus.state);
-          };
-          permissionStatus.onchange = handlePermissionChange;
-
-          return () => {
-            permissionStatus.onchange = null;
-          };
-        } catch (error) {
-          console.error('Error while querying geolocation permissions:', error);
-        }
-      };
-      queryPermissions();
+    if (navigator.geolocation && navigator.permissions) {
+      navigator.permissions.query({ name: 'geolocation' }).then(permissionStatus => {
+        setLocationAccessinfo(permissionStatus.state as any);
+        permissionStatus.onchange = () => setLocationAccessinfo(permissionStatus.state as any);
+      });
     }
   }, []);
 
-  useEffect(() => {
-    if (!loadingSocket) {
-      socketRef.current = socket;
-    }
-  }, [loadingSocket, socket]);
-
-  useEffect(() => {
-    positionRef.current = position;
-  }, [position]);
+  useEffect(() => { socketRef.current = socket; }, [socket, loadingSocket]);
+  useEffect(() => { positionRef.current = position; }, [position]);
 
   useEffect(() => {
     if (!navigator.geolocation) {
-      setPosition(prev => ({ ...prev, loading: false, error: "Geolocation is not supported by your browser." }));
+      setPosition(prev => ({ ...prev, loading: false, error: 'Geolocation not supported' }));
       return;
     }
 
-    const handleSuccess = async (position: GeolocationPosition) => {
-      if (typeof (position.coords.latitude) !== "number" || typeof (position.coords.longitude) !== "number") return;
+    const handleSuccess = async (pos: GeolocationPosition) => {
       const newPosition = {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        accuracy: position.coords.accuracy,
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
         loading: false,
         error: null,
         username: user?.email ?? null,
-        time: new Date(Date.now())
+        time: new Date()
       };
       setPosition(newPosition);
       await socketRef.current?.emit('save location', newPosition);
     };
 
     const handleError = (error: GeolocationPositionError) => {
-      setPosition(prev => ({ ...prev, loading: false, error: error.message }));
+      const msg = error.message || (error.code === 2 ? 'Position unavailable' : 'Error retrieving location');
+      setPosition(prev => ({ ...prev, loading: false, error: msg }));
     };
 
-    const getAndPublishLocation = async () => {
-        navigator.geolocation.getCurrentPosition(await handleSuccess, handleError, geolocationOptions);
-    }
-
-    getAndPublishLocation();
-
-    if (socketRef.current) {
-      const intervalId = setInterval( () => {
-        if (positionRef.current && socketRef.current) {
-          getAndPublishLocation();
-        }
-      }, parseInt(process.env.NEXT_PUBLIC_LOCATION_INTERVAL!));
-      return () => {
-        clearInterval(intervalId);
-      }
-    }
-  }, [socketReady]);
+    const watchId = navigator.geolocation.watchPosition(handleSuccess, handleError, geolocationOptions);
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [socketReady, user?.email]);
 
   return { position, locationAccessinfo };
 };

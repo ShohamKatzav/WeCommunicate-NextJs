@@ -62,7 +62,7 @@ const Chat = () => {
 
 
   const handleSendMessage = async () => {
-    if (socket && participants.current?.length) {
+    if (socket && !loadingSocket && participants.current?.length) {
       const newMessage: Message = {
         date: new Date(),
         sender: user?.email,
