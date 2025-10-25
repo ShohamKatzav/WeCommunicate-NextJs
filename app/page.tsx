@@ -9,7 +9,6 @@ import { useUser } from './hooks/useUser';
 // Define the Home component
 const Home = () => {
   const router = useRouter();
-  const [email, setEmail] = useState("");
   const baseUrl = process.env.NEXT_PUBLIC_BASE_ADDRESS + "api/account";
   const { user, updateUser, loading } = useUser();
   const [navigated, setNavigated] = useState(false);
@@ -19,7 +18,6 @@ const Home = () => {
 
     try {
       await AxiosWithAuth().post(`${baseUrl}/verify`);
-      setEmail(user.email || "unknown");
       setNavigated(true);
       router.push("/chat");
     } catch (error: any) {
@@ -40,7 +38,7 @@ const Home = () => {
 
   if (loading || (user && Object.keys(user).length > 0)) return <Loading />;
   else
-    return <Login setEmail={setEmail} />
+    return <Login />
 }
 
 // Export the Home component as the default export
