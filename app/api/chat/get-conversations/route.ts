@@ -9,16 +9,11 @@ export async function GET(
 ) {
   try {
     await connectDB();
-    try {
-      const userID = await AccountRepository.extractIDFromToken(req?.headers?.get('authorization')!);
-      const recentConversations = await ConversationRepository.GetRecentConversations(
-        Types.ObjectId.createFromHexString(userID)
-      );
-      return NextResponse.json({ message: "success", recentConversations }, { status: 200 });
-    }
-    catch {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const userID = await AccountRepository.extractIDFromToken(req?.headers?.get('authorization')!);
+    const recentConversations = await ConversationRepository.GetRecentConversations(
+      Types.ObjectId.createFromHexString(userID)
+    );
+    return NextResponse.json({ message: "success", recentConversations }, { status: 200 });
 
   } catch (err: any) {
     if (err.message === "Internal Server Error") {

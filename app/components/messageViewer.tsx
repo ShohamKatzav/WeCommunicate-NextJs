@@ -1,22 +1,90 @@
+"use client"
 import Message from "../types/message";
+import Image from "next/image";
+import Link from "next/link";
+import { useState, useEffect } from "react";
+import Loading from "./loading";
 
 interface MessageViewerProps {
   message: Message;
-  email: string | undefined;
+  email?: string;
 }
 
 const MessageViewer = ({ message, email }: MessageViewerProps) => {
-  const sender = message.sender == email ? 'You' : message.sender;
+  const [type, setType] = useState("text");
+  const sender = message.sender === email ? "You" : message.sender;
   const dateToDisplay = new Date(message.date!).toLocaleString();
+
+  useEffect(() => {
+    const contentType = message.file?.contentType;
+    if (!contentType) return;
+
+    if (contentType.includes("image")) setType("image");
+    else if (contentType.includes("audio")) setType("audio");
+    else if (contentType.includes("video")) setType("video");
+    else setType("link");
+  }, [message.file?.contentType]);
+
+  if (!type) return <Loading />;
+
   return (
     <div
-      className={`mr-2 py-3 px-4 col-span-4 md:col-span-3 ${message.sender == email ? "bg-blue-400 col-start-1 rounded-br-3xl" :
-        "bg-slate-400 col-start-2 md:col-start-3 rounded-bl-3xl"}
-                        rounded-tl-3xl rounded-tr-xl text-white wrap-break-words overflow-auto gap-6 mb-6`}>
-      <div>On {dateToDisplay}</div>
-      <div>{sender}</div>
-      <div>Said: {message.value}</div>
+      className={`mr-2 py-3 px-4 col-span-4 md:col-span-3 ${message.sender === email
+        ? "bg-blue-400 rounded-br-3xl justify-self-start"
+        : "bg-slate-400 rounded-bl-3xl col-start-2 md:col-start-3 justify-self-end md:justify-self-auto"
+        } rounded-tl-3xl rounded-tr-xl text-white wrap-break-word overflow-auto gap-6 mb-6`}
+    >
+      <div className="text-sm md:text-lg text-gray-200 mb-1">{sender}</div>
+
+      {message.text && (
+        <div className="text-lg md:text-2xl wrap-break-word">{message.text}</div>
+      )}
+
+      {type === "image" && message.file && (
+        <Image
+          src={message.file.url}
+          width={250}
+          height={250}
+          alt="Sent image"
+        />
+      )}
+
+      {type === "audio" && message.file && (
+        <audio controls>
+          <source src={message.file.url} type="audio/mpeg" />
+          Your browser does not support the audio element.
+        </audio>
+      )}
+
+      {type === "video" && message.file && (
+        <video width="320" height="240" controls preload="none">
+          <source src={message.file.url} type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      )}
+
+      {type === "link" && message.file?.downloadUrl && (
+        <div className="text-lg md:text-2xl">
+          <div>Has sent a document</div>
+          <Link href={message.file.url} target="_blank" className="underline">
+            View Document
+          </Link>{" "}
+          &nbsp;
+          <Link
+            href={message.file.downloadUrl}
+            target="_blank"
+            className="underline"
+          >
+            Download Link
+          </Link>
+        </div>
+      )}
+
+      <div className="text-xs md:text-sm text-gray-200 mt-1 text-right">
+        {dateToDisplay}
+      </div>
     </div>
   );
-}
+};
+
 export default MessageViewer;

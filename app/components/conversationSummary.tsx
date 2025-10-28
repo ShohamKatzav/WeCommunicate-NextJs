@@ -85,7 +85,7 @@ const ConversationSummary = ({ conversation, getLastMessages, setToggle }: Conve
                             {conversation.messages[0].sender?.toUpperCase() === user?.email?.toUpperCase() ? 'You' :
                                 conversation.messages[0].sender?.split("@")[0]}
                         </span>
-                        : {conversation.messages[0].value}
+                        : {conversation.messages[0].text}
                         <div className="text-xs text-gray-400">
                             {conversation.messages[0].date &&
                                 new Date(conversation.messages[0].date).toLocaleString()}

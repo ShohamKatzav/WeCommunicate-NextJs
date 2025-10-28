@@ -1,4 +1,4 @@
-import { Document, Schema, Types, models, model } from 'mongoose';
+import { Document, Schema, models, model } from 'mongoose';
 interface ILocation extends Document {
     latitude: number;
     longitude: number;

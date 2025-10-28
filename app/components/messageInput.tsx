@@ -18,8 +18,13 @@ const MessageInput = ({ message, setMessage, participants }: MessageInputProps) 
                      dark:focus:ring-blue-500 dark:focus:border-blue-500 mt-4"
                 placeholder={participants.current ? "Type your message here..." : "Select a participant to start chatting"}
                 type="text"
-                value={message.value}
-                onChange={(e) => setMessage({ value: e.target.value })}
+                value={message.text}
+                onChange={(e) =>
+                    setMessage(prev => ({
+                        ...prev,
+                        text: e.target.value
+                    }))
+                }
                 disabled={!participants.current}
             />
         </div>

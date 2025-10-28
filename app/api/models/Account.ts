@@ -4,7 +4,7 @@ export interface IAccount extends Document {
     _id: Schema.Types.ObjectId;
     email: string;
     password: string;
-    initHistory?: Date;
+    cleanHistory?: Date;
     location?: Schema.Types.ObjectId;
 }
 
@@ -17,7 +17,7 @@ const AccountSchema = new Schema<IAccount>({
         type: String,
         required: true
     },
-    initHistory: {
+    cleanHistory: {
         type: Date,
         required: false
     },

@@ -1,7 +1,7 @@
 import connectDB from "../../database/MongoDb";
 import { NextRequest, NextResponse } from 'next/server';
 import AccountRepository from "../../database/AccountDal";
-import InitHistoryRepository from "../../database/InitHistoryDal";
+import CleanHistoryRepository from "../../database/CleanHistoryDal";
 import MessageRepository from "../../database/MessageDal";
 import ConversationRepository from "../../database/ConversationDal";
 import mongoose from "mongoose";
@@ -23,9 +23,6 @@ export async function GET(
     let totalMessagesCount = 0;
 
     const userID = await AccountRepository.extractIDFromToken(req?.headers?.get('authorization')!);
-    if (typeof userID !== "string") {
-      return NextResponse.redirect(new URL('/login', req.url));
-    }
     const partners = await AccountRepository.getUsersByID(participantsId!);
 
     if (!userID || !partners) {
@@ -46,12 +43,12 @@ export async function GET(
     chatQuery = { conversation: conversation._id };
 
     if (conversation) {
-      const initHistoryTime = await InitHistoryRepository.findInitHistory(
+      const cleanHistoryTime = await CleanHistoryRepository.findCleanHistory(
         new mongoose.Types.ObjectId(userID),
         conversation._id
       );
-      if (initHistoryTime) {
-        chatQuery.date = { $gt: initHistoryTime.date }; // Filter messages after init history time
+      if (cleanHistoryTime) {
+        chatQuery.date = { $gt: cleanHistoryTime.date }; // Filter messages after clean history time
       }
       totalMessagesCount = await MessageRepository.countMessages(chatQuery);
     }

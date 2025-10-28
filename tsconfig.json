@@ -37,7 +37,7 @@
     "**/*.mts",
     ".next\\dev/types/**/*.ts",
     ".next\\dev/types/**/*.ts"
-, "pages/api/socket/index.js"  ],
+, "pages/api/socket/index.js", "app/global-not-found.tsx", "pages/_app.js"  ],
   "exclude": [
     "node_modules"
   ]

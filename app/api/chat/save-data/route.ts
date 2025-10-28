@@ -16,7 +16,7 @@ export async function POST(
     const messageDoc = await MessageRepository.SaveMessage(body, userID!);
     return NextResponse.json({ message: "success", messageDoc }, { status: 200 });
   } catch (err) {
-    console.error('Failed to retrieve messages:', err);
+    console.error('Failed to save message:', err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

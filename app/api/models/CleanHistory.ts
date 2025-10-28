@@ -1,12 +1,12 @@
-import { Document, Schema, Types, models, model } from 'mongoose';
+import { Document, Schema, models, model } from 'mongoose';
 
-interface IInitHistory extends Document {
+interface ICleanHistory extends Document {
     date?: Date;
     account?: Schema.Types.ObjectId;
     conversation?: Schema.Types.ObjectId;
 }
 
-const InitHistorySchema = new Schema<IInitHistory>({
+const CleanHistorySchema = new Schema<ICleanHistory>({
     date: {
         type: Date,
         required: true
@@ -23,6 +23,6 @@ const InitHistorySchema = new Schema<IInitHistory>({
     }
 });
 
-// InitHistorySchema.index({ account: 1, conversation: 1 }, { unique: true });
+// CleanHistorySchema.index({ account: 1, conversation: 1 }, { unique: true });
 
-export default models.InitHistory || model<IInitHistory>('InitHistory', InitHistorySchema);
+export default models.CleanHistory || model<ICleanHistory>('CleanHistory', CleanHistorySchema);

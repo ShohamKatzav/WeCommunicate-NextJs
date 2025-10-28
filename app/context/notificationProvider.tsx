@@ -2,6 +2,7 @@
 import { useState, useEffect, ReactNode } from 'react';
 import { useSocket } from '../hooks/useSocket';
 import NotificationContext from './notificationContext';
+import useNotificationSound from '../hooks/useNotificationSound';
 
 type NotificationProviderProps = {
     children: ReactNode;
@@ -11,6 +12,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
 
     const [newMessageNotification, setNewMessageNotification] = useState<Record<string, number>>({});
     const { socket, loadingSocket } = useSocket();
+    useNotificationSound();
 
     // GET
     useEffect(() => {

@@ -32,8 +32,7 @@ const ioHandler = async (req, res) => {
                 await proxy(authHeader);
             } catch (error) {
                 // emit then disconnect and cleanup
-                const emailFromEntry = socket.handshake?.headers?.email;
-                await RedisService.deleteUser(emailFromEntry);
+                await RedisService.deleteUser(email);
                 socket.emit("unauthorized");
                 socket.disconnect(true);
                 return;
@@ -81,7 +80,7 @@ const ioHandler = async (req, res) => {
                 });
 
                 socket.on('chat message', async (message) => {
-                    const room = `chat_room_${message.conversationID}`;
+                    const room = `chat_room_${message?.conversationID}`;
                     io.to(room).emit('chat message', message);
 
                     // Handle notifications
@@ -121,8 +120,7 @@ const ioHandler = async (req, res) => {
 
                 socket.on('disconnect', async () => {
                     try {
-                        const emailFromEntry = socket.handshake?.headers?.email;
-                        await RedisService.deleteUser(emailFromEntry);
+                        await RedisService.deleteUser(email);
                         const allUsers = await RedisService.getUsers();
                         io.emit('update connected users', allUsers);
                     } catch (err) {

@@ -69,7 +69,8 @@ export default class RedisService {
             throw new Error('Redis instance not initialized');
         }
         try {
-            await RedisService.instance.hdel("user_sockets", email);
+            const normalizedEmail: string = RedisService.normalizeEmail(email);
+            await RedisService.instance.hdel("user_sockets", normalizedEmail);
         } catch (error) {
             console.error('Error deleting user socket:', error);
             return null;

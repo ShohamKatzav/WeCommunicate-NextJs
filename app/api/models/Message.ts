@@ -1,9 +1,10 @@
-import { Document, Schema, Types, models, model } from 'mongoose';
+import { Document, Schema, models, model } from 'mongoose';
 
 interface IMessage extends Document {
     date: Number;
     sender: string;
-    value: string;
+    text?: string;
+    file?: Schema.Types.ObjectId;
     conversation: Schema.Types.ObjectId;
 }
 
@@ -16,9 +17,14 @@ const MessageSchema = new Schema<IMessage>({
         type: String,
         required: true
     },
-    value: {
+    text: {
         type: String,
-        required: true
+        required: false
+    },
+    file: {
+        type: Schema.Types.ObjectId,
+        ref: 'FileModel',
+        required: false
     },
     conversation: {
         type: Schema.Types.ObjectId,

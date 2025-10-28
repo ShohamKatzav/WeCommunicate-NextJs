@@ -58,8 +58,8 @@ export const config = {
   matcher: [
     '/api/account/verify',
     '/api/account/get-usernames',
-    '/api/conversation/:path*',
     '/api/chat/:path*',
+    '/api/conversation/:path*',
     '/api/location/:path*',
     '/chat/:path*',
   ],

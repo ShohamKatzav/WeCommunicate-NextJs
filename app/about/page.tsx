@@ -1,5 +1,3 @@
-import React from 'react';
-
 const About = () => {
     return (
         <div className="relative overflow-hidden">
@@ -7,8 +5,8 @@ const About = () => {
                 <main className="max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="text-center">
                         <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 dark:text-white sm:text-5xl md:text-6xl">
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-800">About</span><br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-800">We-Communicate</span>
+                            <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-500 to-indigo-800">About</span><br />
+                            <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-500 to-indigo-800">We-Communicate</span>
                         </h1>
                     </div>
                 </main>
@@ -21,45 +19,44 @@ const About = () => {
                             My Mission
                         </h2>
                         <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6">
-                            <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                                In creating WeCommunicate, my vision was to bridge the gap in digital communication,
-                                offering a platform that goes beyond traditional chat applications. It&apos;s a space where individuals can connect,
-                                share, and engage in meaningful conversations.
+                            <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
+                                I built WeCommunicate as a way to challenge myself and deepen my understanding of modern web technologies.
+                                My goal was to explore real-time communication, data management, and deployment - and to turn that learning
+                                process into something functional and meaningful. This project reflects my curiosity and drive to grow as a developer,
+                                while building tools that make connecting online feel simple and natural.
                             </p>
                         </div>
                     </div>
                 </div>
 
-                {/* Technology Section */}
-                <div className="py-12">
-                    <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-8">
-                        Technology at the Core
-                    </h2>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {[
-                            {
-                                title: "Next.js",
-                                description: "Server-side rendering and efficient routing capabilities for seamless user experience."
-                            },
-                            {
-                                title: "Tailwind CSS",
-                                description: "Utility-first CSS framework for designing a responsive and aesthetically pleasing interface."
-                            },
-                            {
-                                title: "Socket.IO",
-                                description: "Enabling real-time communication and facilitating instant dynamic interactions."
-                            },
-                            {
-                                title: "MongoDB",
-                                description: "Scalable and flexible database handling for diverse data requirements."
-                            }
-                        ].map((tech, index) => (
-                            <div key={index} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transform hover:scale-105 transition-transform duration-200">
-                                <h3 className="text-xl font-semibold text-blue-600 dark:text-blue-400 mb-3">{tech.title}</h3>
-                                <p className="text-gray-600 dark:text-gray-300">{tech.description}</p>
-                            </div>
-                        ))}
-                    </div>
+                <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
+                    {[
+                        {
+                            title: "Next.js",
+                            description: "Server-side rendering and efficient routing capabilities for seamless user experience."
+                        },
+                        {
+                            title: "Tailwind CSS",
+                            description: "Utility-first CSS framework for designing a responsive and aesthetically pleasing interface."
+                        },
+                        {
+                            title: "Socket.IO",
+                            description: "Enabling real-time communication and facilitating instant dynamic interactions."
+                        },
+                        {
+                            title: "MongoDB",
+                            description: "Scalable and flexible database handling for diverse data requirements."
+                        },
+                        {
+                            title: "Upstash Redis",
+                            description: "Real-time notifications and online status tracking, ensuring instant updates without heavy backend load."
+                        }
+                    ].map((tech, index) => (
+                        <div key={index} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transform hover:scale-105 transition-transform duration-200">
+                            <h3 className="text-xl font-semibold text-blue-600 dark:text-blue-400 mb-3">{tech.title}</h3>
+                            <p className="text-gray-600 dark:text-gray-300">{tech.description}</p>
+                        </div>
+                    ))}
                 </div>
 
                 {/* Deployment Section */}
