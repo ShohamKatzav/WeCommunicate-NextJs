@@ -45,8 +45,10 @@ export default function UploadFile({ message, setMessage }: UploadFileProps) {
     }
 
     useEffect(() => {
-        if (message.file === null)
+        if (message.file === null) {
             setBlob(null);
+            blobRef.current = null;
+        }
     }, [message]);
 
 
