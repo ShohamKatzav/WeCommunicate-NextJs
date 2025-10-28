@@ -103,10 +103,10 @@ const UsersList = ({ chatListActiveUsers, getLastMessages, conversationId }: Lis
                                                     </div>
                                                     <div className="mt-4 flex items-center justify-between">
                                                         <p className="text-sm font-medium text-gray-500">
-                                                            Status: <span className={chatListActiveUsers.find(
+                                                            Status: <span className={chatListActiveUsers?.find(
                                                                 u => ciEquals(u.email as string, chatMember.email as string)
                                                             ) ? "text-green-600" : "text-red-600"}>
-                                                                {chatListActiveUsers.find(
+                                                                {chatListActiveUsers?.find(
                                                                     u => ciEquals(u.email as string, chatMember.email as string)
                                                                 ) ? "Active" : "Inactive"}
                                                             </span>
