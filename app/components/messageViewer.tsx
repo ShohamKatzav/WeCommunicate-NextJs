@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import Loading from "./loading";
+import useIsMedium from "../hooks/useIsMedium";
 
 interface MessageViewerProps {
   message: Message;
@@ -14,6 +15,7 @@ const MessageViewer = ({ message, email }: MessageViewerProps) => {
   const [type, setType] = useState("text");
   const sender = message.sender === email ? "You" : message.sender;
   const dateToDisplay = new Date(message.date!).toLocaleString();
+  const isMedium = useIsMedium();
 
   useEffect(() => {
     const contentType = message.file?.contentType;
@@ -23,15 +25,16 @@ const MessageViewer = ({ message, email }: MessageViewerProps) => {
     else if (contentType.includes("audio")) setType("audio");
     else if (contentType.includes("video")) setType("video");
     else setType("link");
+
   }, [message.file?.contentType]);
 
   if (!type) return <Loading />;
 
   return (
     <div
-      className={`mr-2 py-3 px-4 col-span-4 md:col-span-3 ${message.sender === email
+      className={`self-start max-w-[80%] md:max-w-[60%] px-4 py-3 overflow-hidden ${message.sender === email
         ? "bg-blue-400 rounded-br-3xl justify-self-start"
-        : "bg-slate-400 rounded-bl-3xl col-start-2 md:col-start-3 justify-self-end md:justify-self-auto"
+        : "bg-slate-400 rounded-bl-3xl col-start-2 md:col-start-3 justify-self-end"
         } rounded-tl-3xl rounded-tr-xl text-white wrap-break-word overflow-auto gap-6 mb-6`}
     >
       <div className="text-sm md:text-lg text-gray-200 mb-1">{sender}</div>
@@ -43,8 +46,8 @@ const MessageViewer = ({ message, email }: MessageViewerProps) => {
       {type === "image" && message.file && (
         <Image
           src={message.file.url}
-          width={250}
-          height={250}
+          width={isMedium ? 250 : 100}
+          height={isMedium ? 250 : 100}
           alt="Sent image"
         />
       )}

@@ -71,12 +71,12 @@ const LoadMoreMessages = ({ oldMessages, participants }: LoadMoreProps) => {
 
   return (
     <>
-      <div className="grid row-start-2 md:grid-cols-5">
+      <div>
         {messages.slice(newMessagesCount).map((message, index) =>
           <MessageViewer key={index + 5} message={message} email={user?.email} />)
         }
       </div>
-      <div ref={newMessages} className="grid row-start-2 md:grid-cols-5">
+      <div>
         {messages.slice(0, newMessagesCount).map((message, index) =>
           <MessageViewer key={index} message={message} email={user?.email} />)
         }

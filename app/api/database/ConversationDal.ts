@@ -1,6 +1,7 @@
 import Conversation from "../models/Conversation";
 import { Types } from 'mongoose';
 import Message from "../models/Message";
+import FileModel from "../models/FileModel";
 
 export default class ConversationRepository {
 
@@ -21,11 +22,18 @@ export default class ConversationRepository {
         try {
             const conversations = await Conversation.find({
                 members: { $in: [user] },
-            }).populate('members', 'email').populate({
-                path: 'messages',
-                model: Message,
-                options: { sort: { date: -1 }, perDocumentLimit: 1 },
-            });
+            })
+                .populate('members', 'email')
+                .populate({
+                    path: 'messages',
+                    model: Message,
+                    options: { sort: { date: -1 }, perDocumentLimit: 1 },
+                    populate: {
+                        path: 'file',
+                        model: FileModel,
+                        select: 'pathname',
+                    },
+                });
 
             const sortedConversations = conversations.sort((a, b) => {
                 const aLastMessageDate = a.messages[0]?.date;

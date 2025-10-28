@@ -5,6 +5,7 @@ import useIsMedium from "../hooks/useIsMedium";
 import ChatUser from "../types/chatUser";
 import Conversation from "../types/conversation";
 import { AsShortName } from "../utils/asName";
+import Message from "../types/message";
 
 interface ConversationConversationSummaryProps {
 
@@ -85,7 +86,8 @@ const ConversationSummary = ({ conversation, getLastMessages, setToggle }: Conve
                             {conversation.messages[0].sender?.toUpperCase() === user?.email?.toUpperCase() ? 'You' :
                                 conversation.messages[0].sender?.split("@")[0]}
                         </span>
-                        : {conversation.messages[0].text}
+                        : {conversation.messages?.at(0)?.text ? conversation.messages?.at(0)?.text :
+                            "sent file " + conversation.messages?.at(0)?.file?.pathname}
                         <div className="text-xs text-gray-400">
                             {conversation.messages[0].date &&
                                 new Date(conversation.messages[0].date).toLocaleString()}

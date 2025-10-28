@@ -42,8 +42,8 @@ const MessagesBox = ({ messages, chatBox, participants }: MessagesBoxProps) => {
     return (
         <>
             <div className="mt-8 md:mt-20">
-                <div ref={chatBox} className="overflow-y-scroll h-[30vh] w-full flex md:flex-cols-4 flex-col-reverse">
-                    <div className="grid row-start-2 md:grid-cols-5">
+                <div ref={chatBox} className="flex flex-col-reverse h-[30vh] overflow-y-scroll w-full p-2">
+                    <div>
                         {messages.map((message, index) =>
                             <MessageViewer key={index} message={message} email={user?.email} />)
                         }

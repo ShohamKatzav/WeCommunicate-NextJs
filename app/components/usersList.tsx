@@ -68,7 +68,7 @@ const UsersList = ({ chatListActiveUsers, getLastMessages, conversationId }: Lis
         }
         else {
             const updatedChatUsers: ChatUser[] = JSON.parse(chatUsers.value);
-            chatListActiveUsers.forEach(user => {
+            chatListActiveUsers?.forEach(user => {
                 if (!updatedChatUsers.find(u => ciEquals(u.email as string, user.email as string)))
                     updatedChatUsers.push(user);
             });
