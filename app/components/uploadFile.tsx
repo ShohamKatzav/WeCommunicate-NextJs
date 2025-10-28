@@ -89,7 +89,8 @@ export default function UploadFile({ message, setMessage }: UploadFileProps) {
             {
                 contentType: blob.contentType,
                 url: blob.url,
-                downloadUrl: blob.downloadUrl
+                downloadUrl: blob.downloadUrl,
+                pathname: blob.pathname
             }
         }));
     }, [blob]);
