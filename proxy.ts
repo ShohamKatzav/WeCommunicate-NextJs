@@ -1,66 +1,51 @@
-import { NextResponse, NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import jwt from 'jsonwebtoken'
 
-const jwtSecretKey = process.env.TOKEN_SECRET!;
+const jwtSecretKey = process.env.TOKEN_SECRET
+if (!jwtSecretKey) throw new Error('TOKEN_SECRET environment variable is not set')
 
-export default function proxy(req: any) {
-  let token = "";
+const protectedRoutes = ['/chat', '/locations']
+const publicRoutes = ['/about', '/contact']
+const publiclLoginRoutes = ['/', '/login', '/sign-up']
 
-  // Handle Socket.IO requests (object with token property)
-  if ('token' in req && req.token) {
-    token = req.token.toString();
-  }
-  // Handle Next.js page/API requests
-  else if (req instanceof NextRequest) {
-    // Try Authorization header first
-    const authHeader = req.headers.get('authorization');
-    if (authHeader?.startsWith("Bearer ")) {
-      token = authHeader.split(" ")[1];
-    }
-    // Try cookie as fallback (Pages Requests)
-    else {
-      const cookieUser = req.cookies.get('user')?.value;
-      if (cookieUser) {
+export default async function middleware(req: NextRequest) {
+    const path = req.nextUrl.pathname
+    const isProtectedRoute = protectedRoutes.includes(path)
+    const isPublicRoute = publicRoutes.includes(path)
+    const isPublicLoginRoute = publiclLoginRoutes.includes(path)
+
+    if (isPublicRoute) return NextResponse.next()
+
+    const cookie = (await cookies()).get('user')?.value
+    if (isProtectedRoute && !cookie)
+        return NextResponse.redirect(new URL('/login', req.url))
+
+    let verified = null
+    if (cookie) {
         try {
-          const userData = JSON.parse(decodeURIComponent(cookieUser));
-          token = userData.token;
-        } catch (err) {
-          console.error('Failed to parse user cookie:', err);
+            const user = JSON.parse(cookie)
+            verified = jwt.verify(user.token, jwtSecretKey!)
+        } catch {
+            verified = null
         }
-      }
-      else {
-        return NextResponse.redirect(new URL('/login', req.url));
-      }
     }
-  }
-  // No token — redirect to login (only for NextRequest)
-  if (!token) {
-    if (req instanceof NextRequest) {
-      return NextResponse.redirect(new URL('/login', req.url));
-    }
-    return null;
-  }
 
-  try {
-    const verified = jwt.verify(token, jwtSecretKey);
-    if (verified && req instanceof NextRequest) {
-      return NextResponse.next();
-    }
-  } catch (err) {
-    return false;
-    // Invalid token → redirect to login
-  }
+    if (isProtectedRoute && !verified)
+        return NextResponse.redirect(new URL('/login', req.url))
 
-  return true; // For socket.io
+    if (isPublicLoginRoute && verified) {
+        return NextResponse.redirect(new URL('/chat', req.url))
+    }
+    return NextResponse.next()
 }
 
 export const config = {
-  matcher: [
-    '/api/account/verify',
-    '/api/account/get-usernames',
-    '/api/chat/:path*',
-    '/api/conversation/:path*',
-    '/api/location/:path*',
-    '/chat/:path*',
-  ],
-};
+    matcher: [
+        '/',
+        '/login',
+        '/sign-up',
+        '/chat/:path*',
+        '/api/send-file',
+    ],
+}

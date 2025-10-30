@@ -5,7 +5,6 @@ import useIsMedium from "../hooks/useIsMedium";
 import ChatUser from "../types/chatUser";
 import Conversation from "../types/conversation";
 import { AsShortName } from "../utils/asName";
-import Message from "../types/message";
 
 interface ConversationConversationSummaryProps {
 

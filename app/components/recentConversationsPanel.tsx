@@ -1,11 +1,11 @@
 "use client"
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from "react";
-import fetchRecentConversations from "../actions/conversation-actions";
 import ChatUser from "../types/chatUser";
 import Message from "../types/message";
 import useIsMedium from "../hooks/useIsMedium";
 import ConversationSummary from "./conversationSummary";
+import { getConversations } from '@/app/lib/conversationActions'
 
 interface ConversationsPanelProps {
     getLastMessages: (participantFromList: ChatUser[]) => Promise<void>;
@@ -47,7 +47,7 @@ const RecentConversationsPanel = ({ getLastMessages, newMessage, participants, r
 
     const fetchData = async () => {
         try {
-            const fetchedConversations = await fetchRecentConversations();
+            const fetchedConversations = await getConversations();
             setConversations(fetchedConversations.recentConversations);
         } catch (error: any) {
             setFetchCode(401);

@@ -35,9 +35,12 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts",
+    "app/global-not-found.tsx",
+    "socket/authMIddleware.js",
+    "socket/handlers.js",
     ".next\\dev/types/**/*.ts",
     ".next\\dev/types/**/*.ts"
-, "pages/api/socket/index.js", "app/global-not-found.tsx", "pages/_app.js"  ],
+  ],
   "exclude": [
     "node_modules"
   ]

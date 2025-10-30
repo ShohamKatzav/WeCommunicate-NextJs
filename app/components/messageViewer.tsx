@@ -1,8 +1,8 @@
 "use client"
+import { useState, useEffect } from "react";
 import Message from "../types/message";
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useEffect } from "react";
 import Loading from "./loading";
 import useIsMedium from "../hooks/useIsMedium";
 

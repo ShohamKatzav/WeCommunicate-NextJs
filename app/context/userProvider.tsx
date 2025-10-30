@@ -1,9 +1,8 @@
 "use client";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useState, useCallback } from "react";
 import User from "../types/user";
 import UserContext from "./userContext";
-import { create, del } from "../actions/cookie-actions";
-import FetchUserData from "../utils/fetchUserData";
+import { fetchUser, create, del } from "../lib/cookieActions";
 import AsName from "../utils/asName";
 
 type UserProviderProps = {
@@ -12,35 +11,44 @@ type UserProviderProps = {
 
 export const UserProvider = ({ children }: UserProviderProps) => {
     const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [loadingUser, setLoadingUser] = useState(true);
 
-    useEffect(() => {
-        const init = async () => {
-            await fetchUser();
-        };
-        init();       
+    const fetchUserHandler = useCallback(async () => {
+        try {
+            const cookieUser = await fetchUser();
+            setUser(cookieUser);
+        } catch (error) {
+            console.error("Failed to fetch user:", error);
+            setUser(null);
+        } finally {
+            setLoadingUser(false);
+        }
     }, []);
 
-    const fetchUser = async () => {
-        const cookieUser = await FetchUserData();
-        if (cookieUser) {
-            setUser(cookieUser);
-        }
-        setLoading(false);
-    };
+    useEffect(() => {
+        fetchUserHandler();
+    }, [fetchUserHandler]);
 
-    const updateUser = async (userData: User | null) => {
-        if(userData?.email)
-            userData.email = AsName(userData?.email!);
-        setUser(userData);
-        if (userData)
-            await create(userData);
-        else
-            await del();
-    };
+    const updateUser = useCallback(async (userData: User | null) => {
+        try {
+            if (userData?.email) {
+                userData = { ...userData, email: AsName(userData.email) };
+            }
+
+            setUser(userData);
+
+            if (userData) {
+                await create(userData);
+            } else {
+                await del();
+            }
+        } catch (error) {
+            console.error("Failed to update user:", error);
+        }
+    }, []);
 
     return (
-        <UserContext.Provider value={{ user, updateUser, loading }}>
+        <UserContext.Provider value={{ user, loadingUser, updateUser }}>
             {children}
         </UserContext.Provider>
     );

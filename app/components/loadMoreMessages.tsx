@@ -1,9 +1,8 @@
 "use client";
-
 import { useEffect, useRef, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import Message from "../types/message";
-import fetchMessages from "../actions/message-actions";
+import { getMessages } from '@/app/lib/chatActions'
 import { Spinner } from "./spinner";
 import { useUser } from "../hooks/useUser";
 import MessageViewer from "./messageViewer";
@@ -24,20 +23,15 @@ const LoadMoreMessages = ({ oldMessages, participants }: LoadMoreProps) => {
   const { ref, inView } = useInView();
   const { user } = useUser();
 
-  const newMessages = useRef<HTMLDivElement>(null);
   const [newMessagesCount, setNewMessagesCount] = useState(5);
-
-  const delay = (ms: number) =>
-    new Promise((resolve) => setTimeout(resolve, ms));
 
   const loadMoreMessages = async () => {
     setFetching(true);
     setAllDataFetched(false);
-    await delay(200);
     const nextPage = page + 1;
-    const res: any = await fetchMessages(
-      nextPage,
-      participants?.map(p => p._id).filter((id): id is string => id !== undefined)
+    const res: any = await getMessages(
+      participants?.map(p => p._id).filter((id): id is string => id !== undefined),
+      nextPage
     );
     if (res?.message !== "success") {
       setAllDataFetched(true);

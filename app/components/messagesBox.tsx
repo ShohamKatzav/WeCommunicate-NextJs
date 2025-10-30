@@ -1,9 +1,9 @@
 "use client"
+import { RefObject, useEffect, useState } from "react";
 import { useUser } from "../hooks/useUser";
 import Message from "../types/message";
 import MessageViewer from "./messageViewer";
 import LoadMoreMessages from "./loadMoreMessages";
-import { RefObject, useEffect, useState } from "react";
 import ChatUser from "../types/chatUser";
 
 interface MessagesBoxProps {

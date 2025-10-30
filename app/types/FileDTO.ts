@@ -1,4 +1,4 @@
-export default interface File {
+export default interface FileDTO {
     contentType: string;
     url: string;
     downloadUrl: string;

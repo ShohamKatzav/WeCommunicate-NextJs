@@ -1,10 +1,10 @@
 import { Dispatch, RefObject, SetStateAction, useEffect, useState } from "react";
-import ChatUser from "../types/chatUser";
-import { getCoockieChatUsersList } from '../actions/cookie-actions';
-import { AsShortName } from "../utils/asName";
-import Message from "../types/message";
+import { getCoockieChatUsersList } from '@/app/lib/cookieActions';
+import { getUsernames } from '@/app/lib/accountActions'
 import { useUser } from "../hooks/useUser";
-import AxiosWithAuth from "../utils/axiosWithAuth";
+import ChatUser from "../types/chatUser";
+import Message from "../types/message";
+import { AsShortName } from "../utils/asName";
 
 interface GroupCreationProps {
     isOpen: boolean;
@@ -15,8 +15,6 @@ interface GroupCreationProps {
 }
 
 const GroupCreationForm = ({ isOpen, onClose, participants, conversationId, setChat }: GroupCreationProps) => {
-
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_ADDRESS + "api/account";
 
     const [participantsList, setparticipantsList] = useState([]);
     const [selectedParticipants, setSelectedParticipants] = useState<ChatUser[]>([]);
@@ -44,7 +42,7 @@ const GroupCreationForm = ({ isOpen, onClose, participants, conversationId, setC
         if (chatUsers)
             setparticipantsList(JSON.parse(chatUsers?.value));
         else {
-            const response: any = await AxiosWithAuth().get(`${baseUrl}/get-usernames`);
+            const response: any = await getUsernames();
             setparticipantsList(response?.data);
         }
     }

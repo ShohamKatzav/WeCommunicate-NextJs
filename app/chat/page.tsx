@@ -1,9 +1,10 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import { MessageSquareDiff } from 'lucide-react';
 import { MessageCircle } from 'lucide-react';
 import Message from '../types/message';
+import MessageDTO from '../types/messageDTO';
 import ChatUser from '../types/chatUser';
 import MessageInput from '../components/messageInput';
 import Buttons from '../components/buttons';
@@ -13,18 +14,16 @@ import Loading from '../components/loading';
 import UploadFile from '../components/uploadFile';
 import RecentConversationsPanel from '../components/recentConversationsPanel';
 import GroupCreationForm from '../components/groupCreationForm';
-import fetchMessages from '../actions/message-actions';
-import AxiosWithAuth from '../utils/axiosWithAuth';
 import { AsShortName } from '../utils/asName';
 import { useUser } from '../hooks/useUser';
 import { useSocket } from '../hooks/useSocket';
 import { useNotification } from '../hooks/useNotification';
+import { saveMessage, getMessages } from '@/app/lib/chatActions'
 
 const Chat = () => {
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_ADDRESS + "api/chat";
   const { socket, loadingSocket } = useSocket();
-  const { user, loading } = useUser();
+  const { user, loadingUser } = useUser();
   const [chat, setChat] = useState<Message[]>([]);
   const [messageToSend, setMessageToSend] = useState<Message>({ text: '' });
   const [chatListActiveUsers, setChatListActiveUsers] = useState<ChatUser[]>([]);
@@ -39,14 +38,22 @@ const Chat = () => {
 
   const pathname = usePathname();
 
+  interface getMessagesResponse {
+    success: boolean,
+    message: string,
+    chat: Message[],
+    conversation: string | null
+  }
 
-  const getLastMessages = async (roomParticipants: ChatUser[]) => {
+
+  const getLastMessages = useCallback(async (roomParticipants: ChatUser[]) => {
+    if (!roomParticipants) return;
     await socket?.emit('leave room', { conversationId: currentConversationId });
-    const response = await fetchMessages(1, roomParticipants.map(p => p._id!));
+    const response: getMessagesResponse = await getMessages(roomParticipants.map(p => p._id), 1);
     await socket?.emit('join room', { conversationId: response.conversation });
-    const chatWithFormattedDates = response?.chat?.length ? response.chat?.map((message: Message) =>
+    const chatWithFormattedDates: any = response?.chat?.length ? response.chat?.map((message: Message) =>
       ({ ...message, date: new Date(message.date!).toLocaleString() })) : [];
-    currentConversationId.current = response.conversation;
+    currentConversationId.current = response.conversation as string;
     setChat(chatWithFormattedDates);
     participants.current = roomParticipants;
     setMessageToSend(prev => ({
@@ -55,9 +62,9 @@ const Chat = () => {
       participantID: participants.current?.map(p => p._id!),
       conversationID: currentConversationId.current
     }));
-  }
+  }, [socket])
 
-  const handleIncomingMessage = (data: Message) => {
+  const handleIncomingMessage = useCallback(async (data: Message) => {
     if (data.sender?.toUpperCase() === user?.email!.toUpperCase()) return;
     if (data.conversationID === currentConversationId.current) {
       setChat((prevChat) => [...prevChat, { date: new Date(), sender: data.sender, text: data.text, file: data.file }]);
@@ -67,26 +74,28 @@ const Chat = () => {
       increaseNotifications(data.conversationID as string);
     }
     setLastRecievedMessage(data);
-  }
+  }, [user?.email, increaseNotifications])
 
 
   const handleSendMessage = async () => {
     if (socket && !loadingSocket && participants.current?.length) {
 
-      const newMessage: Message = {
-        ...messageToSend,
+      const newMessage: MessageDTO = {
         date: new Date(),
+        sender: messageToSend.sender || "",
         text: messageToSend.text?.trim(),
+        file: messageToSend?.file || undefined,
+        participantID: messageToSend.participantID || [],
+        conversationID: messageToSend.conversationID || ""
       };
-      setChat((prevChat) => [...prevChat, newMessage]);
+      setChat((prevChat) => [...prevChat, newMessage as Message]);
 
       try {
-        const result = await AxiosWithAuth().post(`${baseUrl}/save-data`, newMessage);
+        const result = await saveMessage(newMessage);
         let newConversationId;
-
         if (!currentConversationId.current) {
           socket.disconnect();
-          newConversationId = result.data.messageDoc.conversation;
+          newConversationId = result.messageDoc.conversation;
           socket.io.opts.extraHeaders = { email: user!.email!, conversationId: newConversationId }
           socket.connect();
           currentConversationId.current = newConversationId;
@@ -99,18 +108,6 @@ const Chat = () => {
         console.error("Error sending message:", error);
       }
     }
-  };
-
-  const handleCleanHistory = async () => {
-    await AxiosWithAuth().put(`${baseUrl}/clean-history`, { currentConversationId: currentConversationId.current })
-      .then(async response => {
-        if ('success' === response.data.message) {
-          setChat([]);
-        }
-      })
-      .catch(error => {
-        window.alert("Error occured while cleaning chat history: " + error.response.data.message);
-      })
   };
   const handleLeaveRoom = async () => {
     currentConversationId.current = "";
@@ -176,8 +173,6 @@ const Chat = () => {
       chatBox.current.scrollTop = chatBox.current.scrollHeight;
   }, [chat]);
 
-
-
   const handleOpenModal = () => {
     setModalOpen(true);
     document.body.classList.add("overflow-hidden");
@@ -188,7 +183,7 @@ const Chat = () => {
     document.body.classList.remove("overflow-hidden");
   };
 
-  if (!user || loading)
+  if (!user || loadingUser)
     return (<Loading />)
 
   return (
@@ -261,10 +256,11 @@ const Chat = () => {
               />
 
               <Buttons
-                handleCleanHistory={handleCleanHistory}
                 handleLeaveRoom={handleLeaveRoom}
                 chat={chat}
+                setChat={setChat}
                 message={messageToSend}
+                conversationIdRef={currentConversationId}
                 participants={participants}
               />
             </div>

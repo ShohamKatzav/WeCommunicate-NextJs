@@ -2,13 +2,13 @@
 import './login.css'
 import { useState } from "react";
 import { useRouter } from 'next/navigation';
-import AxiosWithAuth from '../utils/axiosWithAuth';
 import { useUser } from '../hooks/useUser';
 import Loading from '../components/loading';
+import { isExist, authenticateUser } from '@/app/lib/accountActions'
 
 const Login = () => {
   const router = useRouter();
-  const { updateUser } = useUser();
+  const { user, loadingUser, updateUser } = useUser();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,13 +16,11 @@ const Login = () => {
   const [passwordError, setPasswordError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_ADDRESS + "api/account";
-
   // Check if account exists
   const checkAccountExists = async (): Promise<boolean> => {
     try {
-      const response = await AxiosWithAuth().post(`${baseUrl}/is-exist`, { email });
-      return response.data.accountExists;
+      const response = await isExist(email);
+      return response.accountExists;
     } catch (err: any) {
       if (err.response?.status === 401) window.alert("Wrong email or password");
       return false;
@@ -32,14 +30,16 @@ const Login = () => {
   // Log in user
   const logIn = async () => {
     try {
-      const response = await AxiosWithAuth().post(`${baseUrl}/auth`, { email, password });
-      if (response.data.message === "Success") {
-        updateUser({ email, token: response.data.token });
+      const response = await authenticateUser(email, password);
+      if (response.success) {
+        await updateUser({ email, token: response.token });
         router.push("/chat");
       }
+      else
+        if (response.status === 401)
+          window.alert("Wrong email or password");
     } catch (err: any) {
-      if (err.response?.status === 401) window.alert("Wrong email or password");
-      else console.error('Unexpected error', err);
+      console.error('Unexpected error', err);
     } finally {
       setLoading(false);
     }
@@ -81,7 +81,8 @@ const Login = () => {
     else setLoading(false);
   }
 
-  if (loading) return <Loading />;
+  if (user && Object.keys(user).length < 0 || loadingUser || loading)
+    return <Loading />;
 
   return (
     <form onSubmit={onButtonClick}>

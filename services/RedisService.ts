@@ -3,8 +3,6 @@ import { Redis } from '@upstash/redis';
 export default class RedisService {
     private static instance: Redis | null = null;
 
-    private constructor() { }
-
     private static normalizeEmail(email?: string | null): string {
         if (!email || typeof email !== 'string') {
             console.warn('Invalid email provided to normalizeEmail');
@@ -32,10 +30,6 @@ export default class RedisService {
         const normalizedEmail = RedisService.normalizeEmail(email);
         try {
             const socketId = await RedisService.instance.hget('user_sockets', normalizedEmail!) as string;
-            if (!socketId) {
-                console.debug(`No socket found for email: ${normalizedEmail}`);
-            }
-
             return socketId || null;
         } catch (error) {
             console.error(`Error getting socket for email ${email}:`, error);

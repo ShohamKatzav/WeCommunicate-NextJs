@@ -1,8 +1,8 @@
 import ChatUser from "./chatUser";
-import Message from "./message";
+import MessageDTO from "./messageDTO";
 
 export default interface Conversation {
     _id?: string | undefined;
     members: ChatUser[];
-    messages?: Message[];
- }
+    messages?: MessageDTO[];
+}

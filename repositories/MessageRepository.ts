@@ -1,17 +1,8 @@
 import Message from "../models/Message";
 import FileModel from "../models/FileModel";
-import ConversationRepository from "./ConversationDal";
+import ConversationRepository from "./ConversationRepository";
 import { Schema, Types } from 'mongoose';
-import { IFile } from '../models/FileModel';
-
-
-interface MessageDTO {
-    date: Number;
-    sender: string;
-    participantID: string[];
-    text?: string;
-    file?: IFile;
-}
+import MessageDTO from '@/app/types/messageDTO';
 
 type ChatQuery = {
     date?: {

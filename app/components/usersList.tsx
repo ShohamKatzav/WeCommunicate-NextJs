@@ -1,14 +1,15 @@
+"use client"
 import { useEffect, useRef, useState } from "react";
 import { Users } from 'lucide-react';
-import { createCoockieChatUsersList, getCoockieChatUsersList } from "../actions/cookie-actions";
+import { createCoockieChatUsersList, getCoockieChatUsersList } from "../lib/cookieActions";
 import ciEquals from "../utils/ciEqual";
-import AxiosWithAuth from "../utils/axiosWithAuth";
 import ChatUser from "../types/chatUser";
 import AsName from "../utils/asName";
 import useIsMedium from "../hooks/useIsMedium";
 import { useUser } from "../hooks/useUser";
 import { useSocket } from "../hooks/useSocket";
 import { useNotification } from "../hooks/useNotification";
+import { getUsernames } from '@/app/lib/accountActions'
 
 interface ListProps {
     chatListActiveUsers: ChatUser[];
@@ -17,7 +18,6 @@ interface ListProps {
 }
 
 const UsersList = ({ chatListActiveUsers, getLastMessages, conversationId }: ListProps) => {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_ADDRESS + "api/account";
 
     const isMediumScreen = useIsMedium();
     const { user } = useUser();
@@ -62,9 +62,9 @@ const UsersList = ({ chatListActiveUsers, getLastMessages, conversationId }: Lis
         if (!user?.email) return;
         const chatUsers = await getCoockieChatUsersList();
         if (chatUsers === undefined) {
-            const response: any = await AxiosWithAuth().get(`${baseUrl}/get-usernames`);
-            createCoockieChatUsersList(response?.data);
-            setChatListAllUsers(response?.data);
+            const response: any = await getUsernames();
+            createCoockieChatUsersList(response);
+            setChatListAllUsers(response);
         }
         else {
             const updatedChatUsers: ChatUser[] = JSON.parse(chatUsers.value);

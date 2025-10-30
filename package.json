@@ -17,7 +17,6 @@
     "@upstash/redis": "^1.35.6",
     "@vercel/blob": "^2.0.0",
     "aws4": "^1.13.0",
-    "axios": "^1.6.2",
     "bcryptjs": "^2.4.3",
     "core-js": "^3.37.1",
     "eslint-config-next": "^16.0.0",

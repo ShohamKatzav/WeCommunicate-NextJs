@@ -1,14 +1,14 @@
-import dbConnect from "../database/MongoDb";
-import AccountRepository from "../database/AccountDal"
-import LocationRepository from "../database/LocationDal";
+import dbConnect from "./MongoDb";
+import AccountRepository from "@/repositories/AccountRepository";
+import LocationRepository from "@/repositories/LocationRepository";
 
 export async function GetLocations() {
     try {
         await dbConnect();
         return await LocationRepository.getLocations();
-    }  catch (err) {
-      console.error('Failed to retrieve locations:', err);
-      throw err;
+    } catch (err) {
+        console.error('Failed to retrieve locations:', err);
+        throw err;
     }
 }
 export async function SaveLocations(location: any) {

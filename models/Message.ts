@@ -1,7 +1,7 @@
 import { Document, Schema, models, model } from 'mongoose';
 
 interface IMessage extends Document {
-    date: Number;
+    date: Date;
     sender: string;
     text?: string;
     file?: Schema.Types.ObjectId;

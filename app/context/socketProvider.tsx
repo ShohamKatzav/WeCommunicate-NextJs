@@ -11,13 +11,13 @@ type SocketProviderProps = {
 
 export const SocketProvider = ({ children }: SocketProviderProps) => {
     const baseAddress = process.env.NEXT_PUBLIC_BASE_ADDRESS as string;
-    const { user, loading, updateUser } = useUser();
+    const { user, loadingUser, updateUser } = useUser();
     const [socket, setSocket] = useState<Socket | null>(null);
     const [loadingSocket, setLoadingSocket] = useState(true);
     const router = useRouter();
 
     useEffect(() => {
-        if (!loading && user?.email) {
+        if (!loadingUser && user?.email) {
             const setUp = () => {
                 const socketConfig = {
                     extraHeaders: {

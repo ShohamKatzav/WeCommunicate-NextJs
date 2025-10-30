@@ -1,6 +1,6 @@
 "use client"
-import Link from "next/link";
 import { useState } from "react";
+import Link from "next/link";
 import { FaBars, FaTimes } from "react-icons/fa";
 import { useUser } from "../hooks/useUser";
 import { useSocket } from "../hooks/useSocket";
@@ -51,7 +51,7 @@ const Navbar = () => {
   ];
 
   const handleLogOut: any = async () => {
-    updateUser({});
+    updateUser(null);
     socket?.disconnect();
   };
 

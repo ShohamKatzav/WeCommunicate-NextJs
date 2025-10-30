@@ -2,9 +2,9 @@
 import { useRouter } from 'next/navigation';
 import { useState } from "react";
 import { useUser } from "../hooks/useUser";
-import AxiosWithAuth from "../utils/axiosWithAuth";
 import '../login/login.css';
 import Loading from '../components/loading';
+import { isExist, createUser } from '@/app/lib/accountActions'
 
 function SignUp() {
     const router = useRouter();
@@ -12,15 +12,14 @@ function SignUp() {
     const [password, setPassword] = useState("")
     const [emailError, setEmailError] = useState("")
     const [passwordError, setPasswordError] = useState("")
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_ADDRESS + "api/account";
     const [loading, setLoading] = useState(false);
     const { updateUser } = useUser();
 
 
     const checkAccountExists = async (): Promise<boolean> => {
         try {
-            const response = await AxiosWithAuth().post(`${baseUrl}/is-exist`, { email });
-            return response.data.accountExists;
+            const response = await isExist(email);
+            return response.accountExists;
         } catch (err: any) {
             if (!(err.response?.status === 401))
                 console.log(err);
@@ -31,14 +30,14 @@ function SignUp() {
     // Log in a user using email and password
     const logIn = async () => {
         try {
-            const logInResponse = await AxiosWithAuth().post(`${baseUrl}/auth`, { email, password });
-            if ('Success' === logInResponse.data.message) {
-                updateUser({ email, token: logInResponse.data.token });
-                router.push("/chat");
+            const logInResponse = await createUser(email, password);
+            if (logInResponse.success) {
+                await updateUser({ email, token: logInResponse.token });
+                router.replace('/chat');
             }
         } catch (error: any) {
             setLoading(false);
-            window.alert("Error occured: " + error?.response?.data?.message);
+            window.alert("Error occured: " + error?.message);
         }
     }
 
