@@ -67,10 +67,47 @@ const useLocation = () => {
       const msg = error.message || (error.code === 2 ? 'Position unavailable' : 'Error retrieving location');
       setPosition(prev => ({ ...prev, loading: false, error: msg }));
     };
+    let watchId = navigator.geolocation.watchPosition(handleSuccess, handleError, geolocationOptions);
 
-    const watchId = navigator.geolocation.watchPosition(handleSuccess, handleError, geolocationOptions);
-    return () => navigator.geolocation.clearWatch(watchId);
+    const interval = setInterval(() => {
+      navigator.geolocation.clearWatch(watchId);
+      watchId = navigator.geolocation.watchPosition(handleSuccess, handleError, geolocationOptions);
+    }, 30000);
+
+    return () => {
+      clearInterval(interval);
+      navigator.geolocation.clearWatch(watchId);
+    };
   }, [socketReady, user?.email]);
+
+  // useEffect(() => {
+  //   if (!navigator.geolocation) {
+  //     setPosition(prev => ({ ...prev, loading: false, error: 'Geolocation not supported' }));
+  //     return;
+  //   }
+
+  //   const handleSuccess = async (pos: GeolocationPosition) => {
+  //     const newPosition = {
+  //       latitude: pos.coords.latitude,
+  //       longitude: pos.coords.longitude,
+  //       accuracy: pos.coords.accuracy,
+  //       loading: false,
+  //       error: null,
+  //       username: user?.email ?? null,
+  //       time: new Date()
+  //     };
+  //     setPosition(newPosition);
+  //     await socketRef.current?.emit('save location', newPosition);
+  //   };
+
+  //   const handleError = (error: GeolocationPositionError) => {
+  //     const msg = error.message || (error.code === 2 ? 'Position unavailable' : 'Error retrieving location');
+  //     setPosition(prev => ({ ...prev, loading: false, error: msg }));
+  //   };
+
+  //   const watchId = navigator.geolocation.watchPosition(handleSuccess, handleError, geolocationOptions);
+  //   return () => navigator.geolocation.clearWatch(watchId);
+  // }, [socketReady, user?.email]);
 
   return { position, locationAccessinfo };
 };

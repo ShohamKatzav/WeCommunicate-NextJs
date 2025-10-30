@@ -45,7 +45,8 @@ export const config = {
         '/',
         '/login',
         '/sign-up',
-        '/chat/:path*',
+        '/chat',
+        '/locations',
         '/api/send-file',
     ],
 }
