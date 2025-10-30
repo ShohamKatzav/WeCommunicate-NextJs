@@ -1,46 +1,148 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# WeCommunicate
 
-## Getting Started
+A modern real-time chat application built with Next.js, featuring group chats, file sharing, real-time notifications, and seamless deployment on Render.
 
-First, run the development server:
+## 🚀 Features
 
+- **Real-time Messaging** - Instant message delivery via WebSocket connections
+- **Group Chats** - Create and manage group conversations with multiple participants
+- **File Sharing** - Upload and share files within conversations
+- **Location Sharing** - Share your current location with Google Maps integration
+- **Push Notifications** - Real-time notifications for new messages and updates
+- **Modular Architecture** - Clean separation of concerns with dedicated handlers
+- **Secure Authentication** - Built-in auth middleware for socket connections
+- **Rate Limiting** - Protection against abuse with Upstash-powered rate limiting
+- **Server Actions** - Modern Next.js server actions for efficient data handling
+- **Optimized Proxy** - Custom proxy configuration for seamless routing
+
+## 🛠️ Technologies Used
+
+### Frontend
+- **Next.js** - React framework for production
+- **React** - UI component library
+- **TypeScript** - Type-safe development
+
+### Backend
+- **Socket.IO** - Real-time bidirectional communication
+- **Server Actions** - Next.js server-side operations
+- **Custom Middleware** - Authentication and rate limiting
+
+### Deployment
+- **Render** - Cloud platform for deployment
+- **Node.js** - Runtime environment
+
+## 📦 Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/ShohamKatzav/WeCommunicate-NextJs.git
+cd WeCommunicate-NextJs
+```
+
+2. Install dependencies:
+```bash
+npm install
+# or
+yarn install
+# or
+pnpm install
+```
+
+3. Set up environment variables:
+```bash
+cp .env.example .env.local
+```
+
+Add your environment variables:
+```env
+TOKEN_SECRET=<Secrete for signing user auth tokens>
+DB_URI=<MongoDB connection string>
+
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=<In order to access google maps api - create one on google cloud console>
+
+UPSTASH_REDIS_REST_URL=<Private URL endpoint used to create connection to upstash -> upstash dashboard>
+UPSTASH_REDIS_REST_TOKEN=<Token for upstash -> Upstash dashboard>
+
+BLOB_READ_WRITE_TOKEN=<Token for Vercel blob from their dashboard>
+VERCEL_BLOB_CALLBACK_URL=<Deployment URL (Public/Ngrok) for testing - vercel blob will update this url when file uploading done>
+
+MESSAGES_PER_PAGE=<Number of messages to load per page (default 5)>
+```
+
+4. Run the development server:
 ```bash
 npm run dev
 # or
 yarn dev
 # or
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📁 Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+```
+├── app/
+│   ├── api/              # API routes (Send files route is here)
+│   ├── components/       # React components
+│   ├── hooks/            # Hooks allow easy access to main contexts (User, Socket and more)
+│   ├── lib/              # Server actions
+│   ├── socket/
+│   │   ├── handlers/     # Socket event handlers
+│   │   ├── middleware/   # Auth middleware
+│   │   └── ratelimiter/  # Rate limiting logic
+│   ├── utils/            # Utility functions
+│   └── types/            # TypeScript types
+├── models/               # Mongodb schemas
+├── repositories/         # DAL layer
+└── public/               # Static assets
+```
 
-## Learn More
+## 🚀 Deployment on Render
 
-To learn more about Next.js, take a look at the following resources:
+### Live Deployement
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+[https://wecommunicate-nextjs.onrender.com/](https://wecommunicate-nextjs.onrender.com/)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+Connection Information for example:
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+- Username: Shoham@gmail.com
+- Password: 12345678
 
 
-## Next up:
 
-- Implement a solution for messaging and notifications with a message broker.
-- Recent conversations panel
-- Group chats
-- Profile editing page
-- Send emails option
-- Email confirmation option on sign-up
+## 🔧 Configuration
+
+### Socket Configuration
+Socket handlers are organized in `lib/socket/handlers/`. Each handler manages specific events and includes:
+- Authentication checks via middleware
+- Rate limiting per connection
+- Error handling and validation
+
+### Server Actions
+API routes have been converted to server actions for better performance and type safety. Find them in `app/lib/`.
+
+## 📝 Scripts
+
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run start        # Start production server
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 👤 Author
+
+Your Name - [GitHub](https://github.com/ShohamKatzav)
+
+---
+
+Built with ❤️ using Next.js and deployed on Render
