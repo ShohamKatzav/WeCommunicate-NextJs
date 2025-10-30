@@ -18,7 +18,7 @@ export default async function handleSocketConnection(io, socket) {
             socket.join(room);
         }
 
-        socket.on('save location', () => handleSaveLocation(io, socket));
+        socket.on('save location', (location) => handleSaveLocation(io, socket, location));
         socket.on('get locations', () => handleGetLocation(io, socket));
         socket.on('notifications update', () => handleNotificationsUpdate(socket, email));
         socket.on("notifications checked", (roomID) => handleNotificationsChecked(roomID, email));
@@ -39,15 +39,14 @@ async function handleUpdateConnectedUsers(io) {
     io.emit('update connected users', fresh);
 }
 
-async function handleSaveLocation(io, socket) {
-    await SaveLocations(location);
+async function handleGetLocation(io, socket) {
     const positions = await GetLocations();
     io.to(socket.id).emit('get locations', positions);
 }
 
-async function handleGetLocation(io, socket) {
-    const positions = await GetLocations();
-    io.to(socket.id).emit('get locations', positions);
+async function handleSaveLocation(io, socket, location) {
+    await SaveLocations(location);
+    await handleGetLocation(io, socket);
 }
 
 async function handleNotificationsUpdate(socket, email) {
