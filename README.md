@@ -141,7 +141,7 @@ This project is licensed under the MIT License.
 
 ## 👤 Author
 
-Your Name - [GitHub](https://github.com/ShohamKatzav)
+Shoham Katzav - [GitHub](https://github.com/ShohamKatzav)
 
 ---
 
