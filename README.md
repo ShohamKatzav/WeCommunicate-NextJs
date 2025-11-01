@@ -92,8 +92,8 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 │   │   ├── handlers/     # Socket event handlers
 │   │   ├── middleware/   # Auth middleware
 │   │   └── ratelimiter/  # Rate limiting logic
-│   ├── utils/            # Utility functions
-│   └── types/            # TypeScript types
+│   └──utils/             # Utility functions
+├── types/                # TypeScript types
 ├── models/               # Mongodb schemas
 ├── repositories/         # DAL layer
 └── public/               # Static assets

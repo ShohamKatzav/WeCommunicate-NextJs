@@ -1,6 +1,6 @@
 import { Dispatch, RefObject, SetStateAction } from "react";
-import Message from "../types/message";
-import ChatUser from "../types/chatUser";
+import Message from "@/types/message";
+import ChatUser from "@/types/chatUser";
 
 interface MessageInputProps {
     message: Message;

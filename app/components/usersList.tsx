@@ -1,15 +1,15 @@
 "use client"
 import { useEffect, useRef, useState } from "react";
-import { Users } from 'lucide-react';
 import { createCoockieChatUsersList, getCoockieChatUsersList } from "../lib/cookieActions";
-import ciEquals from "../utils/ciEqual";
-import ChatUser from "../types/chatUser";
-import AsName from "../utils/asName";
-import useIsMedium from "../hooks/useIsMedium";
+import { getUsernames } from '@/app/lib/accountActions'
+import useIsMobile from "../hooks/useIsMobile";
 import { useUser } from "../hooks/useUser";
 import { useSocket } from "../hooks/useSocket";
 import { useNotification } from "../hooks/useNotification";
-import { getUsernames } from '@/app/lib/accountActions'
+import ChatUser from "@/types/chatUser";
+import AsName from "../utils/asName";
+import ciEquals from "../utils/ciEqual";
+import { Users } from 'lucide-react';
 
 interface ListProps {
     chatListActiveUsers: ChatUser[];
@@ -19,7 +19,7 @@ interface ListProps {
 
 const UsersList = ({ chatListActiveUsers, getLastMessages, conversationId }: ListProps) => {
 
-    const isMediumScreen = useIsMedium();
+    const isMobile = useIsMobile();
     const { user } = useUser();
     const { socket } = useSocket();
     const { initializeRoomNotifications } = useNotification();
@@ -69,7 +69,7 @@ const UsersList = ({ chatListActiveUsers, getLastMessages, conversationId }: Lis
         else {
             const updatedChatUsers: ChatUser[] = JSON.parse(chatUsers.value);
             chatListActiveUsers?.forEach(user => {
-                if (!updatedChatUsers.find(u => ciEquals(u.email as string, user.email as string)))
+                if (!updatedChatUsers?.find(u => ciEquals(u.email as string, user.email as string)))
                     updatedChatUsers.push(user);
             });
             createCoockieChatUsersList(updatedChatUsers);
@@ -88,7 +88,7 @@ const UsersList = ({ chatListActiveUsers, getLastMessages, conversationId }: Lis
             <div>
                 {toggle && (
                     <ul className="bg-white shadow sm:rounded-md md:absolute md:transform md:-translate-y-full overflow-auto max-h-[60vh]" ref={dropRef}>
-                        {chatListAllUsers &&
+                        {chatListAllUsers.length > 0 &&
                             chatListAllUsers
                                 ?.sort((a, b) => a.email!.localeCompare(b.email!))
                                 .map((chatMember: ChatUser, index) => {
@@ -129,24 +129,24 @@ const UsersList = ({ chatListActiveUsers, getLastMessages, conversationId }: Lis
                 </h2>
                 <div>
                     <div ref={closeRef}>
-                        {isMediumScreen &&
+                        {!isMobile &&
                             <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M5.00016 5.33333L0.333496 0.666664H9.66683L5.00016 5.33333Z" fill="#1F2937" />
                             </svg>
                         }
-                        {!isMediumScreen &&
+                        {isMobile &&
                             <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M5.00016 0.666664L9.66683 5.33333L0.333496 5.33333L5.00016 0.666664Z" fill="#1F2937" />
                             </svg>
                         }
                     </div>
                     <div className="hidden" ref={openRef}>
-                        {isMediumScreen &&
+                        {!isMobile &&
                             <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M5.00016 0.666664L9.66683 5.33333L0.333496 5.33333L5.00016 0.666664Z" fill="#1F2937" />
                             </svg>
                         }
-                        {!isMediumScreen &&
+                        {isMobile &&
                             <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M5.00016 5.33333L0.333496 0.666664H9.66683L5.00016 5.33333Z" fill="#1F2937" />
                             </svg>

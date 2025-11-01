@@ -5,9 +5,9 @@ import AccountRepository from "@/repositories/AccountRepository";
 import MessageRepository from "@/repositories/MessageRepository"
 import ConversationRepository from "@/repositories/ConversationRepository";
 import CleanHistoryRepository from "@/repositories/CleanHistoryRepository"
-import { extractID } from '@/app/lib/cookieActions'
+import { extractUserIDFromCoockie } from '@/app/lib/cookieActions'
 import { IAccount } from "@/models/Account";
-import MessageDTO from "../types/messageDTO";
+import MessageDTO from "@/types/messageDTO";
 
 export const getMessages = async (participantsId: string[], page: number) => {
     if (typeof page !== 'number' || page < 1) {
@@ -33,7 +33,7 @@ export const getMessages = async (participantsId: string[], page: number) => {
         let chat: any = [];
         let totalMessagesCount = 0;
 
-        const userID = await extractID();
+        const userID = await extractUserIDFromCoockie();
         const partners = await AccountRepository.getUsersByID(participantsId);
 
         if (!userID || !partners) {
@@ -100,7 +100,7 @@ export const getMessages = async (participantsId: string[], page: number) => {
 export const saveMessage = async (message: MessageDTO) => {
     try {
         await connectDB();
-        const userID = await extractID();
+        const userID = await extractUserIDFromCoockie();
         if (typeof userID !== 'string') {
             throw new Error('Unauthorized');
         }
@@ -110,6 +110,25 @@ export const saveMessage = async (message: MessageDTO) => {
     } catch (err) {
         console.error('Failed to save message:', err);
         const result = JSON.parse(JSON.stringify({ success: false, message: 'Failed to save message' }))
+        return result;
+    }
+}
+
+export const deleteMessage = async (id: string) => {
+    try {
+        await connectDB();
+        const userID = await extractUserIDFromCoockie();
+        if (typeof userID !== 'string') {
+            throw new Error('Unauthorized');
+        }
+        const result = await MessageRepository.deleteMessage(id);
+        if (result)
+            return { success: true, message: "Message deleted" };
+        else
+            return { success: false, message: "Failed to delete message" };
+    } catch (err) {
+        console.error('Failed to delete message:', err);
+        const result = { success: false, message: 'Failed to delete message' };
         return result;
     }
 }

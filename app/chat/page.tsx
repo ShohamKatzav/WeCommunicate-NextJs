@@ -3,9 +3,9 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import { MessageSquareDiff } from 'lucide-react';
 import { MessageCircle } from 'lucide-react';
-import Message from '../types/message';
-import MessageDTO from '../types/messageDTO';
-import ChatUser from '../types/chatUser';
+import Message from '@/types/message';
+import MessageDTO from '@/types/messageDTO';
+import ChatUser from '@/types/chatUser';
 import MessageInput from '../components/messageInput';
 import Buttons from '../components/buttons';
 import UsersList from '../components/usersList';
@@ -67,7 +67,20 @@ const Chat = () => {
   const handleIncomingMessage = useCallback(async (data: Message) => {
     if (data.sender?.toUpperCase() === user?.email!.toUpperCase()) return;
     if (data.conversationID === currentConversationId.current) {
-      setChat((prevChat) => [...prevChat, { date: new Date(), sender: data.sender, text: data.text, file: data.file }]);
+      setChat((prevChat) => {
+        // Check if message already exists by _id
+        if (prevChat.some(msg => msg._id === data._id)) {
+          return prevChat;
+        }
+        return [...prevChat, {
+          _id: data._id,
+          date: data.date,
+          sender: data.sender,
+          text: data.text,
+          status: data.status,
+          file: data.file
+        }];
+      });
     }
     else {
       setReloadKey(prev => !prev);
@@ -78,9 +91,11 @@ const Chat = () => {
 
 
   const handleSendMessage = async () => {
+    const tempId = new Date().getTime().toString();
     if (socket && !loadingSocket && participants.current?.length) {
 
       const newMessage: MessageDTO = {
+        _id: tempId,
         date: new Date(),
         sender: messageToSend.sender || "",
         text: messageToSend.text?.trim(),
@@ -92,6 +107,12 @@ const Chat = () => {
 
       try {
         const result = await saveMessage(newMessage);
+        setChat(prevChat =>
+          prevChat.map(msg =>
+            msg._id === tempId ? result.message : msg
+          )
+        );
+        newMessage._id = result.message._id;
         let newConversationId;
         if (!currentConversationId.current) {
           socket.disconnect();
@@ -101,7 +122,7 @@ const Chat = () => {
           currentConversationId.current = newConversationId;
         }
 
-        socket.emit('chat message', newMessage);
+        socket.emit('publish message', newMessage);
         setMessageToSend((prev) => ({ ...prev, text: '', file: null }));
         setLastRecievedMessage({ ...messageToSend, conversationID: currentConversationId.current || newConversationId });
       } catch (error) {
@@ -161,9 +182,9 @@ const Chat = () => {
 
   useEffect(() => {
     if (!loadingSocket) {
-      socket?.on("chat message", handleIncomingMessage);
+      socket?.on("publish message", handleIncomingMessage);
       return () => {
-        socket?.off("chat message", handleIncomingMessage);
+        socket?.off("publish message", handleIncomingMessage);
       };
     }
   }, [loadingSocket, user?.token]);

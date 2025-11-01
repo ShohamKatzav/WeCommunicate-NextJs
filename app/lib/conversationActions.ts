@@ -3,13 +3,13 @@ import connectDB from "@/app/lib/MongoDb";
 import { Types } from "mongoose";
 import ConversationRepository from "@/repositories/ConversationRepository";
 import CleanHistoryRepository from "@/repositories/CleanHistoryRepository"
-import { extractID } from '@/app/lib/cookieActions'
+import { extractUserIDFromCoockie } from '@/app/lib/cookieActions'
 import { error } from "console";
 
 export const getConversations = async () => {
     try {
         await connectDB();
-        const userID = await extractID();
+        const userID = await extractUserIDFromCoockie();
         const recentConversations = await ConversationRepository.GetRecentConversations(
             Types.ObjectId.createFromHexString(userID)
         );
@@ -26,7 +26,7 @@ export const cleanHistory = async (conversationId: string) => {
     if (!conversationId) throw error("Invalid Conversation Id")
     try {
         await connectDB();
-        const userID = await extractID();
+        const userID = await extractUserIDFromCoockie();
         await CleanHistoryRepository.updateCleanHistory(userID, conversationId);
         return { success: true };
     }

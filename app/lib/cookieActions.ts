@@ -1,8 +1,9 @@
 'use server';
 import { cookies } from 'next/headers'
-import User from '../types/user'
-import ChatUser from '../types/chatUser';
+import User from '@/types/user'
+import ChatUser from '@/types/chatUser';
 import jwt from 'jsonwebtoken';
+import { getUsernames } from '@/app/lib/accountActions'
 
 const jwtSecretKey = process.env.TOKEN_SECRET;
 if (!jwtSecretKey) {
@@ -16,7 +17,7 @@ interface DecodedToken {
   iat: number;
 }
 
-export async function create(data: User): Promise<any> {
+export async function createUserCoockie(data: User): Promise<any> {
   const cookieStore = await cookies();
   cookieStore.set({
     name: 'user',
@@ -25,7 +26,7 @@ export async function create(data: User): Promise<any> {
   });
 }
 
-export const fetchUser = async (): Promise<User> => {
+export const fetchgetUserObJFromCoockie = async (): Promise<User> => {
   let user: User = {};
   try {
     const cookieStore = await cookies();
@@ -43,23 +44,35 @@ export const fetchUser = async (): Promise<User> => {
   }
 }
 
-export async function extractID(): Promise<any> {
+export async function extractUserIDFromCoockie(): Promise<any> {
   if (!jwtSecretKey) {
     throw new Error("TOKEN_SECRET environment variable is not set");
   }
-  const cookieStore = await cookies();
-  const userCookie = await cookieStore.get('user');
-  if (!userCookie) return null;
   try {
-    const userObj = JSON.parse(userCookie.value);
-    const decoded = jwt.verify(userObj.token, jwtSecretKey) as DecodedToken;
+    const user = await fetchgetUserObJFromCoockie();
+    if (!user) return null;
+    const decoded = jwt.verify(user.token as string, jwtSecretKey) as unknown as DecodedToken;
     return decoded._id || null;
   } catch {
-    return null;
+    throw new Error("Failed retrieving users ID");
   }
 }
 
-export async function del(): Promise<any> {
+export async function extractUsersEmailFromCoockie(): Promise<any> {
+  if (!jwtSecretKey) {
+    throw new Error("TOKEN_SECRET environment variable is not set");
+  }
+  try {
+    const user = await fetchgetUserObJFromCoockie();
+    if (!user) return null;
+    return user.email;
+  }
+  catch {
+    throw new Error("Failed retrieving users email");
+  }
+}
+
+export async function deleteUserCoockie(): Promise<any> {
   const cookieStore = await cookies();
   cookieStore.set('user', "");
 }
@@ -75,5 +88,9 @@ export async function createCoockieChatUsersList(data: ChatUser[]): Promise<any>
 
 export async function getCoockieChatUsersList(): Promise<any> {
   const cookieStore = await cookies();
+  const chatUsersList = cookieStore.get('chatUsersList');
+  if (chatUsersList)
+    return chatUsersList;
+  await createCoockieChatUsersList(await getUsernames());
   return cookieStore.get('chatUsersList');
 }

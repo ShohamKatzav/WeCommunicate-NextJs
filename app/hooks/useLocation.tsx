@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import Location from '../types/location';
+import Location from '@/types/location';
 import { useUser } from './useUser';
 import { useSocket } from './useSocket';
 

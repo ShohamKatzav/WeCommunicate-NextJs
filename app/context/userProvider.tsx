@@ -1,8 +1,8 @@
 "use client";
 import { ReactNode, useEffect, useState, useCallback } from "react";
-import User from "../types/user";
+import User from "@/types/user";
 import UserContext from "./userContext";
-import { fetchUser, create, del } from "../lib/cookieActions";
+import { fetchgetUserObJFromCoockie, createUserCoockie, deleteUserCoockie } from "../lib/cookieActions";
 import AsName from "../utils/asName";
 
 type UserProviderProps = {
@@ -15,8 +15,8 @@ export const UserProvider = ({ children }: UserProviderProps) => {
 
     const fetchUserHandler = useCallback(async () => {
         try {
-            const cookieUser = await fetchUser();
-            setUser(cookieUser);
+            const userObject = await fetchgetUserObJFromCoockie();
+            setUser(userObject);
         } catch (error) {
             console.error("Failed to fetch user:", error);
             setUser(null);
@@ -38,9 +38,9 @@ export const UserProvider = ({ children }: UserProviderProps) => {
             setUser(userData);
 
             if (userData) {
-                await create(userData);
+                await createUserCoockie(userData);
             } else {
-                await del();
+                await deleteUserCoockie();
             }
         } catch (error) {
             console.error("Failed to update user:", error);

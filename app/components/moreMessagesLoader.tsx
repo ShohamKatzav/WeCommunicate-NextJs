@@ -1,12 +1,11 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
-import Message from "../types/message";
+import Message from "@/types/message";
+import ChatUser from "@/types/chatUser";
 import { getMessages } from '@/app/lib/chatActions'
 import { Spinner } from "./spinner";
-import { useUser } from "../hooks/useUser";
 import MessageViewer from "./messageViewer";
-import ChatUser from "../types/chatUser";
 
 
 interface LoadMoreProps {
@@ -14,14 +13,13 @@ interface LoadMoreProps {
   participants: ChatUser[]
 }
 
-const LoadMoreMessages = ({ oldMessages, participants }: LoadMoreProps) => {
+export default function MoreMessagesLoader({ oldMessages, participants }: LoadMoreProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [page, setPage] = useState(1);
   const [allDataFetched, setAllDataFetched] = useState(false);
   const [fetching, setFetching] = useState(false);
 
   const { ref, inView } = useInView();
-  const { user } = useUser();
 
   const [newMessagesCount, setNewMessagesCount] = useState(5);
 
@@ -67,12 +65,12 @@ const LoadMoreMessages = ({ oldMessages, participants }: LoadMoreProps) => {
     <>
       <div>
         {messages.slice(newMessagesCount).map((message, index) =>
-          <MessageViewer key={index + 5} message={message} email={user?.email} />)
+          <MessageViewer key={index + 5} message={message} />)
         }
       </div>
       <div>
         {messages.slice(0, newMessagesCount).map((message, index) =>
-          <MessageViewer key={index} message={message} email={user?.email} />)
+          <MessageViewer key={index} message={message} />)
         }
       </div>
       <div
@@ -85,4 +83,3 @@ const LoadMoreMessages = ({ oldMessages, participants }: LoadMoreProps) => {
 
 
 }
-export default LoadMoreMessages;

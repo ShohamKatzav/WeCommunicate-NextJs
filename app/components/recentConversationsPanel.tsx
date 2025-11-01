@@ -1,9 +1,9 @@
 "use client"
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from "react";
-import ChatUser from "../types/chatUser";
-import Message from "../types/message";
-import useIsMedium from "../hooks/useIsMedium";
+import ChatUser from "@/types/chatUser";
+import Message from "@/types/message";
+import useIsMobile from "../hooks/useIsMobile";
 import ConversationSummary from "./conversationSummary";
 import { getConversations } from '@/app/lib/conversationActions'
 
@@ -18,9 +18,9 @@ const RecentConversationsPanel = ({ getLastMessages, newMessage, participants, r
     const [conversations, setConversations] = useState<any>([]);
     const [loading, setLoading] = useState(true);
     const [fetchCode, setFetchCode] = useState(200);
-    const isMediumScreen = useIsMedium();
+    const isMobile = useIsMobile();
 
-    const [toggle, setToggle] = useState(isMediumScreen);
+    const [toggle, setToggle] = useState(!isMobile);
     const dropRef = useRef<HTMLUListElement>(null);
     const openRef = useRef<HTMLDivElement>(null);
     const closeRef = useRef<HTMLDivElement>(null);
@@ -41,9 +41,6 @@ const RecentConversationsPanel = ({ getLastMessages, newMessage, participants, r
         setToggle(!toggle);
     };
 
-    useEffect(() => {
-        setToggle(isMediumScreen);
-    }, [isMediumScreen]);
 
     const fetchData = async () => {
         try {
@@ -55,6 +52,10 @@ const RecentConversationsPanel = ({ getLastMessages, newMessage, participants, r
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        setToggle(!isMobile);
+    }, [isMobile]);
 
     useEffect(() => {
         fetchData();

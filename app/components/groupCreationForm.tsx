@@ -2,8 +2,8 @@ import { Dispatch, RefObject, SetStateAction, useEffect, useState } from "react"
 import { getCoockieChatUsersList } from '@/app/lib/cookieActions';
 import { getUsernames } from '@/app/lib/accountActions'
 import { useUser } from "../hooks/useUser";
-import ChatUser from "../types/chatUser";
-import Message from "../types/message";
+import ChatUser from "@/types/chatUser";
+import Message from "@/types/message";
 import { AsShortName } from "../utils/asName";
 
 interface GroupCreationProps {
@@ -37,14 +37,8 @@ const GroupCreationForm = ({ isOpen, onClose, participants, conversationId, setC
     const getUsersListFromCoockie = async () => {
         // guard: ensure user is available before making authenticated requests
         if (!user?.email) return;
-
         const chatUsers = await getCoockieChatUsersList();
-        if (chatUsers)
-            setparticipantsList(JSON.parse(chatUsers?.value));
-        else {
-            const response: any = await getUsernames();
-            setparticipantsList(response?.data);
-        }
+        setparticipantsList(JSON.parse(chatUsers?.value));
     }
 
     const selectChange = (checkbox: HTMLInputElement, participant: ChatUser) => {
@@ -84,7 +78,7 @@ const GroupCreationForm = ({ isOpen, onClose, participants, conversationId, setC
                         onChange={(e) => setParticipantsSearch(e.target.value)}
                     />
                     <div className="flex-1 overflow-y-auto mt-4">
-                        {participantsList.length > 0 &&
+                        {Array.isArray(participantsList) && participantsList.length > 0 &&
                             participantsList
                                 .filter((participant: ChatUser) =>
                                     participant.email?.toUpperCase() !== user?.email?.toUpperCase()
@@ -94,7 +88,7 @@ const GroupCreationForm = ({ isOpen, onClose, participants, conversationId, setC
                                     const isVisible = shortName.toUpperCase().includes(participantsSearch.toUpperCase());
 
                                     return (
-                                        <div className="text-xl" key={participant._id}>
+                                        <div className="text-xl" key={participant?._id}>
                                             <input
                                                 type="checkbox"
                                                 onChange={(e) =>

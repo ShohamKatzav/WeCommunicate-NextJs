@@ -2,7 +2,8 @@ import Message from "../models/Message";
 import FileModel from "../models/FileModel";
 import ConversationRepository from "./ConversationRepository";
 import { Schema, Types } from 'mongoose';
-import MessageDTO from '@/app/types/messageDTO';
+import MessageDTO from '@/types/messageDTO';
+import { extractUsersEmailFromCoockie } from "@/app/lib/cookieActions";
 
 type ChatQuery = {
     date?: {
@@ -17,8 +18,8 @@ export default class MessageRepository {
             return await Message.find(query)
                 .skip(skip)
                 .limit(limit)
-                .populate("file") // gets url, contentType, etc.
-                .lean() // return plain JS objects (faster for read-only)
+                .populate("file")
+                .lean()
                 .exec();
         } catch (err) {
             console.error('Failed to find messages:', err);
@@ -75,6 +76,26 @@ export default class MessageRepository {
             return await Message.countDocuments(query);
         } catch (err) {
             console.error('Failed to count messages:', err);
+            throw err;
+        }
+    }
+
+    static async deleteMessage(id: string) {
+        try {
+            const requestSenderEmail = await extractUsersEmailFromCoockie();
+            const messageObjectId = new Types.ObjectId(id);
+
+            const messageToDelete = await Message.findOne({ _id: messageObjectId });
+            if (!messageToDelete) return null;
+
+            if (messageToDelete.sender !== requestSenderEmail) return null;
+
+            return await Message.updateOne(
+                { _id: messageObjectId },
+                { $set: { status: "revoked" } }
+            );
+        } catch (err) {
+            console.error("Failed to delete message:", err);
             throw err;
         }
     }

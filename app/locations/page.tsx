@@ -1,12 +1,12 @@
 'use client';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from '@react-google-maps/api';
 import { useSocket } from '../hooks/useSocket';
-import Location from '../types/location';
+import Location from '@/types/location';
 import ciEquals from '../utils/ciEqual';
 import useLocation from '../hooks/useLocation';
 import LocationAccessInformation from '../components/locationAccessStatus';
-import useIsMedium from '../hooks/useIsMedium';
+import useIsMobile from '../hooks/useIsMobile';
 import { useUser } from '../hooks/useUser';
 
 
@@ -35,13 +35,13 @@ function Locations(props: any) {
     socket?.emit('get locations');
   }, [socket]);
 
-  const isMediumScreen = useIsMedium();
+  const isMobileScreen = useIsMobile();
 
   const containerStyle = useMemo(() => ({
-    width: isMediumScreen ? '50vw' : '90vw',
+    width: isMobileScreen ? '90vw' : '50vw',
     height: '60vh',
-    marginLeft: isMediumScreen ? '25vw' : '5vw'
-  }), [isMediumScreen]);
+    marginLeft: isMobileScreen ? '5vw' : '25vw'
+  }), [isMobileScreen]);
 
   useEffect(() => {
     setShowInfoWindow(positions?.map(() => false) || []);

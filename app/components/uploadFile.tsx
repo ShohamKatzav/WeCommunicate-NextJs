@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, Dispatch, SetStateAction } from 'react';
 import { type PutBlobResult } from '@vercel/blob';
 import { upload } from '@vercel/blob/client';
-import Message from '../types/message';
+import Message from '@/types/message';
 import { useUser } from '../hooks/useUser';
 import { deleteFile } from '@/app/lib/fileActions'
 

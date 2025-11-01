@@ -1,10 +1,12 @@
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { useNotification } from "../hooks/useNotification";
 import { useUser } from "../hooks/useUser";
-import useIsMedium from "../hooks/useIsMedium";
-import ChatUser from "../types/chatUser";
-import Conversation from "../types/conversation";
+import { useSocket } from "../hooks/useSocket";
+import useIsMobile from "../hooks/useIsMobile";
+import ChatUser from "@/types/chatUser";
+import Conversation from "@/types/conversation";
 import { AsShortName } from "../utils/asName";
+import Message from "@/types/message";
 
 interface ConversationConversationSummaryProps {
 
@@ -16,12 +18,23 @@ interface ConversationConversationSummaryProps {
 const ConversationSummary = ({ conversation, getLastMessages, setToggle }: ConversationConversationSummaryProps) => {
 
     const [otherMembers, setOtherMembers] = useState<ChatUser[]>();
+    const [lastMessage, setLastMessage] = useState<Message | undefined>(
+        conversation.messages?.[0]
+    );
 
     const { user } = useUser();
+    const { socket, loadingSocket } = useSocket();
     const { initializeRoomNotifications, newMessageNotification } = useNotification();
-    const isMediumScreen = useIsMedium();
+    const isMobile = useIsMobile();
 
     const incoming = newMessageNotification[conversation._id!];
+
+    const switchRoom = (otherMembers: ChatUser[]) => {
+        initializeRoomNotifications(conversation._id!);
+        getLastMessages(otherMembers);
+        if (isMobile)
+            setToggle(false);
+    }
 
     useEffect(() => {
         const temp = conversation.members.filter(
@@ -31,12 +44,28 @@ const ConversationSummary = ({ conversation, getLastMessages, setToggle }: Conve
         setOtherMembers(temp);
     }, [conversation.members]);
 
-    const switchRoom = (otherMembers: ChatUser[]) => {
-        initializeRoomNotifications(conversation._id!);
-        getLastMessages(otherMembers);
-        if (!isMediumScreen)
-            setToggle(false);
-    }
+    useEffect(() => {
+        setLastMessage(conversation.messages?.[0]);
+    }, [conversation.messages]);
+
+    useEffect(() => {
+        if (!socket || loadingSocket) return;
+
+        const handleDeletedMessage = (deletedMessage: Message) => {
+            // Only update if this conversation contains the deleted message
+            if (lastMessage?._id === deletedMessage._id) {
+                setLastMessage(prev =>
+                    prev ? { ...prev, text: undefined, status: "revoked" } : prev
+                );
+            }
+        };
+
+        socket.on("delete message", handleDeletedMessage);
+
+        return () => {
+            socket.off("delete message", handleDeletedMessage);
+        };
+    }, [socket, loadingSocket, lastMessage?._id]);
 
     return (
         otherMembers && <li
@@ -79,17 +108,18 @@ const ConversationSummary = ({ conversation, getLastMessages, setToggle }: Conve
                         </>
                     )}
                 </div>
-                {conversation.messages && conversation.messages.length > 0 ? (
+                {lastMessage ? (
                     <div className="text-gray-600 text-sm relative">
                         <span className="font-semibold text-gray-800">
-                            {conversation.messages[0].sender?.toUpperCase() === user?.email?.toUpperCase() ? 'You' :
-                                conversation.messages[0].sender?.split("@")[0]}
+                            {lastMessage.sender?.toUpperCase() === user?.email?.toUpperCase() ? 'You' :
+                                lastMessage.sender?.split("@")[0]}
                         </span>
-                        : {conversation.messages?.at(0)?.text ? conversation.messages?.at(0)?.text :
-                            "sent file " + conversation.messages?.at(0)?.file?.pathname}
+                        : {lastMessage.status?.includes("revoked")
+                            ? "Message deleted"
+                            : (lastMessage.text || "sent file " + lastMessage.file?.pathname)}
                         <div className="text-xs text-gray-400">
-                            {conversation.messages[0].date &&
-                                new Date(conversation.messages[0].date).toLocaleString()}
+                            {lastMessage.date &&
+                                new Date(lastMessage.date).toLocaleString()}
                         </div>
                         {incoming > 0 &&
                             <span className="inline-flex items-center justify-center px-2 py-1

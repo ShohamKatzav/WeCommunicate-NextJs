@@ -14,14 +14,6 @@ interface LocationData {
 const lockMap: { [key: string]: boolean } = {};
 
 export default class LocationRepository {
-    static async findLocation(accountId: Types.ObjectId) {
-        try {
-            return await Account.findById(accountId).populate('location').exec();
-        } catch (err) {
-            console.error('Failed to find location for this accountID:', err);
-            throw err;
-        }
-    }
 
     static async getLocationsWithUsernames(locations: LocationData[]) {
         try {

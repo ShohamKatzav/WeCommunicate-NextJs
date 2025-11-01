@@ -4,6 +4,7 @@ interface IMessage extends Document {
     date: Date;
     sender: string;
     text?: string;
+    status?: string;
     file?: Schema.Types.ObjectId;
     conversation: Schema.Types.ObjectId;
 }
@@ -11,7 +12,8 @@ interface IMessage extends Document {
 const MessageSchema = new Schema<IMessage>({
     date: {
         type: Date,
-        required: true
+        required: true,
+        default: Date.now
     },
     sender: {
         type: String,
@@ -20,6 +22,11 @@ const MessageSchema = new Schema<IMessage>({
     text: {
         type: String,
         required: false
+    },
+    status: {
+        type: String,
+        required: false,
+        default: "sent"
     },
     file: {
         type: Schema.Types.ObjectId,

@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
 
-const useIsMedium = () => {
-    const [isMediumScreen, setIsMediumScreen] = useState(false);
+const useIsMobile = () => {
+    const [isMobileScreen, setIsMobileScreen] = useState(false);
 
     useEffect(() => {
-        const checkScreen = () => setIsMediumScreen(window.innerWidth >= 768);
+        const checkScreen = () => setIsMobileScreen(window.innerWidth <= 768);
         checkScreen();
 
         window.addEventListener('resize', checkScreen);
         return () => window.removeEventListener('resize', checkScreen);
     }, []);
 
-    return isMediumScreen;
+    return isMobileScreen;
 };
 
-export default useIsMedium;
+export default useIsMobile;
