@@ -10,8 +10,8 @@ export default async function handleSocketConnection(io, socket) {
         RedisService.getInstance();
         await RedisService.addUserSocket(email, socket.id);
         const allUsers = await RedisService.getUsers();
-        io.emit('update connected users', allUsers);
         socket.on('update connected users', () => handleUpdateConnectedUsers(io));
+        io.emit('update connected users', allUsers);
 
         if (conversationId) {
             const room = `chat_room_${conversationId}`;
@@ -20,7 +20,7 @@ export default async function handleSocketConnection(io, socket) {
 
         socket.on('join room', (body) => handleJoinRoom(body, socket));
         socket.on('publish message', (message) => handlePublishMessage(io, socket, message));
-        socket.on('delete message', (message) => handleDeleteMessage(socket, message));
+        socket.on('delete message', (message) => handleDeleteMessage(io, message));
         socket.on('notifications update', () => handleNotificationsUpdate(socket, email));
         socket.on("notifications checked", (roomID) => handleNotificationsChecked(roomID, email));
         socket.on('get locations', () => handleGetLocation(io, socket));
@@ -72,9 +72,9 @@ async function handlePublishMessage(io, socket, message) {
     }
 }
 
-async function handleDeleteMessage(socket, message) {
+async function handleDeleteMessage(io, message) {
     const room = `chat_room_${message?.conversationID}`;
-    socket.to(room).emit('delete message', message);
+    io.to(room).emit('delete message', message);
 }
 
 async function handleNotificationsUpdate(socket, email) {

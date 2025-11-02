@@ -5,84 +5,113 @@ import { useRouter } from 'next/navigation';
 import { useUser } from '../hooks/useUser';
 import Loading from '../components/loading';
 import { isExist, authenticateUser } from '@/app/lib/accountActions'
+import { Eye, EyeOff } from 'lucide-react';
 
 const Login = () => {
   const router = useRouter();
-  const { user, loadingUser, updateUser } = useUser();
+  const { loadingUser, updateUser } = useUser();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [generalError, setGeneralError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Check if account exists
-  const checkAccountExists = async (): Promise<boolean> => {
-    try {
-      const response = await isExist(email);
-      return response.accountExists;
-    } catch (err: any) {
-      if (err.response?.status === 401) window.alert("Wrong email or password");
-      return false;
-    }
+  const validateEmail = (email: string): boolean => {
+    return /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email);
   }
 
-  // Log in user
-  const logIn = async () => {
-    try {
-      const response = await authenticateUser(email, password);
-      if (response.success) {
-        await updateUser({ email, token: response.token });
-        router.push("/chat");
-      }
-      else
-        if (response.status === 401)
-          window.alert("Wrong email or password");
-    } catch (err: any) {
-      console.error('Unexpected error', err);
-    } finally {
-      setLoading(false);
-    }
+  const validatePassword = (password: string): boolean => {
+    return password.length >= 8;
   }
 
-  // Validate inputs and handle login
-  const onButtonClick = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setLoading(true);
+  const clearErrors = () => {
     setEmailError("");
     setPasswordError("");
+    setGeneralError("");
+  }
+
+  const validateInputs = (): boolean => {
+    clearErrors();
+    let isValid = true;
 
     if (!email) {
       setEmailError("Please enter your email");
-      setLoading(false);
-      return;
-    }
-
-    if (!/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
+      isValid = false;
+    } else if (!validateEmail(email)) {
       setEmailError("Please enter a valid email");
-      setLoading(false);
-      return;
+      isValid = false;
     }
 
     if (!password) {
       setPasswordError("Please enter a password");
-      setLoading(false);
-      return;
-    }
-
-    if (password.length < 8) {
+      isValid = false;
+    } else if (!validatePassword(password)) {
       setPasswordError("The password must be 8 characters or longer");
-      setLoading(false);
-      return;
+      isValid = false;
     }
 
-    const accountExists = await checkAccountExists();
-    if (accountExists) await logIn();
-    else setLoading(false);
+    return isValid;
   }
 
-  if (user && Object.keys(user).length < 0 || loadingUser || loading)
+  const handleLogin = async () => {
+    try {
+      // Check if account exists
+      const existsResponse = await isExist(email);
+
+      if (!existsResponse.accountExists) {
+        setGeneralError("No account found with this email. Please sign up first.");
+        return false;
+      }
+
+      // Authenticate user
+      const authResponse = await authenticateUser(email, password);
+
+      if (authResponse.success) {
+        await updateUser({ email, token: authResponse.token });
+        router.push("/chat");
+        return true;
+      } else if (authResponse.status === 401) {
+        setGeneralError("Wrong email or password. Please try again.");
+        return false;
+      } else {
+        setGeneralError("An unexpected error occurred. Please try again.");
+        return false;
+      }
+    } catch (err: any) {
+      console.error('Login error:', err);
+
+      if (err.response?.status === 401) {
+        setGeneralError("Wrong email or password. Please try again.");
+      } else {
+        setGeneralError("Unable to connect to the server. Please check your connection.");
+      }
+
+      return false;
+    }
+  }
+
+  // Handle form submission
+  const onButtonClick = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (loading) return;
+
+    if (!validateInputs()) {
+      return;
+    }
+
+    setLoading(true);
+    await handleLogin();
+    setLoading(false);
+  }
+
+  // Show loading screen only for initial user check
+  if (loadingUser) {
     return <Loading />;
+  }
 
   return (
     <form onSubmit={onButtonClick}>
@@ -95,30 +124,81 @@ const Login = () => {
           </h1>
         </div>
 
-        <div className="inputContainer row-start-2 md:row-start-4 row-span-2 space-y-4 md:grid grid-cols-5">
-          <input
-            value={email}
-            placeholder="Enter your email here"
-            onChange={ev => setEmail(ev.target.value)}
-            className="inputBox w-full md:col-start-2 md:col-span-3"
-          />
-          <label className="errorLabel md:col-start-2 md:col-span-3">{emailError}</label>
+        {generalError && (
+          <div className="row-start-2 md:row-start-3 md:grid grid-cols-5">
+            <div className="md:col-start-2 md:col-span-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded mb-4">
+              {generalError}
+            </div>
+          </div>
+        )}
 
-          <input
-            type="password"
-            value={password}
-            placeholder="Enter your password here"
-            onChange={ev => setPassword(ev.target.value)}
-            className="inputBox w-full md:col-start-2 md:col-span-3"
-          />
-          <label className="errorLabel md:col-start-2 md:col-span-3">{passwordError}</label>
+        <div className="inputContainer row-start-2 md:row-start-4 row-span-2 space-y-4 md:grid grid-cols-5">
+          <div className="md:col-start-2 md:col-span-3">
+            <label htmlFor="email" className="sr-only">Email</label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              placeholder="Enter your email here"
+              onChange={ev => setEmail(ev.target.value)}
+              className="inputBox w-full"
+              autoComplete="email"
+              disabled={loading}
+              aria-invalid={!!emailError}
+              aria-describedby={emailError ? "email-error" : undefined}
+            />
+            {emailError && (
+              <label id="email-error" className="errorLabel block mt-1">
+                {emailError}
+              </label>
+            )}
+          </div>
+
+          <div className="md:col-start-2 md:col-span-3">
+            <label htmlFor="password" className="sr-only">Password</label>
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                placeholder="Enter your password here"
+                onChange={ev => setPassword(ev.target.value)}
+                className="inputBox w-full pr-10"
+                autoComplete="current-password"
+                disabled={loading}
+                aria-invalid={!!passwordError}
+                aria-describedby={passwordError ? "password-error" : undefined}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                disabled={loading}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+            {passwordError && (
+              <label id="password-error" className="errorLabel block mt-1">
+                {passwordError}
+              </label>
+            )}
+          </div>
+
         </div>
 
         <div className="row-start-4 md:row-start-7 grid">
           <div className="inputContainer justify-self-center">
-            <input className="inputButton" type="submit" value="Log in" />
+            <button
+              className="inputButton disabled:opacity-50 disabled:cursor-not-allowed"
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? "Logging in..." : "Log in"}
+            </button>
           </div>
-          <p className="text-gray-500 dark:text-gray-400 justify-self-center">
+          <p className="text-gray-500 dark:text-gray-400 justify-self-center mt-4">
             Not a Member? <a href="/sign-up"
               className="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Sign up!</a>
           </p>

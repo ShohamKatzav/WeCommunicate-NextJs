@@ -105,7 +105,7 @@ export const saveMessage = async (message: MessageDTO) => {
             throw new Error('Unauthorized');
         }
         const messageDoc = await MessageRepository.SaveMessage(message, userID);
-        const result = JSON.parse(JSON.stringify({ success: true, message: messageDoc }));
+        const result = JSON.parse(JSON.stringify({ success: true, messageDoc }));
         return result;
     } catch (err) {
         console.error('Failed to save message:', err);

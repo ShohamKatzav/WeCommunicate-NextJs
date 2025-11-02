@@ -86,7 +86,7 @@ const Chat = () => {
       setReloadKey(prev => !prev);
       increaseNotifications(data.conversationID as string);
     }
-    setLastRecievedMessage(data);
+    setLastRecievedMessage(data as Message);
   }, [user?.email, increaseNotifications])
 
 
@@ -109,14 +109,14 @@ const Chat = () => {
         const result = await saveMessage(newMessage);
         setChat(prevChat =>
           prevChat.map(msg =>
-            msg._id === tempId ? result.message : msg
+            msg._id === tempId ? result.messageDoc : msg
           )
         );
-        newMessage._id = result.message._id;
+        newMessage._id = result.messageDoc._id;
         let newConversationId;
         if (!currentConversationId.current) {
           socket.disconnect();
-          newConversationId = result.messageDoc.conversation;
+          newConversationId = result.messageDoc?.conversation;
           socket.io.opts.extraHeaders = { email: user!.email!, conversationId: newConversationId }
           socket.connect();
           currentConversationId.current = newConversationId;
@@ -124,7 +124,7 @@ const Chat = () => {
 
         socket.emit('publish message', newMessage);
         setMessageToSend((prev) => ({ ...prev, text: '', file: null }));
-        setLastRecievedMessage({ ...messageToSend, conversationID: currentConversationId.current || newConversationId });
+        setLastRecievedMessage({ ...newMessage, conversationID: currentConversationId.current || newConversationId });
       } catch (error) {
         console.error("Error sending message:", error);
       }
@@ -260,6 +260,7 @@ const Chat = () => {
               messages={chat}
               chatBox={chatBox}
               participants={participants.current!}
+              setReloadKey={setReloadKey}
             />
           </div>
 

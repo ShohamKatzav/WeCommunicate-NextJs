@@ -65,7 +65,7 @@ export default function MoreMessagesLoader({ oldMessages, participants }: LoadMo
     <>
       <div>
         {messages.slice(newMessagesCount).map((message, index) =>
-          <MessageViewer key={index + 5} message={message} />)
+          <MessageViewer key={index + parseInt(process.env.MESSAGES_PER_PAGE || '5')} message={message} />)
         }
       </div>
       <div>

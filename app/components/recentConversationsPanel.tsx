@@ -91,7 +91,7 @@ const RecentConversationsPanel = ({ getLastMessages, newMessage, participants, r
                 return updatedConversations;
             });
         }
-    }, [newMessage?.conversationID]);
+    }, [newMessage]);
 
     return (
         <>

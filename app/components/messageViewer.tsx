@@ -2,7 +2,7 @@
 import Message from "@/types/message";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
 import { deleteMessage } from '@/app/lib/chatActions'
 import { useUser } from "../hooks/useUser";
 import { useSocket } from "../hooks/useSocket";
@@ -12,9 +12,10 @@ import { IoBan } from "react-icons/io5";
 
 interface MessageViewerProps {
   message: Message;
+  setReloadKey?: Dispatch<SetStateAction<boolean>>;
 }
 
-const MessageViewer = ({ message }: MessageViewerProps) => {
+const MessageViewer = ({ message, setReloadKey }: MessageViewerProps) => {
 
   const { user } = useUser();
   const { socket, loadingSocket } = useSocket();
@@ -57,6 +58,7 @@ const MessageViewer = ({ message }: MessageViewerProps) => {
   const deleteMessageHandler = async () => {
     await deleteMessage(message._id!);
     setDeleted(true);
+    if (setReloadKey) setReloadKey((prev: any) => !prev);
     socket?.emit("delete message", message)
   }
 
