@@ -15,7 +15,7 @@ export default async function authMiddleware(socket, next) {
     }
     else {
         RedisService.getInstance();
-        await RedisService.deleteUser(email);
+        await RedisService.deleteUserSocket(email);
         socket.emit("unauthorized");
         socket.disconnect(true);
         next(new Error("No token found"));
@@ -24,7 +24,7 @@ export default async function authMiddleware(socket, next) {
     try {
         jwt.verify(token, jwtSecretKey);
     } catch (err) {
-        await RedisService.deleteUser(email);
+        await RedisService.deleteUserSocket(email);
         socket.emit("unauthorized");
         socket.disconnect(true);
         next(new Error("Invalid token"));

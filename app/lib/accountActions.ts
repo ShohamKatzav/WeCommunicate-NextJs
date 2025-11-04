@@ -9,6 +9,19 @@ if (!jwtSecretKey) {
     throw new Error("TOKEN_SECRET environment variable is not set");
 }
 
+export const isExist = async (email: string) => {
+    try {
+        await connectDB();
+        const userExists = await AccountRepository.getUserByEmail(email);
+        const status = userExists != null ? 200 : 401;
+        const accountExists = status == 200 ? true : false;
+        return JSON.parse(JSON.stringify({ accountExists, status }));
+    } catch (err) {
+        console.error('Failed to find user:', err);
+        throw err;
+    }
+}
+
 export const createUser = async (email: string, password: string) => {
     if (!email || !password)
         return JSON.parse(JSON.stringify({ message: "Email and password are required", status: 400 }));
@@ -64,15 +77,14 @@ export const getUsernames = async () => {
     }
 }
 
-export const isExist = async (email: string) => {
+export const updatePassword = async (email: string, newPassword: string) => {
     try {
         await connectDB();
-        const userExists = await AccountRepository.getUserByEmail(email);
-        const status = userExists != null ? 200 : 401;
-        const accountExists = status == 200 ? true : false;
-        return JSON.parse(JSON.stringify({ accountExists, status }));
+        const hash = await bcrypt.hash(newPassword, 10);
+        await AccountRepository.updatePssword(email, hash);
+        return JSON.parse(JSON.stringify({ success: true, status: 201 }));
     } catch (err) {
-        console.error('Failed to find user:', err);
+        console.error('Failed to update password:', err);
         throw err;
     }
 }

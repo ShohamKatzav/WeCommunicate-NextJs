@@ -9,7 +9,7 @@ export default async function handleSocketConnection(io, socket) {
     try {
         RedisService.getInstance();
         await RedisService.addUserSocket(email, socket.id);
-        const allUsers = await RedisService.getUsers();
+        const allUsers = await RedisService.getUserSockets();
         socket.on('update connected users', () => handleUpdateConnectedUsers(io));
         io.emit('update connected users', allUsers);
 
@@ -41,7 +41,7 @@ async function handleJoinRoom(body, socket) {
 }
 
 async function handleUpdateConnectedUsers(io) {
-    const fresh = await RedisService.getUsers();
+    const fresh = await RedisService.getUserSockets();
     io.emit('update connected users', fresh);
 }
 
@@ -102,6 +102,6 @@ async function handleLeaveRoom(body, socket) {
 }
 
 async function handleDisconnect(io, email) {
-    await RedisService.deleteUser(email);
+    await RedisService.deleteUserSocket(email);
     await handleUpdateConnectedUsers(io);
 }

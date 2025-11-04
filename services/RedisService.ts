@@ -1,4 +1,5 @@
 import { Redis } from '@upstash/redis';
+import OTP from '@/types/OTP'
 
 export default class RedisService {
     private static instance: Redis | null = null;
@@ -49,14 +50,14 @@ export default class RedisService {
             const normalizedEmail: string = RedisService.normalizeEmail(email);
             await RedisService.instance.hset("user_sockets", { [normalizedEmail]: socketId });
         } catch (error) {
-            console.error('Error deleting user socket:', error);
+            console.error('Error adding user socket:', error);
             return null;
         }
     }
 
-    static async deleteUser(email: string) {
+    static async deleteUserSocket(email: string) {
         if (!email || typeof email !== 'string') {
-            console.warn('Invalid email provided to deleteUser');
+            console.warn('Invalid email provided to deleteUserSocket');
             return null;
         }
         if (!RedisService.instance) {
@@ -71,7 +72,7 @@ export default class RedisService {
         }
     }
 
-    static async getUsers() {
+    static async getUserSockets() {
         if (!RedisService.instance) {
             throw new Error('Redis instance not initialized');
         }
@@ -152,6 +153,61 @@ export default class RedisService {
             await RedisService.instance.hdel(key, conversationId);
         } catch (error) {
             console.error('Error clearNotification:', error);
+            return null;
+        }
+    }
+
+
+    static async getOTPByEmail(email: string): Promise<OTP | null> {
+        if (!email || typeof email !== 'string') {
+            console.warn('Invalid email provided to getOTPByEmail');
+            return null;
+        }
+
+        if (!RedisService.instance) {
+            throw new Error('Redis instance not initialized');
+        }
+        const normalizedEmail = RedisService.normalizeEmail(email);
+        try {
+            const otp = await RedisService.instance.hget('otp', normalizedEmail!) as OTP;
+            return otp || null;
+        } catch (error) {
+            console.error(`Error getting OTP for email ${email}:`, error);
+            return null;
+        }
+    }
+
+    static async addOTP(email: string, otp: OTP) {
+        if (!email || typeof email !== 'string' || !otp.OTP || typeof otp.OTP !== 'string'
+            || !otp.expiresAt || typeof otp.expiresAt !== 'number') {
+            console.warn('Invalid paramaeters provided to addOTP');
+            return null;
+        }
+        if (!RedisService.instance) {
+            throw new Error('Redis instance not initialized');
+        }
+        try {
+            const normalizedEmail: string = RedisService.normalizeEmail(email);
+            await RedisService.instance.hset("otp", { [normalizedEmail]: otp });
+        } catch (error) {
+            console.error('Error adding OTP:', error);
+            return null;
+        }
+    }
+
+    static async deleteOTP(email: string) {
+        if (!email || typeof email !== 'string') {
+            console.warn('Invalid email provided to deleteOTP');
+            return null;
+        }
+        if (!RedisService.instance) {
+            throw new Error('Redis instance not initialized');
+        }
+        try {
+            const normalizedEmail: string = RedisService.normalizeEmail(email);
+            await RedisService.instance.hdel("otp", normalizedEmail);
+        } catch (error) {
+            console.error('Error deleting OTP:', error);
             return null;
         }
     }

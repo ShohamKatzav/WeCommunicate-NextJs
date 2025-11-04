@@ -62,7 +62,7 @@ const Login = () => {
       const existsResponse = await isExist(email);
 
       if (!existsResponse.accountExists) {
-        setGeneralError("No account found with this email. Please sign up first.");
+        setGeneralError("Wrong email or password. Please try again.");
         return false;
       }
 
@@ -186,6 +186,14 @@ const Login = () => {
             )}
           </div>
 
+          <div className="md:col-start-2 md:col-span-3 flex items-center justify-between">
+            <a
+              href="/forgot-password"
+              className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-500"
+            >
+              Forgot password?
+            </a>
+          </div>
         </div>
 
         <div className="row-start-4 md:row-start-7 grid">

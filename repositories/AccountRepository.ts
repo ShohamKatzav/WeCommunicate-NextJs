@@ -59,4 +59,17 @@ export default class AccountRepository {
             throw err;
         }
     }
+
+    static async updatePssword(email: string, newPassword: string) {
+        try {
+            return await Account.updateOne(
+                { email: email },
+                { $set: { password: newPassword } },
+            );
+        } catch (err) {
+            console.error('Could not get usernames:', err instanceof Error ? err.stack || err.message : err);
+            // rethrow the original error for clearer diagnostics upstream
+            throw err;
+        }
+    }
 }
