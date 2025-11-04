@@ -199,8 +199,11 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
         setLoading(true);
 
         try {
-            const response = await requestOTP(email);
-
+            let response = null;
+            if (mode === 'forgot')
+                response = await requestOTP(email, 'forgot');
+            else
+                response = await requestOTP(email);
             if (response.status === 200) {
                 setSuccessMessage("OTP resent successfully!");
                 startResendTimer();
