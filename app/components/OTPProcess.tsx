@@ -73,11 +73,7 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
         setLoading(true);
 
         try {
-            let response = null;
-            if (mode === 'forgot')
-                response = await requestOTP(email, 'forgot');
-            else
-                response = await requestOTP(email);
+            const response = await requestOTP(email, mode);
             if (response.status === 200) {
                 if (mode === 'forgot')
                     setSuccessMessage("If an account with this email exists, an OTP was sent.\nPlease check your inbox.");
@@ -199,11 +195,7 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
         setLoading(true);
 
         try {
-            let response = null;
-            if (mode === 'forgot')
-                response = await requestOTP(email, 'forgot');
-            else
-                response = await requestOTP(email);
+            const response = await requestOTP(email, mode);
             if (response.status === 200) {
                 setSuccessMessage("OTP resent successfully!");
                 startResendTimer();
@@ -224,9 +216,9 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                 step === 'otp' ? handleVerifyOTP :
                     handleResetPassword
         }>
-            <div className="mainContainer grid grid-rows-6 p-4">
+            <div className="mainContainer grid grid-rows-3 md:grid-rows-6 px-3 md:p-4">
                 <div className="titleContainer md:row-start-2">
-                    <h1 className="mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-3xl lg:text-6xl text-center">
+                    <h1 className="md:mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-3xl lg:text-6xl text-center">
                         <span className="text-transparent bg-clip-text bg-linear-to-r to-indigo-700 from-pink-400">
                             {step === 'email' && mode === 'forgot' ? 'Reset Your Password' :
                                 step === 'email' && mode === 'sign-up' ? 'Create Your Account on WeCommunicate' :
@@ -235,7 +227,7 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                                             'Set Your Password'}
                         </span>
                     </h1>
-                    <p className="text-center text-gray-600 dark:text-gray-400 mt-4">
+                    <p className="text-center text-gray-600 dark:text-gray-400 mt-4 md:text-2xl text-wrap">
                         {step === 'email' ? 'Enter your email to receive a verification code' :
                             step === 'otp' ? 'Enter the 6-digit code sent to your email' :
                                 'Create a new password for your account'}
@@ -253,7 +245,7 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                     </div>
                 )}
 
-                <div className="inputContainer row-start-3 md:row-start-4 row-span-2 space-y-4 md:grid grid-cols-5">
+                <div className="inputContainer row-start-3 md:row-start-4 row-span-1 space-y-4 md:grid grid-cols-5">
                     {step === 'email' && (
                         <div className="md:col-start-2 md:col-span-3">
                             <label htmlFor="email" className="sr-only">Email</label>
@@ -378,10 +370,10 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                     )}
                 </div>
 
-                <div className="row-start-5 md:row-start-7 grid">
+                <div className="row-start-4 md:row-start-7 grid">
                     <div className="inputContainer justify-self-center">
                         <button
-                            className="inputButton disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="inputButton disabled:opacity-50 disabled:cursor-not-allowed w-3xs"
                             type="submit"
                             disabled={loading}
                         >
@@ -398,9 +390,15 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                                 className="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Back to Login</a>
                         </p>
                     }
+                    {mode === 'sign-up' &&
+                        <p className="text-gray-500 dark:text-gray-400 justify-self-center mt-4">
+                            Already have an account? <a href="/login"
+                                className="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Sign in</a>
+                        </p>
+                    }
                 </div>
             </div>
-        </form>
+        </form >
     );
 }
 

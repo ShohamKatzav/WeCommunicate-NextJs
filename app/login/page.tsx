@@ -115,7 +115,7 @@ const Login = () => {
 
   return (
     <form onSubmit={onButtonClick}>
-      <div className="mainContainer grid grid-rows-6 p-4">
+      <div className="mainContainer grid grid-rows-3 md:grid-rows-6 px-4">
         <div className="titleContainer md:row-start-2">
           <h1 className="mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-3xl lg:text-6xl text-center">
             <span className="text-transparent bg-clip-text bg-linear-to-r to-indigo-700 from-pink-400">
@@ -199,7 +199,7 @@ const Login = () => {
         <div className="row-start-4 md:row-start-7 grid">
           <div className="inputContainer justify-self-center">
             <button
-              className="inputButton disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inputButton disabled:opacity-50 disabled:cursor-not-allowed w-3xs"
               type="submit"
               disabled={loading}
             >
