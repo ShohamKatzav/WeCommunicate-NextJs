@@ -20,6 +20,9 @@ async function sendEmailOTP(email: string, otp: string, mode: string = 'sign-up'
         tls: {
             rejectUnauthorized: false,
         },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 10000,
     });
 
     const mailOptions = {
