@@ -83,7 +83,7 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage }: 
                     className="p-2 rounded-full bg-green-500 text-white shrink-0 disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-green-600 active:scale-95 transition-all"
                     aria-label="Send message"
                 >
-                    <Send size={18} />
+                    <Send size={30} />
                 </button>
             </div>
         </div>
