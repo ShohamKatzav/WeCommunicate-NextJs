@@ -82,7 +82,7 @@ const ConversationsList = ({ getLastMessages, newMessage, participants, reloadKe
 
             {
                 conversations?.length > 0 && (
-                    <div className="divide-y overflow-auto" style={{ maxHeight: 'calc(100vh - 160px)' }}>
+                    <div className="divide-y overflow-auto" style={{ maxHeight: 'calc(100vh - 270px)' }}>
                         {conversations.map((conversation: any) => {
                             const membersEmailsIncludeQuery = conversation.members.some((m: any) => m.email?.toUpperCase().includes(query.toUpperCase()));
                             const messageIncludeQuery = conversation.messages[0]?.text?.toUpperCase().includes(query.toUpperCase());

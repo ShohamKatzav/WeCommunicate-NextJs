@@ -60,7 +60,7 @@ const Chat = () => {
         setMessageToSend(prev => ({
             ...prev,
             value: '',
-            participantID: participants.current?.map(p => p._id!),
+            participantID: roomParticipants?.map(p => p._id!),
             conversationID: currentConversationId.current
         }));
         setMobileChatsSidebarOpen(false);

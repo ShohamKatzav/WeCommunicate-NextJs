@@ -95,19 +95,22 @@ const ChatCreationForm = ({ isOpen, onClose, participants, conversationId, setCh
                                 .filter((participant: ChatUser) =>
                                     participant.email?.toUpperCase() !== user?.email?.toUpperCase()
                                 )
-                                .map((participant: ChatUser) => {
+                                .map((participant: ChatUser, index) => {
                                     const shortName = AsShortName(participant.email!);
                                     const isVisible = shortName.toUpperCase().includes(participantsSearch.toUpperCase());
 
                                     return (
                                         <div className="text-xl" key={participant?._id}>
                                             <input
+                                            id={`participant-${index}`}
                                                 type={conversationMode === 'group' ? 'checkbox' : 'radio'}
                                                 name={conversationMode === 'group' ? undefined : 'participant'} // ensures radios belong to same group
                                                 onChange={(e) => selectChange(e.target as HTMLInputElement, participant)}
                                                 hidden={!isVisible}
                                             /> {" "}
-                                            {isVisible && AsShortName(participant.email!)}
+                                            {isVisible &&
+                                                <label htmlFor={`participant-${index}`}>{shortName}</label>
+                                            }
                                         </div>
                                     );
                                 })}

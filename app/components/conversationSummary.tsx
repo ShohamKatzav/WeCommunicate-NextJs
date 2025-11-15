@@ -107,19 +107,39 @@ const ConversationSummary = ({ conversation, getLastMessages }: ConversationConv
                         </div>
                     </div>
                     {lastMessage ?
-                        <div className="grid grid-cols-2 justify-between items-center text-gray-400">
-                            <div>{AsShortName(lastMessage.sender)}</div>
+                        <div className="grid grid-cols-2 place-content-between text-gray-400">
+                            <span>{AsShortName(lastMessage.sender)}</span>
+                            <div className="justify-self-end wrap-break-word text-right">
+                                {(() => {
+                                    const date = new Date(lastMessage.date!);
+                                    const now = new Date();
 
-                            <div className="items-center gap-2 justify-self-end">
-                                {new Date(lastMessage.date!).toLocaleTimeString([], {
-                                    day: "2-digit",
-                                    month: "2-digit",
-                                    year: "2-digit",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                    hour12: false,
-                                })}
+                                    const d1 = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+                                    const d2 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+                                    const diffDays = (d2 - d1) / 86400000;
 
+                                    if (diffDays === 0) {
+                                        return date.toLocaleTimeString([], {
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                            hour12: false
+                                        });
+                                    }
+
+                                    if (diffDays === 1) {
+                                        return "Yesterday";
+                                    }
+
+                                    if (diffDays === 2) {
+                                        return date.toLocaleDateString([], { weekday: "long" });
+                                    }
+
+                                    return date.toLocaleDateString([], {
+                                        day: "2-digit",
+                                        month: "2-digit",
+                                        year: "2-digit"
+                                    });
+                                })()}
                             </div>
                             <div className="text-sm text-gray-500 break-all col-span-2">{lastMessage.status?.includes("revoked")
                                 ? "Message deleted"

@@ -43,7 +43,7 @@ const ConversationsBar = ({ isMobileChatsSidebarOpen, handleOpenModal, getLastMe
                 </div>
 
 
-                <div className="px-4 divide-y overflow-auto" style={{ maxHeight: 'calc(100vh - 160px)' }}>
+                <div className="px-4 divide-y overflow-auto" style={{ maxHeight: 'calc(100vh - 270px)' }}>
                     <button
                         type="button"
                         onClick={() => handleOpenModal('group')}
