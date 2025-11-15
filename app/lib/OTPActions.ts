@@ -1,36 +1,27 @@
 "use server"
-import nodemailer from 'nodemailer';
+import Brevo from "@getbrevo/brevo";
 import { isExist, updatePassword, createUser } from './accountActions'
 import RedisService from '@/services/RedisService'
+
+if (!process.env.BREVO_API_KEY) {
+    throw new Error("BREVO_API_KEY environment variable is not set");
+}
+
+const apiInstance = new Brevo.TransactionalEmailsApi();
+apiInstance.setApiKey(Brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY!);
 
 function generateOTP(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
 async function sendEmailOTP(email: string, otp: string, mode: string = 'sign-up') {
+    const sendSmtpEmail = new Brevo.SendSmtpEmail();
 
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: false,
-        auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_APP_PASS,
-        },
-        tls: {
-            rejectUnauthorized: false,
-        },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 10000,
-    });
-
-    const mailOptions = {
-        from: process.env.SMTP_FROM,
-        to: email,
-        subject: mode === 'sign-up' ? 'Verify Your Email Address' :
-            'Password Reset OTP',
-        html: mode === 'sign-up' ? `
+    sendSmtpEmail.to = [{ email: email }];
+    sendSmtpEmail.sender = { name: "WeCommunicate", email: process.env.SMTP_USER };
+    sendSmtpEmail.subject = mode === 'sign-up' ? 'Verify Your Email Address' :
+        'Password Reset OTP';
+    sendSmtpEmail.htmlContent = mode === 'sign-up' ? `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #333;">Welcome! Verify Your Email</h2>
         <p>Thank you for signing up. Please use the following OTP to verify your email address:</p>
@@ -41,7 +32,7 @@ async function sendEmailOTP(email: string, otp: string, mode: string = 'sign-up'
         <p style="color: #666;">If you didn't sign up for an account, please ignore this email.</p>
       </div>
     ` :
-            `
+        `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #333;">Password Reset Request</h2>
         <p>You have requested to reset your password. Use the following OTP to complete the process:</p>
@@ -51,10 +42,9 @@ async function sendEmailOTP(email: string, otp: string, mode: string = 'sign-up'
         <p style="color: #666;">This OTP will expire in 10 minutes.</p>
         <p style="color: #666;">If you didn't request this, please ignore this email.</p>
       </div>
-    `,
-    };
+    `;
 
-    await transporter.sendMail(mailOptions);
+    return await apiInstance.sendTransacEmail(sendSmtpEmail);
 }
 
 export async function requestOTP(email: string, mode: string = 'sign-up') {
@@ -81,7 +71,6 @@ export async function requestOTP(email: string, mode: string = 'sign-up') {
         return { message: 'Failed to send OTP', status: 500 }
     }
 }
-
 
 export async function verifyOTP(email: string, otp: string) {
     try {
