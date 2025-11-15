@@ -1,8 +1,7 @@
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNotification } from "../hooks/useNotification";
 import { useUser } from "../hooks/useUser";
 import { useSocket } from "../hooks/useSocket";
-import useIsMobile from "../hooks/useIsMobile";
 import ChatUser from "@/types/chatUser";
 import Conversation from "@/types/conversation";
 import Message from "@/types/message";
@@ -113,6 +112,9 @@ const ConversationSummary = ({ conversation, getLastMessages }: ConversationConv
 
                             <div className="items-center gap-2 justify-self-end">
                                 {new Date(lastMessage.date!).toLocaleTimeString([], {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "2-digit",
                                     hour: "2-digit",
                                     minute: "2-digit",
                                     hour12: false,

@@ -120,7 +120,7 @@ export default function UploadFile({ message, setMessage }: UploadFileProps) {
             'application/pdf'
         ];
         if (!validTypes.includes(file.type)) {
-            setError('Please select a valid file (JPEG, PNG, GIF, webp, mp3 or mpeg )');
+            setError('Please select a valid file (JPEG, PNG, GIF, webp, mp3 or mpeg)');
             return;
         }
 
@@ -160,9 +160,9 @@ export default function UploadFile({ message, setMessage }: UploadFileProps) {
     }
 
     return (
-        <div>
-            <div className="flex flex-cols-2">
-                <label htmlFor="uploaded-file" className={`${isMobile ? 'mx-3' : ''}`}>
+        <>
+            <div className="flex items-center gap-2">
+                <label htmlFor="uploaded-file" className="cursor-pointer hover:opacity-80 transition-opacity">
                     <AiOutlineFileAdd size={isMobile ? 25 : 40} />
                 </label>
                 <input
@@ -176,26 +176,36 @@ export default function UploadFile({ message, setMessage }: UploadFileProps) {
                     disabled={isUploading}
                     onChange={() => handleSubmit()}
                 />
-                <label htmlFor="remove-file" className={`${isMobile ? 'mx-3' : ''}`}>
+                <button
+                    id="remove-file"
+                    onClick={() => deleteBlobFile()}
+                    disabled={!blob}
+                    className="hover:opacity-80 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
+                    aria-label="Remove file"
+                >
                     <MdDelete size={isMobile ? 25 : 40} />
-                </label>
-                <button id="remove-file" onClick={() => deleteBlobFile()} disabled={!blob} />
+                </button>
+
+                {/* Desktop: Inline filename */}
+                {blob && !isMobile && (
+                    <span className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-[200px]">
+                        <span className="font-semibold">{blob.pathname}</span>
+                    </span>
+                )}
             </div>
 
-            {blob && (
-                isMobile ? <div>
-                    File loaded:<br /><label className="truncate block max-w-2/3">{blob.pathname}</label>
-                </div> : <div>
-                    File loaded:<br /><label>{blob.pathname}</label>
+            {/* Mobile: Filename below */}
+            {blob && isMobile && (
+                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 truncate max-w-[250px]">
+                    File: <span className="font-semibold">{blob.pathname}</span>
                 </div>
             )}
 
             {error && (
-                <div role="alert" style={{ color: 'red', marginTop: '1rem' }}>
+                <div role="alert" className="text-red-500 text-xs mt-1">
                     {error}
                 </div>
             )}
-
-        </div>
-    )
+        </>
+    );
 }

@@ -99,65 +99,67 @@ const MessageBubble = ({ message, setReloadKey }: MessageBubbleProps) => {
           <div className="text-lg md:text-2xl wrap-break-word">{message.text}</div>
         )}
 
-        {message.file?.contentType.includes("image")
-          && message.file && (
-            <Image
-              onDoubleClick={() => {
-                if (isMobile) handleMediaDoubleClick();
-              }}
-              onClick={() => {
-                if (!isMobile) handleMediaDoubleClick();
-              }}
-              src={message.file.url}
-              width={isMobile ? 90 : 150}
-              height={isMobile ? 90 : 150}
-              alt="Sent image"
-              className="cursor-pointer"
-            />
-          )}
+        {message.file?.contentType && <>
+          {message.file?.contentType.includes("image")
+            && message.file && (
+              <Image
+                onDoubleClick={() => {
+                  if (isMobile) handleMediaDoubleClick();
+                }}
+                onClick={() => {
+                  if (!isMobile) handleMediaDoubleClick();
+                }}
+                src={message.file.url}
+                width={isMobile ? 90 : 150}
+                height={isMobile ? 90 : 150}
+                alt="Sent image"
+                className="cursor-pointer"
+              />
+            )}
 
-        {message.file?.contentType.includes("audio")
-          && message.file && (
-            <audio controls>
-              <source src={message.file.url} type="audio/mpeg" />
-              Your browser does not support the audio element.
-            </audio>
-          )}
+          {message.file?.contentType.includes("audio")
+            && message.file && (
+              <audio controls>
+                <source src={message.file.url} type="audio/mpeg" />
+                Your browser does not support the audio element.
+              </audio>
+            )}
 
-        {message.file?.contentType.includes("video")
-          && message.file && (
-            <video
-              width="320"
-              height="240"
-              controls
-              preload="none"
-              className="cursor-pointer"
-            >
-              <source src={message.file.url} type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
-          )}
-
-        {(!message.file?.contentType.includes("image")) &&
-          (!message.file?.contentType.includes("audio")) &&
-          (!message.file?.contentType.includes("video")) &&
-          message.file?.downloadUrl && (
-            <div className="text-lg md:text-2xl">
-              <div>Has sent a document</div>
-              <Link href={message.file.url} target="_blank" className="underline">
-                View Document
-              </Link>{" "}
-              &nbsp;
-              <Link
-                href={message.file.downloadUrl}
-                target="_blank"
-                className="underline"
+          {message.file?.contentType.includes("video")
+            && message.file && (
+              <video
+                width="320"
+                height="240"
+                controls
+                preload="none"
+                className="cursor-pointer"
               >
-                Download Link
-              </Link>
-            </div>
-          )}
+                <source src={message.file.url} type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+            )}
 
+          {(!message.file?.contentType.includes("image")) &&
+            (!message.file?.contentType.includes("audio")) &&
+            (!message.file?.contentType.includes("video")) &&
+            message.file?.downloadUrl && (
+              <div className="text-lg md:text-2xl">
+                <div>Has sent a document</div>
+                <Link href={message.file.url} target="_blank" className="underline">
+                  View Document
+                </Link>{" "}
+                &nbsp;
+                <Link
+                  href={message.file.downloadUrl}
+                  target="_blank"
+                  className="underline"
+                >
+                  Download Link
+                </Link>
+              </div>
+            )}
+        </>
+        }
         <div className="text-xs md:text-sm text-gray-200 mt-1 text-right">
           {dateToDisplay}
         </div>
