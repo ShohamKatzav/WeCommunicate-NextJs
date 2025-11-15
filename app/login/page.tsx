@@ -115,7 +115,7 @@ const Login = () => {
 
   return (
     <form onSubmit={onButtonClick}>
-      <div className="mainContainer grid grid-rows-3 md:grid-rows-6 px-4">
+      <div className="mainContainer md:grid grid-rows-3 md:grid-rows-6 px-4">
         <div className="titleContainer md:row-start-2">
           <h1 className="mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-3xl lg:text-6xl text-center">
             <span className="text-transparent bg-clip-text bg-linear-to-r to-indigo-700 from-pink-400">
@@ -125,14 +125,14 @@ const Login = () => {
         </div>
 
         {generalError && (
-          <div className="row-start-2 md:row-start-3 md:grid grid-cols-5">
+          <div className="row-start-2 md:row-start-3 grid grid-cols-1 md:grid-cols-5 px-4 md:px-0">
             <div className="md:col-start-2 md:col-span-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded mb-4">
               {generalError}
             </div>
           </div>
         )}
 
-        <div className="inputContainer row-start-2 md:row-start-4 row-span-2 space-y-4 md:grid grid-cols-5">
+        <div className="inputContainer row-start-3 md:row-start-4 row-span-2 space-y-4 md:grid grid-cols-5">
           <div className="md:col-start-2 md:col-span-3">
             <label htmlFor="email" className="sr-only">Email</label>
             <input

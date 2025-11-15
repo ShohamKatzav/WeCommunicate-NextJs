@@ -1,5 +1,5 @@
 "use server"
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import { isExist, updatePassword, createUser } from './accountActions'
 import RedisService from '@/services/RedisService'
 
@@ -9,43 +9,52 @@ function generateOTP(): string {
 
 async function sendEmailOTP(email: string, otp: string, mode: string = 'sign-up') {
 
-    if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM) {
-        throw new Error('Please define RESEND_API_KEY and RESEND_FROM environment variables.');
-    }
-    const senderIdentity: string = process.env.RESEND_FROM;
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    try {
-        resend.emails.send({
-            from: senderIdentity,
-            to: email,
-            subject: mode === 'sign-up' ? 'Verify Your Email Address' : 'Password Reset OTP',
-            html: mode === 'sign-up' ? `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2 style="color: #333;">Welcome! Verify Your Email</h2>
-                    <p>Thank you for signing up. Please use the following OTP to verify your email address:</p>
-                    <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
-                        ${otp}
-                    </div>
-                    <p style="color: #666;">This OTP will expire in 10 minutes.</p>
-                    <p style="color: #666;">If you didn't sign up for an account, please ignore this email.</p>
-                </div>
-            ` : `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2 style="color: #333;">Password Reset Request</h2>
-                    <p>You have requested to reset your password. Use the following OTP to complete the process:</p>
-                    <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
-                        ${otp}
-                    </div>
-                    <p style="color: #666;">This OTP will expire in 10 minutes.</p>
-                    <p style="color: #666;">If you didn't request this, please ignore this email.</p>
-                </div>
+    const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        port: parseInt(process.env.SMTP_PORT || '587'),
+        secure: false,
+        auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_APP_PASS,
+        },
+        tls: {
+            rejectUnauthorized: false,
+        },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 10000,
+    });
+
+    const mailOptions = {
+        from: process.env.SMTP_FROM,
+        to: email,
+        subject: mode === 'sign-up' ? 'Verify Your Email Address' :
+            'Password Reset OTP',
+        html: mode === 'sign-up' ? `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;">Welcome! Verify Your Email</h2>
+        <p>Thank you for signing up. Please use the following OTP to verify your email address:</p>
+        <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
+          ${otp}
+        </div>
+        <p style="color: #666;">This OTP will expire in 10 minutes.</p>
+        <p style="color: #666;">If you didn't sign up for an account, please ignore this email.</p>
+      </div>
+    ` :
             `
-        });
-    }
-    catch (error) {
-        console.error('Resend Error:', error);
-        throw error;
-    }
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;">Password Reset Request</h2>
+        <p>You have requested to reset your password. Use the following OTP to complete the process:</p>
+        <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
+          ${otp}
+        </div>
+        <p style="color: #666;">This OTP will expire in 10 minutes.</p>
+        <p style="color: #666;">If you didn't request this, please ignore this email.</p>
+      </div>
+    `,
+    };
+
+    await transporter.sendMail(mailOptions);
 }
 
 export async function requestOTP(email: string, mode: string = 'sign-up') {
