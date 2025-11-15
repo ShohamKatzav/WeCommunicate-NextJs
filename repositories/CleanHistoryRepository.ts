@@ -23,4 +23,10 @@ export default class CleanHistoryRepository {
             throw err;
         }
     }
+
+    static async findAllForUser(userID: Types.ObjectId) {
+        return await CleanHistory.find({ account: userID })
+            .select('conversation date')
+            .lean();
+    }
 }

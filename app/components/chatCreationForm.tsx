@@ -1,20 +1,21 @@
 import { Dispatch, RefObject, SetStateAction, useEffect, useState } from "react";
 import { getCoockieChatUsersList } from '@/app/lib/cookieActions';
-import { getUsernames } from '@/app/lib/accountActions'
 import { useUser } from "../hooks/useUser";
 import ChatUser from "@/types/chatUser";
 import Message from "@/types/message";
 import { AsShortName } from "../utils/asName";
 
-interface GroupCreationProps {
+interface ChatCreationProps {
     isOpen: boolean;
     onClose: () => void;
     participants: RefObject<ChatUser[] | null | undefined>;
     conversationId: RefObject<string | null | undefined>;
     setChat: Dispatch<SetStateAction<Message[]>>;
+    conversationMode: string;
+    setMobileSidebarOpen: Dispatch<SetStateAction<boolean>>;
 }
 
-const GroupCreationForm = ({ isOpen, onClose, participants, conversationId, setChat }: GroupCreationProps) => {
+const ChatCreationForm = ({ isOpen, onClose, participants, conversationId, setChat, conversationMode, setMobileSidebarOpen }: ChatCreationProps) => {
 
     const [participantsList, setparticipantsList] = useState([]);
     const [selectedParticipants, setSelectedParticipants] = useState<ChatUser[]>([]);
@@ -41,14 +42,19 @@ const GroupCreationForm = ({ isOpen, onClose, participants, conversationId, setC
         setparticipantsList(JSON.parse(chatUsers?.value));
     }
 
-    const selectChange = (checkbox: HTMLInputElement, participant: ChatUser) => {
-        const isChecked = checkbox.checked;
-
-        if (isChecked) {
-            setSelectedParticipants((prev) => [...prev, participant]);
-        } else {
-            setSelectedParticipants((prev) => prev.filter((item) => item !== participant));
+    const selectChange = (input: HTMLInputElement, participant: ChatUser) => {
+        if (conversationMode === 'single') {
+            setSelectedParticipants([participant]);
         }
+        else {
+            const isChecked = input.checked;
+            if (isChecked) {
+                setSelectedParticipants((prev) => [...prev, participant]);
+            } else {
+                setSelectedParticipants((prev) => prev.filter((item) => item !== participant));
+            }
+        }
+        setMobileSidebarOpen(false);
     };
 
     const groupCreation = () => {
@@ -62,11 +68,17 @@ const GroupCreationForm = ({ isOpen, onClose, participants, conversationId, setC
     return isOpen ? (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-3">
             <div className="bg-white rounded-lg shadow-lg p-6 w-96 h-96 max-w-full flex flex-col">
-                <h2 className="text-3xl font-bold mb-4">Create New Group</h2>
+                {
+                    conversationMode === 'group' ? <h2 className="text-3xl font-bold mb-4">Create a new group</h2> :
+                        <h2 className="text-3xl font-bold mb-4">Select a friend</h2>
+                }
                 <div className="flex flex-col flex-1">
-                    <label className="text-2xl block font-medium mb-2">
-                        Select Participants:
-                    </label>
+                    {
+                        conversationMode === 'group' &&
+                        <label className="text-2xl block font-medium mb-2">
+                            Select Participants:
+                        </label>
+                    }
                     <input
                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg
                         focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700
@@ -90,12 +102,11 @@ const GroupCreationForm = ({ isOpen, onClose, participants, conversationId, setC
                                     return (
                                         <div className="text-xl" key={participant?._id}>
                                             <input
-                                                type="checkbox"
-                                                onChange={(e) =>
-                                                    selectChange(e.target as HTMLInputElement, participant)
-                                                }
+                                                type={conversationMode === 'group' ? 'checkbox' : 'radio'}
+                                                name={conversationMode === 'group' ? undefined : 'participant'} // ensures radios belong to same group
+                                                onChange={(e) => selectChange(e.target as HTMLInputElement, participant)}
                                                 hidden={!isVisible}
-                                            />{" "}
+                                            /> {" "}
                                             {isVisible && AsShortName(participant.email!)}
                                         </div>
                                     );
@@ -107,7 +118,7 @@ const GroupCreationForm = ({ isOpen, onClose, participants, conversationId, setC
                             onClick={groupCreation}
                             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
                         >
-                            Create Group
+                            {conversationMode === 'group' ? 'Create Group' : 'Start chatting'}
                         </button>
                         <button
                             type="button"
@@ -122,4 +133,4 @@ const GroupCreationForm = ({ isOpen, onClose, participants, conversationId, setC
         </div>) : null
 };
 
-export default GroupCreationForm;
+export default ChatCreationForm;

@@ -9,33 +9,37 @@ import { useSocket } from "../hooks/useSocket";
 import useIsMobile from '../hooks/useIsMobile';
 import { TiDeleteOutline } from "react-icons/ti";
 import { IoBan } from "react-icons/io5";
+import FullscreenMediaViewer from './fullscreenMediaViewer';
+import { AsShortName } from "../utils/asName";
 
-interface MessageViewerProps {
+interface MessageBubbleProps {
   message: Message;
   setReloadKey?: Dispatch<SetStateAction<boolean>>;
 }
 
-const MessageViewer = ({ message, setReloadKey }: MessageViewerProps) => {
+const MessageBubble = ({ message, setReloadKey }: MessageBubbleProps) => {
 
   const { user } = useUser();
   const { socket, loadingSocket } = useSocket();
 
-  const sender = message.sender === user?.email ? "You" : message.sender;
+  const sender = message.sender === user?.email ? "You" : AsShortName(message.sender);
   const dateToDisplay = new Date(message.date!).toLocaleString();
   const messageRef = useRef<HTMLDivElement | null>(null);
   const deleteButtonRef = useRef<HTMLButtonElement | null>(null);
-  const [hover, setHover] = useState(false); // Show delete button only for desktop
-  const [showActions, setShowActions] = useState(false); // Show delete button only for mobile
+  const [hover, setHover] = useState(false); // Show delete message button only for desktop
+  const [showActions, setShowActions] = useState(false); // Show delete message button only for mobile
   const isMobile = useIsMobile();
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const [deleted, setDeleted] = useState(
     message.status?.includes("revoked") ?? false
   );
 
   const messageStyle = `self-start max-w-[80%] md:max-w-[60%] px-4 py-3 overflow-hidden ${message.sender === user?.email
-    ? "bg-blue-400 rounded-br-3xl justify-self-start"
-    : "bg-slate-400 rounded-bl-3xl col-start-2 md:col-start-3 justify-self-end"
+    ? "bg-green-500 rounded-br-3xl justify-self-start"
+    : "bg-gray-500 rounded-bl-3xl col-start-2 md:col-start-3 justify-self-end"
     } rounded-tl-3xl rounded-tr-xl text-white wrap-break-word overflow-auto gap-6 mb-6`;
+
 
   useEffect(() => {
     setDeleted(message.status?.includes("revoked") ?? false);
@@ -61,6 +65,10 @@ const MessageViewer = ({ message, setReloadKey }: MessageViewerProps) => {
     if (setReloadKey) setReloadKey((prev: any) => !prev);
     socket?.emit("delete message", message)
   }
+
+  const handleMediaDoubleClick = () => {
+    setIsFullscreen(true);
+  };
 
   if (deleted) {
     const deletedMessageText = message.sender === user?.email ? 'You deleted this message' :
@@ -94,10 +102,17 @@ const MessageViewer = ({ message, setReloadKey }: MessageViewerProps) => {
         {message.file?.contentType.includes("image")
           && message.file && (
             <Image
+              onDoubleClick={() => {
+                if (isMobile) handleMediaDoubleClick();
+              }}
+              onClick={() => {
+                if (!isMobile) handleMediaDoubleClick();
+              }}
               src={message.file.url}
-              width={isMobile ? 100 : 250}
-              height={isMobile ? 100 : 250}
+              width={isMobile ? 90 : 150}
+              height={isMobile ? 90 : 150}
               alt="Sent image"
+              className="cursor-pointer"
             />
           )}
 
@@ -111,7 +126,13 @@ const MessageViewer = ({ message, setReloadKey }: MessageViewerProps) => {
 
         {message.file?.contentType.includes("video")
           && message.file && (
-            <video width="320" height="240" controls preload="none">
+            <video
+              width="320"
+              height="240"
+              controls
+              preload="none"
+              className="cursor-pointer"
+            >
               <source src={message.file.url} type="video/mp4" />
               Your browser does not support the video tag.
             </video>
@@ -154,8 +175,16 @@ const MessageViewer = ({ message, setReloadKey }: MessageViewerProps) => {
           color="red"
         />
       </button>
+
+      {/* Fullscreen Media Viewer */}
+      {isFullscreen && message.file && (
+        <FullscreenMediaViewer
+          src={message.file.url}
+          onClose={() => setIsFullscreen(false)}
+        />
+      )}
     </div >
   );
 };
 
-export default MessageViewer;
+export default MessageBubble;

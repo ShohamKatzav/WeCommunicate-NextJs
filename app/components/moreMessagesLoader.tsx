@@ -5,12 +5,12 @@ import Message from "@/types/message";
 import ChatUser from "@/types/chatUser";
 import { getMessages } from '@/app/lib/chatActions'
 import { Spinner } from "./spinner";
-import MessageViewer from "./messageViewer";
+import MessageBubble from "./messageBubble";
 
 
 interface LoadMoreProps {
-  oldMessages: Message[]
-  participants: ChatUser[]
+  oldMessages: Message[];
+  participants: ChatUser[];
 }
 
 export default function MoreMessagesLoader({ oldMessages, participants }: LoadMoreProps) {
@@ -21,33 +21,38 @@ export default function MoreMessagesLoader({ oldMessages, participants }: LoadMo
 
   const { ref, inView } = useInView();
 
-  const [newMessagesCount, setNewMessagesCount] = useState(5);
+  const [newMessagesCount, setNewMessagesCount] = useState(parseInt(process.env.MESSAGES_PER_PAGE || '5'));
 
   const loadMoreMessages = async () => {
+    if (fetching || allDataFetched) return;
     setFetching(true);
     setAllDataFetched(false);
     const nextPage = page + 1;
-    const res: any = await getMessages(
-      participants?.map(p => p._id).filter((id): id is string => id !== undefined),
-      nextPage
-    );
-    if (res?.message !== "success") {
-      setAllDataFetched(true);
+    try {
+      const res: any = await getMessages(
+        participants?.map(p => p._id).filter((id): id is string => id !== undefined),
+        nextPage
+      );
+      if (res?.message !== "success") {
+        setAllDataFetched(true);
+      }
+      const newMessages = res?.chat ?? [];
+      if (newMessages.length > 0) {
+        setNewMessagesCount(res.chat.length);
+        setMessages((prevMessages: Message[]) => [...newMessages, ...prevMessages]);
+      }
+      setPage(nextPage);
+    } finally {
+      setFetching(false);
     }
-    const newMessages = res?.chat ?? [];
-    if (newMessages.length > 0) {
-      setNewMessagesCount(res.chat.length);
-      setMessages((prevMessages: Message[]) => [...newMessages, ...prevMessages]);
-    }
-    setPage(nextPage);
   };
 
   useEffect(() => {
+    if (fetching || allDataFetched) return;
     if (inView && !fetching) {
       loadMoreMessages();
-      setFetching(false);
     }
-  }, [inView]);
+  }, [inView, fetching]);
 
   // aka intialize chat history
   useEffect(() => {
@@ -65,12 +70,12 @@ export default function MoreMessagesLoader({ oldMessages, participants }: LoadMo
     <>
       <div>
         {messages.slice(newMessagesCount).map((message, index) =>
-          <MessageViewer key={index + parseInt(process.env.MESSAGES_PER_PAGE || '5')} message={message} />)
+          <MessageBubble key={index + parseInt(process.env.MESSAGES_PER_PAGE || '5')} message={message} />)
         }
       </div>
       <div>
         {messages.slice(0, newMessagesCount).map((message, index) =>
-          <MessageViewer key={index} message={message} />)
+          <MessageBubble key={index} message={message} />)
         }
       </div>
       <div

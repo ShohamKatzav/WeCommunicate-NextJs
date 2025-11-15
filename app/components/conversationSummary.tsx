@@ -5,17 +5,16 @@ import { useSocket } from "../hooks/useSocket";
 import useIsMobile from "../hooks/useIsMobile";
 import ChatUser from "@/types/chatUser";
 import Conversation from "@/types/conversation";
-import { AsShortName } from "../utils/asName";
 import Message from "@/types/message";
+import { AsShortName } from "../utils/asName";
 
 interface ConversationConversationSummaryProps {
 
     conversation: Conversation;
     getLastMessages: (participantsFromList: ChatUser[]) => Promise<void>;
-    setToggle: Dispatch<SetStateAction<boolean>>
 }
 
-const ConversationSummary = ({ conversation, getLastMessages, setToggle }: ConversationConversationSummaryProps) => {
+const ConversationSummary = ({ conversation, getLastMessages }: ConversationConversationSummaryProps) => {
 
     const [otherMembers, setOtherMembers] = useState<ChatUser[]>();
     const [lastMessage, setLastMessage] = useState<Message | undefined>(
@@ -25,15 +24,12 @@ const ConversationSummary = ({ conversation, getLastMessages, setToggle }: Conve
     const { user } = useUser();
     const { socket, loadingSocket } = useSocket();
     const { initializeRoomNotifications, newMessageNotification } = useNotification();
-    const isMobile = useIsMobile();
 
     const incoming = newMessageNotification[conversation._id!];
 
     const switchRoom = (otherMembers: ChatUser[]) => {
         initializeRoomNotifications(conversation._id!);
         getLastMessages(otherMembers);
-        if (isMobile)
-            setToggle(false);
     }
 
     useEffect(() => {
@@ -69,73 +65,74 @@ const ConversationSummary = ({ conversation, getLastMessages, setToggle }: Conve
 
     return (
         otherMembers && <li
-            className="bg-white p-4 rounded-lg shadow-md flex items-center gap-4 hover:shadow-lg transition-shadow"
+            className="bg-white p-3 shadow-md flex items-center gap-4 hover:shadow-lg transition-shadow"
             onClick={() => switchRoom(otherMembers)}
         >
-            <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-lg font-semibold text-gray-600">
-                {otherMembers.length <= 3 ? (
-                    otherMembers.map((member, index) => (
-                        <span key={index}>
-                            {AsShortName(member.email!)[0]}
-                            {index < otherMembers.length - 1 ? ", " : ""}
-                        </span>
-                    ))
-                ) : (
-                    <>
-                        {AsShortName(otherMembers[0].email!)[0]},
-                        {AsShortName(otherMembers[1].email!)[0]}
-                        <span> +{otherMembers.length - 2}</span>
-                    </>
-                )}
-            </div>
-            <div className="flex-1">
-                <div className="text-gray-800 font-medium text-lg">
-                    {otherMembers.length <= 3 ? (
-                        otherMembers.map((member, index) => (
-                            <span key={index}>
-                                {AsShortName(member.email!)}
-                                {index < otherMembers.length - 1 ? ", " : ""}
-                            </span>
-                        ))
+            <div className="w-full text-left p-2 flex gap-3 items-center hover:bg-gray-50 dark:hover:bg-gray-700">
+                <div className="w-12 h-12 rounded-full bg-linear-to-r from-amber-400 to-red-500 flex items-center justify-center">
+                    {otherMembers.length > 0 ? (
+                        otherMembers.map((member, index) => {
+                            const letter = (member.email || "U")[0].toUpperCase();
+                            const isLast = index === otherMembers.length - 1;
+
+                            return (
+                                index < 3 &&
+                                <span key={index} className="text-white font-bold">
+                                    {letter}
+                                    {!isLast && ","}
+                                </span>
+                            );
+                        })
                     ) : (
-                        <>
-                            {AsShortName(otherMembers[0].email!)}
-                            {", "}
-                            {AsShortName(otherMembers[1].email!)}
-                            {", "}
-                            {AsShortName(otherMembers[2].email!)}
-                            <span> +{otherMembers.length - 3}</span>
-                        </>
+                        <span className="text-white text-xs">No members in this conversation.</span>
                     )}
                 </div>
-                {lastMessage ? (
-                    <div className="text-gray-600 text-sm relative">
-                        <span className="font-semibold text-gray-800">
-                            {lastMessage.sender?.toUpperCase() === user?.email?.toUpperCase() ? 'You' :
-                                lastMessage.sender?.split("@")[0]}
-                        </span>
-                        : {lastMessage.status?.includes("revoked")
-                            ? "Message deleted"
-                            : (lastMessage.text || "sent file " + lastMessage.file?.pathname)}
-                        <div className="text-xs text-gray-400">
-                            {lastMessage.date &&
-                                new Date(lastMessage.date).toLocaleString()}
+
+
+                <div className="flex-1">
+                    <div className="grid grid-cols-8 justify-between items-center">
+                        <div className="col-span-7">
+                            {(otherMembers.map((member, index) => (
+                                index < otherMembers.length - 1 ?
+                                    <span key={index} className="font-medium">{AsShortName(member.email)}, </span> :
+                                    <span key={index} className="font-medium">{AsShortName(member.email)}</span>
+                            )))
+                            }
                         </div>
-                        {incoming > 0 &&
-                            <span className="inline-flex items-center justify-center px-2 py-1
-                                text-xl font-bold leading-none text-white 
-                                bg-red-600 rounded-full absolute top-0 right-0 transform translate-x-1/2 -translate-y-1/2">
-                                {incoming}
-                            </span>
-                        }
+                        <div className="col-span-1 justify-self-end">
+                            {incoming > 0 && (
+                                <div className="w-5 h-5 flex items-center justify-center text-white bg-red-600 rounded-full">
+                                    {incoming}
+                                </div>
+                            )}
+                        </div>
                     </div>
-                ) : (
-                    <div className="text-gray-500 text-sm italic">
-                        No messages yet.
-                    </div>
-                )}
+                    {lastMessage ?
+                        <div className="grid grid-cols-2 justify-between items-center text-gray-400">
+                            <div>{AsShortName(lastMessage.sender)}</div>
+
+                            <div className="items-center gap-2 justify-self-end">
+                                {new Date(lastMessage.date!).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: false,
+                                })}
+
+                            </div>
+                            <div className="text-sm text-gray-500 break-all col-span-2">{lastMessage.status?.includes("revoked")
+                                ? "Message deleted"
+                                : (lastMessage.text || "sent file " + lastMessage.file?.pathname)}
+                            </div>
+                        </div>
+                        :
+                        <div className="text-gray-500 text-sm italic">
+                            No messages yet.
+                        </div>
+                    }
+
+                </div>
             </div>
-        </li>
+        </li >
     );
 };
 

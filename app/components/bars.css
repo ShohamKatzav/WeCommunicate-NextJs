@@ -28,8 +28,8 @@
     margin-bottom: 6rem;
     padding: 0 20px;
   }
-  .navbar
-  {
-    z-index: 1;
+  body.menu-open .z-15,
+  body.menu-open [class*="z-15"] {
+    display: none !important;
   }
 }

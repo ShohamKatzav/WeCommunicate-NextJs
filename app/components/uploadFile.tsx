@@ -8,6 +8,7 @@ import { deleteFile } from '@/app/lib/fileActions'
 
 import { MdDelete } from "react-icons/md";
 import { AiOutlineFileAdd } from "react-icons/ai";
+import useIsMobile from '../hooks/useIsMobile';
 
 interface UploadFileProps {
     message: Message;
@@ -19,6 +20,7 @@ export default function UploadFile({ message, setMessage }: UploadFileProps) {
     const inputFileRef = useRef<HTMLInputElement>(null);
     const [blob, setBlob] = useState<PutBlobResult | null>(null);
     const { user } = useUser();
+    const isMobile = useIsMobile();
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -160,8 +162,8 @@ export default function UploadFile({ message, setMessage }: UploadFileProps) {
     return (
         <div>
             <div className="flex flex-cols-2">
-                <label htmlFor="uploaded-file">
-                    <AiOutlineFileAdd size={40} />
+                <label htmlFor="uploaded-file" className={`${isMobile ? 'mx-3' : ''}`}>
+                    <AiOutlineFileAdd size={isMobile ? 25 : 40} />
                 </label>
                 <input
                     id="uploaded-file"
@@ -174,15 +176,16 @@ export default function UploadFile({ message, setMessage }: UploadFileProps) {
                     disabled={isUploading}
                     onChange={() => handleSubmit()}
                 />
-                <label htmlFor="remove-file">
-                    <MdDelete size={40} />
+                <label htmlFor="remove-file" className={`${isMobile ? 'mx-3' : ''}`}>
+                    <MdDelete size={isMobile ? 25 : 40} />
                 </label>
                 <button id="remove-file" onClick={() => deleteBlobFile()} disabled={!blob} />
             </div>
 
-            <br />
             {blob && (
-                <div>
+                isMobile ? <div>
+                    File loaded:<br /><label className="truncate block max-w-2/3">{blob.pathname}</label>
+                </div> : <div>
                     File loaded:<br /><label>{blob.pathname}</label>
                 </div>
             )}
