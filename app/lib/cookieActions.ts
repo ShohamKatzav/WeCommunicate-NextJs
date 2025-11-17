@@ -1,9 +1,7 @@
 'use server';
 import { cookies } from 'next/headers'
 import User from '@/types/user'
-import ChatUser from '@/types/chatUser';
 import jwt from 'jsonwebtoken';
-import { getUsernames } from '@/app/lib/accountActions'
 
 const jwtSecretKey = process.env.TOKEN_SECRET;
 if (!jwtSecretKey) {
@@ -75,22 +73,4 @@ export async function extractUsersEmailFromCoockie(): Promise<any> {
 export async function deleteUserCoockie(): Promise<any> {
   const cookieStore = await cookies();
   cookieStore.set('user', "");
-}
-
-export async function createCoockieChatUsersList(data: ChatUser[]): Promise<any> {
-  const cookieStore = await cookies();
-  cookieStore.set({
-    name: 'chatUsersList',
-    value: JSON.stringify(data),
-    httpOnly: true
-  });
-}
-
-export async function getCoockieChatUsersList(): Promise<any> {
-  const cookieStore = await cookies();
-  const chatUsersList = cookieStore.get('chatUsersList');
-  if (chatUsersList)
-    return chatUsersList;
-  await createCoockieChatUsersList(await getUsernames());
-  return cookieStore.get('chatUsersList');
 }

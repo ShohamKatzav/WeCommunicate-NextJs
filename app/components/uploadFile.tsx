@@ -141,6 +141,19 @@ export default function UploadFile({ message, setMessage }: UploadFileProps) {
                 }
             });
 
+            // Debug: Log upload result and useful context for troubleshooting
+            // Please check the browser Network tab for the POST `/api/send-file` response too.
+            console.log('upload debug', {
+                pathname: newBlob?.pathname,
+                contentType: newBlob?.contentType,
+                url: newBlob?.url,
+                downloadUrl: newBlob?.downloadUrl,
+                token: user.token,
+                fileName: file.name,
+                fileType: file.type,
+                fileSize: file.size
+            });
+
             setBlob(newBlob);
 
             // Optional: Reset the form
@@ -149,7 +162,7 @@ export default function UploadFile({ message, setMessage }: UploadFileProps) {
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Upload failed');
-            console.error(err);
+            console.error('upload error detail', err);
         } finally {
             setIsUploading(false);
         }

@@ -1,9 +1,9 @@
-import { Dispatch, RefObject, SetStateAction, useEffect, useState } from "react";
-import { getCoockieChatUsersList } from '@/app/lib/cookieActions';
+import { Dispatch, RefObject, SetStateAction, useCallback, useEffect, useState } from "react";
 import { useUser } from "../hooks/useUser";
 import ChatUser from "@/types/chatUser";
 import Message from "@/types/message";
 import { AsShortName } from "../utils/asName";
+import { getUsernames } from "../lib/accountActions";
 
 interface ChatCreationProps {
     isOpen: boolean;
@@ -17,30 +17,30 @@ interface ChatCreationProps {
 
 const ChatCreationForm = ({ isOpen, onClose, participants, conversationId, setChat, conversationMode, setMobileSidebarOpen }: ChatCreationProps) => {
 
-    const [participantsList, setparticipantsList] = useState([]);
+    const [participantsList, setParticipantsList] = useState<ChatUser[]>([]);
     const [selectedParticipants, setSelectedParticipants] = useState<ChatUser[]>([]);
     const [participantsSearch, setParticipantsSearch] = useState<string>("");
 
     const { user } = useUser();
 
 
-    useEffect(() => {
-        // only fetch remote usernames when user (and token) is available
-        if (user?.email) {
-            getUsersListFromCoockie();
+    const fetchUsers = useCallback(async () => {
+        if (!user?.email) return;
+        try {
+            const response: ChatUser[] = await getUsernames();
+            setParticipantsList(response);
+        } catch (err) {
+            console.error('Failed to fetch usernames', err);
+            // fallback: keep existing list (or empty)
         }
-    }, [user?.email]);
+    }, [isOpen]);
 
     useEffect(() => {
         setSelectedParticipants([]);
+        fetchUsers();
     }, [isOpen]);
 
-    const getUsersListFromCoockie = async () => {
-        // guard: ensure user is available before making authenticated requests
-        if (!user?.email) return;
-        const chatUsers = await getCoockieChatUsersList();
-        setparticipantsList(JSON.parse(chatUsers?.value));
-    }
+
 
     const selectChange = (input: HTMLInputElement, participant: ChatUser) => {
         if (conversationMode === 'single') {
@@ -102,7 +102,7 @@ const ChatCreationForm = ({ isOpen, onClose, participants, conversationId, setCh
                                     return (
                                         <div className="text-xl" key={participant?._id}>
                                             <input
-                                            id={`participant-${index}`}
+                                                id={`participant-${index}`}
                                                 type={conversationMode === 'group' ? 'checkbox' : 'radio'}
                                                 name={conversationMode === 'group' ? undefined : 'participant'} // ensures radios belong to same group
                                                 onChange={(e) => selectChange(e.target as HTMLInputElement, participant)}

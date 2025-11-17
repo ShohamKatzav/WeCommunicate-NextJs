@@ -28,6 +28,7 @@ const Chat = () => {
     const currentConversationId = useRef<string>("");
     const participants = useRef<ChatUser[] | null>(null);
     const chatBox = useRef<HTMLDivElement | null>(null);
+    const usersRefreshRef = useRef<(() => void) | null>(null);
     const [lastRecievedMessage, setLastRecievedMessage] = useState<Message>();
     const [isModalOpen, setModalOpen] = useState(false);
     const [isMobileChatsSidebarOpen, setMobileChatsSidebarOpen] = useState(false);
@@ -200,6 +201,7 @@ const Chat = () => {
     };
 
     const handleCloseModal = () => {
+        getLastMessages(participants.current || []);
         setModalOpen(false);
         document.body.classList.remove("overflow-hidden");
     };
@@ -208,7 +210,7 @@ const Chat = () => {
         return (<Loading />);
 
     return (
-        <div className="h-[86dvh] flex bg-linear-to-br bg-white dark:from-gray-900 dark:to-gray-800">
+        <div className="h-[85dvh] flex bg-linear-to-br bg-white dark:from-gray-900 dark:to-gray-800">
             <ConversationsBar
                 isMobileChatsSidebarOpen={isMobileChatsSidebarOpen}
                 handleOpenModal={handleOpenModal}
@@ -255,6 +257,7 @@ const Chat = () => {
                 getLastMessages={getLastMessages}
                 conversationId={currentConversationId.current}
                 isMobileUsersSidebarOpen={isMobileUsersSidebarOpen}
+                registerRefresh={(fn) => { usersRefreshRef.current = fn; }}
             />
 
             {/* Mobile Sidebar Overlay */}
