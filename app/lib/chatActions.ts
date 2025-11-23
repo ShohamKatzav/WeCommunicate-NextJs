@@ -26,7 +26,7 @@ export const getMessages = async (participantsId: string[], page: number) => {
             conversation: null
         };
     }
-    const messagesPerPage = parseInt(process.env.MESSAGES_PER_PAGE || '5');
+    const messagesPerPage = parseInt(process.env.NEXT_PUBLIC_MESSAGES_PER_PAGE || '5');
     try {
         await connectDB();
         let chatQuery: any;

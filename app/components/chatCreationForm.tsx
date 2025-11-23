@@ -2,7 +2,7 @@ import { Dispatch, RefObject, SetStateAction, useCallback, useEffect, useState }
 import { useUser } from "../hooks/useUser";
 import ChatUser from "@/types/chatUser";
 import Message from "@/types/message";
-import { AsShortName } from "../utils/asName";
+import { AsShortName } from "../utils/stringFormat";
 import { getUsernames } from "../lib/accountActions";
 
 interface ChatCreationProps {

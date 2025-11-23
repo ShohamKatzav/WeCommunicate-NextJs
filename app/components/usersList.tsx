@@ -1,6 +1,5 @@
 "use client"
-import { useEffect, useState, useCallback } from "react";
-import { getUsernames } from '@/app/lib/accountActions'
+import { useEffect, useMemo, useRef } from "react";
 import { useUser } from "../hooks/useUser";
 import { useNotification } from "../hooks/useNotification";
 import ChatUser from "@/types/chatUser";
@@ -8,68 +7,51 @@ import ciEquals from "../utils/ciEqual";
 import UserRow from "./userRow";
 import { Users } from 'lucide-react';
 
-interface ListProps {
+interface UsersListClientProps {
+    initialUsers: ChatUser[];
     chatListActiveUsers: ChatUser[];
     getLastMessages: (participantFromList: ChatUser[]) => Promise<void>;
-    conversationId: string | undefined;
+    conversationId?: string | undefined;
     isMobileUsersSidebarOpen: boolean;
-    registerRefresh?: (fn: () => void) => void;
 }
 
-const UsersList = ({ chatListActiveUsers, getLastMessages, conversationId, isMobileUsersSidebarOpen, registerRefresh }: ListProps) => {
-
+export default function UsersListClient({
+    initialUsers,
+    chatListActiveUsers,
+    getLastMessages,
+    conversationId,
+    isMobileUsersSidebarOpen,
+}: UsersListClientProps) {
     const { user } = useUser();
     const { initializeRoomNotifications } = useNotification();
-    const [chatListAllUsers, setChatListAllUsers] = useState<ChatUser[]>([]);
-
-    const fetchUsers = useCallback(async () => {
-        if (!user?.email) return;
-        try {
-            const response: ChatUser[] = await getUsernames();
-            // merge active users (from socket) into the server list ensuring uniqueness
-            const merged = Array.isArray(response) ? [...response] : [];
-            (chatListActiveUsers || []).forEach(active => {
-                if (!merged.find(u => ciEquals(u.email as string, active.email as string))) {
-                    merged.push(active);
-                }
-            });
-            setChatListAllUsers(merged);
-        } catch (err) {
-            console.error('Failed to fetch usernames', err);
-            // fallback: keep existing list (or empty)
-        }
-    }, [user?.email, chatListActiveUsers]);
-
-    useEffect(() => {
-        // fetch when user is available or active users change
-        fetchUsers();
-        // if parent provided a registration function, expose fetchUsers so parent can trigger refresh
-        if (typeof registerRefresh === 'function') {
-            try {
-                registerRefresh(fetchUsers);
-            } catch (e) {
-                // ignore
+    const chatListAllUsers = useMemo(() => {
+        if (!Array.isArray(initialUsers)) return [];
+        const merged = [...initialUsers];
+        (chatListActiveUsers || []).forEach(active => {
+            if (!merged.find(u => ciEquals(u.email as string, active.email as string))) {
+                merged.push(active);
             }
-        }
-    }, [fetchUsers, registerRefresh]);
+        });
+        return merged;
+    }, [initialUsers, chatListActiveUsers]);
 
+    const prevConversationRef = useRef<string | undefined>(undefined);
     useEffect(() => {
-        if (conversationId)
-            initializeRoomNotifications(conversationId);
-    }, [conversationId]);
-
-    // removed cookie caching in favor of direct fetch + socket revalidation
-
+        if (!conversationId) return;
+        if (prevConversationRef.current === conversationId) return;
+        prevConversationRef.current = conversationId;
+        initializeRoomNotifications(conversationId);
+    }, [conversationId, initializeRoomNotifications]);
 
     const isUserActive = (user: ChatUser) => {
         return chatListActiveUsers?.some(u => ciEquals(u.email as string, user.email as string));
     }
 
-    const onlineUsers = chatListAllUsers.filter(
+    const onlineUsers = chatListAllUsers?.filter(
         u => u.email?.toLowerCase() !== user?.email?.toLowerCase() && isUserActive(u)
     );
 
-    const offlineUsers = chatListAllUsers.filter(
+    const offlineUsers = chatListAllUsers?.filter(
         u => u.email?.toLowerCase() !== user?.email?.toLowerCase() && !isUserActive(u)
     );
 
@@ -85,8 +67,8 @@ const UsersList = ({ chatListActiveUsers, getLastMessages, conversationId, isMob
                     Active now
                 </div>
                 {onlineUsers.length > 0 ?
-                    onlineUsers.map((chatUser: ChatUser, index) => (
-                        <UserRow key={`on-${index}`} chatUser={chatUser} getLastMessages={getLastMessages} active={true} />
+                    onlineUsers.map((chatUser: ChatUser) => (
+                        <UserRow key={`on-${chatUser.email}`} chatUser={chatUser} getLastMessages={getLastMessages} active={true} />
                     ))
                     :
                     <div className="text-center text-gray-500 dark:text-gray-400 py-8">
@@ -100,8 +82,8 @@ const UsersList = ({ chatListActiveUsers, getLastMessages, conversationId, isMob
                     Others
                 </div>
                 {offlineUsers.length > 0 ?
-                    offlineUsers.map((chatUser: ChatUser, index) => (
-                        <UserRow key={`off-${index}`} chatUser={chatUser} getLastMessages={getLastMessages} active={false} />
+                    offlineUsers.map((chatUser: ChatUser) => (
+                        <UserRow key={`off-${chatUser.email}`} chatUser={chatUser} getLastMessages={getLastMessages} active={false} />
                     ))
                     :
                     <div className="text-center text-gray-500 dark:text-gray-400 py-8">
@@ -112,7 +94,4 @@ const UsersList = ({ chatListActiveUsers, getLastMessages, conversationId, isMob
             </aside>
         </div>
     );
-
-};
-
-export default UsersList;
+}

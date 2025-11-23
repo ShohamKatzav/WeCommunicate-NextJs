@@ -25,4 +25,4 @@ const CleanHistorySchema = new Schema<ICleanHistory>({
 
 // CleanHistorySchema.index({ account: 1, conversation: 1 }, { unique: true });
 
-export default models.CleanHistory || model<ICleanHistory>('CleanHistory', CleanHistorySchema);
+export default models?.CleanHistory || model<ICleanHistory>('CleanHistory', CleanHistorySchema);

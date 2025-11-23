@@ -20,7 +20,7 @@ export default async function handleSocketConnection(io, socket) {
 
         socket.on('join room', (body) => handleJoinRoom(body, socket));
         socket.on('publish message', (message) => handlePublishMessage(io, socket, message));
-        socket.on('delete message', (message) => handleDeleteMessage(io, message));
+        socket.on('delete message', (message) => handleDeleteMessage(io, socket, message));
         socket.on('notifications update', () => handleNotificationsUpdate(socket, email));
         socket.on("notifications checked", (roomID) => handleNotificationsChecked(roomID, email));
         socket.on('get locations', () => handleGetLocation(io, socket));
@@ -72,9 +72,9 @@ async function handlePublishMessage(io, socket, message) {
     }
 }
 
-async function handleDeleteMessage(io, message) {
+async function handleDeleteMessage(io, socket, message) {
     const room = `chat_room_${message?.conversationID}`;
-    io.to(room).emit('delete message', message);
+    io.emit('delete message', message);
 }
 
 async function handleNotificationsUpdate(socket, email) {

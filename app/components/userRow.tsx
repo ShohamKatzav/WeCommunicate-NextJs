@@ -1,5 +1,5 @@
 import ChatUser from "@/types/chatUser";
-import { AsShortName } from "../utils/asName";
+import { AsShortName } from "../utils/stringFormat";
 import { useSocket } from "../hooks/useSocket";
 
 interface ListProps {

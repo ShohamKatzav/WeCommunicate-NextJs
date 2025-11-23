@@ -2,7 +2,7 @@
 import Message from "@/types/message";
 import Image from "next/image";
 import Link from "next/link";
-import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { deleteMessage } from '@/app/lib/chatActions'
 import { useUser } from "../hooks/useUser";
 import { useSocket } from "../hooks/useSocket";
@@ -10,24 +10,23 @@ import useIsMobile from '../hooks/useIsMobile';
 import { TiDeleteOutline } from "react-icons/ti";
 import { IoBan } from "react-icons/io5";
 import FullscreenMediaViewer from './fullscreenMediaViewer';
-import { AsShortName } from "../utils/asName";
+import { AsShortName } from "../utils/stringFormat";
 
 interface MessageBubbleProps {
   message: Message;
-  setReloadKey?: Dispatch<SetStateAction<boolean>>;
 }
 
-const MessageBubble = ({ message, setReloadKey }: MessageBubbleProps) => {
+const MessageBubble = ({ message }: MessageBubbleProps) => {
 
   const { user } = useUser();
-  const { socket, loadingSocket } = useSocket();
+  const { socket } = useSocket();
 
   const sender = message.sender === user?.email ? "You" : AsShortName(message.sender);
   const dateToDisplay = new Date(message.date!).toLocaleString();
   const messageRef = useRef<HTMLDivElement | null>(null);
   const deleteButtonRef = useRef<HTMLButtonElement | null>(null);
-  const [hover, setHover] = useState(false); // Show delete message button only for desktop
-  const [showActions, setShowActions] = useState(false); // Show delete message button only for mobile
+  const [hover, setHover] = useState(false);
+  const [showActions, setShowActions] = useState(false);
   const isMobile = useIsMobile();
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -40,30 +39,15 @@ const MessageBubble = ({ message, setReloadKey }: MessageBubbleProps) => {
     : "bg-gray-500 rounded-bl-3xl col-start-2 md:col-start-3 justify-self-end"
     } rounded-tl-3xl rounded-tr-xl text-white wrap-break-word overflow-auto gap-6 mb-6`;
 
-
+  // React to prop changes
   useEffect(() => {
     setDeleted(message.status?.includes("revoked") ?? false);
   }, [message.status]);
 
-  useEffect(() => {
-    if (!socket || loadingSocket) return;
-
-    const messageDeletedHandler = async (deletedMessage: Message) => {
-      if (deletedMessage._id === message._id)
-        setDeleted(true);
-    };
-    socket.on("delete message", messageDeletedHandler);
-
-    return () => {
-      socket.off("delete message", messageDeletedHandler);
-    };
-  }, [socket?.connected, loadingSocket, message._id]);
-
   const deleteMessageHandler = async () => {
     await deleteMessage(message._id!);
     setDeleted(true);
-    if (setReloadKey) setReloadKey((prev: any) => !prev);
-    socket?.emit("delete message", message)
+    socket?.emit("delete message", message);
   }
 
   const handleMediaDoubleClick = () => {

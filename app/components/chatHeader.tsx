@@ -1,7 +1,7 @@
 import ChatUser from "@/types/chatUser";
 import { Dispatch, SetStateAction } from "react";
 import { HiChatBubbleLeftRight, HiOutlineChatBubbleOvalLeft, HiUsers } from "react-icons/hi2";
-import { AsShortName } from "../utils/asName";
+import { AsShortName } from "../utils/stringFormat";
 import { useUser } from "../hooks/useUser";
 import ChatDropdown from "./chatDropdown";
 import Message from "@/types/message";
@@ -14,10 +14,9 @@ interface ChatHeaderProps {
     chat: Message[];
     setChat: Dispatch<SetStateAction<Message[]>>;
     conversationId: string;
-    setReloadKey: Dispatch<SetStateAction<boolean>>;
 }
 
-const ChatHeader = ({ setMobileChatsSidebarOpen, setMobileUsersSidebarOpen, participants, handleLeaveRoom, chat, setChat, conversationId, setReloadKey }: ChatHeaderProps) => {
+const ChatHeader = ({ setMobileChatsSidebarOpen, setMobileUsersSidebarOpen, participants, handleLeaveRoom, chat, setChat, conversationId }: ChatHeaderProps) => {
 
     const { user } = useUser();
 
@@ -73,8 +72,7 @@ const ChatHeader = ({ setMobileChatsSidebarOpen, setMobileUsersSidebarOpen, part
                             chat={chat}
                             setChat={setChat}
                             conversationId={conversationId}
-                            participants={participants}
-                            setReloadKey={setReloadKey} />
+                            participants={participants} />
                     }
                 </div>
             </div>

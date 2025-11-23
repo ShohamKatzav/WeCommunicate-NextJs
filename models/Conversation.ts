@@ -21,4 +21,4 @@ const ConversationSchema = new Schema<IConversation>({
 ConversationSchema.index({ members: 1 });
 ConversationSchema.index({ messages: 1 });
 
-export default models.Conversation || model<IConversation>('Conversation', ConversationSchema);
+export default models?.Conversation || model<IConversation>('Conversation', ConversationSchema);

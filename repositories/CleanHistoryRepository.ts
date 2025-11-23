@@ -16,7 +16,10 @@ export default class CleanHistoryRepository {
             return await CleanHistory.updateOne(
                 { account: accountID, conversation: conversationID },
                 { $set: { date: Date.now() } },
-                { upsert: true }
+                {
+                    upsert: true,
+                    writeConcern: { w: 'majority', j: true }
+                }
             );
         } catch (err) {
             console.error('Failed to update Clean History time:', err);

@@ -4,7 +4,7 @@ const MONGO_URI = process.env.DB_URI!;
 const cached: { connection?: typeof mongoose; promise?: Promise<typeof mongoose> } = {};
 async function connectMongo() {
   if (!MONGO_URI) {
-    throw new Error('Please define the MONGO_URI environment variable inside .env.local');
+    throw new Error('Please define the DB_URI environment variable inside .env.local');
   }
   if (cached.connection) {
     return cached.connection;
@@ -23,4 +23,5 @@ async function connectMongo() {
   }
   return cached.connection;
 }
+
 export default connectMongo;

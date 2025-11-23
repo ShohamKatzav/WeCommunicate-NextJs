@@ -25,4 +25,4 @@ const FileSchema = new Schema<IFile>({
         required: true
     },
 });
-export default models.FileModel || model<IFile>('FileModel', FileSchema);
+export default models?.FileModel || model<IFile>('FileModel', FileSchema);

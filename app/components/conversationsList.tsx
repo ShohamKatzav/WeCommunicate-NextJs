@@ -1,49 +1,47 @@
 "use client"
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from "react";
+import { useEffect, useState, RefObject } from "react";
 import ChatUser from "@/types/chatUser";
 import Message from "@/types/message";
 import ConversationSummary from "./conversationSummary";
-import { getConversations } from '@/app/lib/conversationActions'
+import Conversation from "@/types/conversation";
+import { useReloadConversationBar } from "../hooks/useReloadConversationBar";
 
 interface ConversationsListProps {
     getLastMessages: (participantFromList: ChatUser[]) => Promise<void>;
     newMessage: Message | undefined;
-    participants: ChatUser[] | null;
-    reloadKey: boolean;
+    participants: RefObject<ChatUser[] | null>;
     query: string;
+    initialConversations: Conversation[];
 }
 
-const ConversationsList = ({ getLastMessages, newMessage, participants, reloadKey, query }: ConversationsListProps) => {
-    const [conversations, setConversations] = useState<any>([]);
-    const [loading, setLoading] = useState(true);
-    const [fetchCode, setFetchCode] = useState(200);
+const ConversationsList =
+    ({ getLastMessages,
+        newMessage,
+        participants,
+        query,
+        initialConversations }: ConversationsListProps) => {
 
-    const router = useRouter();
+        const { reloadKey } = useReloadConversationBar();
+        const [conversations, setConversations] = useState<Conversation[]>(initialConversations || []);
 
+        // Sync with server data when it changes
+        useEffect(() => {
+            setConversations(initialConversations || []);
+        }, [initialConversations]);
 
-    const fetchData = async () => {
-        try {
-            const fetchedConversations = await getConversations();
-            setConversations(fetchedConversations.recentConversations);
-        } catch (error: any) {
-            setFetchCode(401);
-        } finally {
-            setLoading(false);
-        }
-    };
+        useEffect(() => {
+            if (participants.current) {
+                getLastMessages(participants.current);
+            }
+        }, [reloadKey]);
 
-    useEffect(() => {
-        fetchData();
-    }, [reloadKey]);
+        useEffect(() => {
+            if (!newMessage || !newMessage.conversationID) return;
 
-    useEffect(() => {
-        if (fetchCode === 401) router.replace('/login');
-    }, [fetchCode, router]);
-
-    useEffect(() => {
-        if (newMessage && newMessage?.conversationID) {
             setConversations((prevConversations: any[]) => {
+                // If top message already equals incoming message, skip update
+                if (prevConversations?.[0]?.messages?.[0]?._id === newMessage._id) return prevConversations;
+
                 const updatedConversations = [...prevConversations];
 
                 const conversationIndex = updatedConversations.findIndex(
@@ -58,7 +56,7 @@ const ConversationsList = ({ getLastMessages, newMessage, participants, reloadKe
                 } else {
                     const newConversation = {
                         _id: newMessage.conversationID,
-                        members: participants,
+                        members: participants.current || [],
                         messages: [newMessage],
                     };
                     updatedConversations.unshift(newConversation);
@@ -66,42 +64,39 @@ const ConversationsList = ({ getLastMessages, newMessage, participants, reloadKe
 
                 return updatedConversations;
             });
-        }
-    }, [newMessage]);
+        }, [newMessage]);
 
-    return (
-        <>
-            {
-                conversations?.length < 1 && loading ?
-                    <div className="bg-white p-4 rounded-lg shadow-md flex items-center gap-4 hover:shadow-lg transition-shadow">
-                        <p className="text-gray-600 text-center">Loading...</p></div> :
-                    conversations?.length < 1 && !loading &&
-                    <div className="bg-white p-4 rounded-lg shadow-md flex items-center gap-4 hover:shadow-lg transition-shadow">
-                        <p className="text-gray-600 text-center">No recent conversations available.</p></div>
-            }
-
-            {
-                conversations?.length > 0 && (
-                    <div className="divide-y overflow-auto" style={{ maxHeight: 'calc(100vh - 270px)' }}>
-                        {conversations.map((conversation: any) => {
-                            const membersEmailsIncludeQuery = conversation.members.some((m: any) => m.email?.toUpperCase().includes(query.toUpperCase()));
-                            const messageIncludeQuery = conversation.messages[0]?.text?.toUpperCase().includes(query.toUpperCase());
-                            const show = query.trim() === '' || (membersEmailsIncludeQuery || messageIncludeQuery);
-                            if (!show) return null;
-
-                            return (
-                                <ConversationSummary
-                                    key={conversation._id}
-                                    conversation={conversation}
-                                    getLastMessages={getLastMessages}
-                                />
-                            );
-                        })}
+        return (
+            <>
+                {
+                    conversations?.length < 1 &&
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md flex items-center gap-4 hover:shadow-lg transition-shadow">
+                        <p className="text-gray-600 dark:text-gray-400 text-center">No recent conversations available.</p>
                     </div>
-                )
-            }
-        </>
-    );
-};
+                }
+
+                {
+                    conversations?.length > 0 && (
+                        <div className="divide-y divide-gray-200 dark:divide-gray-700 overflow-auto" style={{ maxHeight: 'calc(100vh - 270px)' }}>
+                            {conversations.map((conversation: any) => {
+                                const membersEmailsIncludeQuery = conversation.members?.some((m: any) => m.email?.toUpperCase().includes(query.toUpperCase()));
+                                const messageIncludeQuery = conversation.messages[0]?.text?.toUpperCase().includes(query.toUpperCase());
+                                const show = query.trim() === '' || (membersEmailsIncludeQuery || messageIncludeQuery);
+                                if (!show) return null;
+
+                                return (
+                                    <ConversationSummary
+                                        key={conversation._id}
+                                        conversation={conversation}
+                                        getLastMessages={getLastMessages}
+                                    />
+                                );
+                            })}
+                        </div>
+                    )
+                }
+            </>
+        );
+    };
 
 export default ConversationsList;

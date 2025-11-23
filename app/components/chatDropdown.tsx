@@ -5,6 +5,8 @@ import useIsMobile from "../hooks/useIsMobile";
 import Message from "@/types/message";
 import ChatUser from "@/types/chatUser";
 import { cleanHistory } from "../lib/conversationActions";
+import { useReloadConversationBar } from "../hooks/useReloadConversationBar";
+import { useRouter } from 'next/navigation'
 
 interface ChatDropdownProps {
     handleLeaveRoom: () => void;
@@ -12,7 +14,6 @@ interface ChatDropdownProps {
     setChat: Dispatch<SetStateAction<Message[]>>;
     conversationId: string;
     participants: RefObject<ChatUser[] | null | undefined>;
-    setReloadKey: Dispatch<SetStateAction<boolean>>;
 }
 
 const ChatDropdown = ({
@@ -20,12 +21,15 @@ const ChatDropdown = ({
     chat,
     setChat,
     conversationId,
-    participants,
-    setReloadKey
+    participants
 }: ChatDropdownProps) => {
+
+
     const isMobile = useIsMobile();
+    const { updateReloadKey } = useReloadConversationBar();
     const [showDropdown, setShowDropdown] = useState(false);
     const dropdownRef = useRef<HTMLDivElement | null>(null);
+    const router = useRouter();
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -48,8 +52,9 @@ const ChatDropdown = ({
             const response = await cleanHistory(conversationId);
             if (response.success) {
                 setChat([]);
-                setReloadKey(prev => !prev);
                 setShowDropdown(false);
+                router.refresh();
+                updateReloadKey();
             }
         } catch (error: any) {
             window.alert("Error occurred while cleaning chat history: " + error);

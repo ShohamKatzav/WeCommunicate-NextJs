@@ -3,7 +3,7 @@ import { ReactNode, useEffect, useState, useCallback } from "react";
 import User from "@/types/user";
 import UserContext from "./userContext";
 import { fetchgetUserObJFromCoockie, createUserCoockie, deleteUserCoockie } from "../lib/cookieActions";
-import AsName from "../utils/asName";
+import AsName from "../utils/stringFormat";
 
 type UserProviderProps = {
     children: ReactNode;

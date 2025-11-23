@@ -35,4 +35,4 @@ export const LocationSchema = new Schema<ILocation>({
         required: true
     }
 });
-export default models.Location || model<ILocation>('Location', LocationSchema);
+export default models?.Location || model<ILocation>('Location', LocationSchema);

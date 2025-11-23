@@ -5,42 +5,44 @@ import { useSocket } from "../hooks/useSocket";
 import ChatUser from "@/types/chatUser";
 import Conversation from "@/types/conversation";
 import Message from "@/types/message";
-import { AsShortName } from "../utils/asName";
+import { AsShortName } from "../utils/stringFormat";
 
 interface ConversationConversationSummaryProps {
-
     conversation: Conversation;
     getLastMessages: (participantsFromList: ChatUser[]) => Promise<void>;
 }
 
 const ConversationSummary = ({ conversation, getLastMessages }: ConversationConversationSummaryProps) => {
 
-    const [otherMembers, setOtherMembers] = useState<ChatUser[]>();
+    const [otherMembers, setOtherMembers] = useState<ChatUser[]>([]);
     const [lastMessage, setLastMessage] = useState<Message | undefined>(
-        conversation.messages?.[0]
+        conversation.messages?.[parseInt(process.env.NEXT_PUBLIC_MESSAGES_PER_PAGE || '5')]
     );
 
     const { user } = useUser();
     const { socket, loadingSocket } = useSocket();
     const { initializeRoomNotifications, newMessageNotification } = useNotification();
 
-    const incoming = newMessageNotification[conversation._id!];
-
-    const switchRoom = (otherMembers: ChatUser[]) => {
+    const switchRoom = async (otherMembers: ChatUser[]) => {
         initializeRoomNotifications(conversation._id!);
-        getLastMessages(otherMembers);
+        await getLastMessages(otherMembers);
     }
 
     useEffect(() => {
+        if (!conversation || !Array.isArray(conversation.members)) {
+            setOtherMembers([]);
+            return;
+        }
+
         const temp = conversation.members.filter(
             (member: ChatUser) =>
                 member.email?.toUpperCase() !== user?.email?.toUpperCase()
         );
         setOtherMembers(temp);
-    }, [conversation.members]);
+    }, [conversation.members, user?.email]);
 
     useEffect(() => {
-        setLastMessage(conversation.messages?.[0]);
+        setLastMessage(conversation.messages?.[conversation.messages.length - 1]);
     }, [conversation.messages]);
 
     useEffect(() => {
@@ -63,7 +65,7 @@ const ConversationSummary = ({ conversation, getLastMessages }: ConversationConv
     }, [socket, loadingSocket, lastMessage?._id]);
 
     return (
-        otherMembers && <li
+        <li
             className="bg-white p-3 shadow-md flex items-center gap-4 hover:shadow-lg transition-shadow"
             onClick={() => switchRoom(otherMembers)}
         >
@@ -99,9 +101,9 @@ const ConversationSummary = ({ conversation, getLastMessages }: ConversationConv
                             }
                         </div>
                         <div className="col-span-1 justify-self-end">
-                            {incoming > 0 && (
+                            {newMessageNotification[conversation._id!] > 0 && (
                                 <div className="w-5 h-5 flex items-center justify-center text-white bg-red-600 rounded-full">
-                                    {incoming}
+                                    {newMessageNotification[conversation._id!]}
                                 </div>
                             )}
                         </div>
