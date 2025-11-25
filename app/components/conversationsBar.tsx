@@ -31,7 +31,7 @@ const ConversationsBar =
             <div className={`
         ${isMobileChatsSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         md:translate-x-0 fixed md:relative z-20 
-        w-80 md:w-1/6 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700
+        w-80 md:w-1/5 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700
         transition-transform duration-300 ease-in-out h-full flex flex-col shadow-xl
       `}>
                 <aside className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transition-transform duration-300`}>

@@ -28,9 +28,9 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
 
     const { socket, loadingSocket } = useSocket();
     const { user, loadingUser } = useUser();
-    const isMobile = useIsMobile();
     const { increaseNotifications } = useNotification();
     const { updateReloadKey } = useReloadConversationBar(); // reload for the conversations list
+    const isMobile = useIsMobile();
     const pathname = usePathname();
     const router = useRouter();
 
@@ -42,7 +42,6 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
     const [isMobileChatsSidebarOpen, setMobileChatsSidebarOpen] = useState(false);
     const [isMobileUsersSidebarOpen, setMobileUsersSidebarOpen] = useState(false);
     const [newConversationMode, setNewConversationMode] = useState('single');
-
 
     const currentConversationId = useRef<string>("");
     const participants = useRef<ChatUser[] | null>(null);
@@ -68,8 +67,11 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
     }
     async function getLastMessages(roomParticipants: ChatUser[]) {
         if (!roomParticipants) return;
+        if (currentConversationId.current)
+            socket?.emit('leave room', { conversationId: currentConversationId.current });
         const conversation = findConversationByExactParticipants(initialConversationsWithMessages, roomParticipants);
         currentConversationId.current = conversation?._id ? conversation?._id : "";
+        socket?.emit('join room', { conversationId: currentConversationId.current });
         if (currentConversationId.current.length > 0) {
             setChat(conversation?.messages!);
         }
@@ -86,7 +88,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
 
     const handleIncomingMessage = useCallback(async (data: Message) => {
         if (data.sender?.toUpperCase() === user?.email!.toUpperCase()) return;
-        if (data.conversationID === currentConversationId.current) {
+        if (data.conversationID?.toUpperCase() === currentConversationId.current.toUpperCase()) {
             setChat((prevChat) => {
                 if (prevChat.some(msg => msg._id === data._id)) {
                     return prevChat;
@@ -102,9 +104,9 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
             });
         }
         else {
-            updateReloadKey();
             increaseNotifications(data.conversationID as string);
         }
+        updateReloadKey();
         setLastRecievedMessage(data as Message);
     }, [user?.email, increaseNotifications]);
 

@@ -1,12 +1,14 @@
 import { Dispatch, RefObject, SetStateAction, useState, useRef, useEffect } from "react";
 import { HiOutlineEllipsisHorizontalCircle } from "react-icons/hi2";
 import { RiHistoryLine, RiLogoutBoxRLine } from "react-icons/ri";
+import { MdDeleteForever } from "react-icons/md";
 import useIsMobile from "../hooks/useIsMobile";
 import Message from "@/types/message";
 import ChatUser from "@/types/chatUser";
-import { cleanHistory } from "../lib/conversationActions";
+import { cleanHistory, deleteConversation } from "../lib/conversationActions"; // <-- ADD YOUR DELETE FN
 import { useReloadConversationBar } from "../hooks/useReloadConversationBar";
 import { useRouter } from 'next/navigation'
+import DeleteConversationModal from "./deleteConversationModal";
 
 interface ChatDropdownProps {
     handleLeaveRoom: () => void;
@@ -24,14 +26,21 @@ const ChatDropdown = ({
     participants
 }: ChatDropdownProps) => {
 
-
     const isMobile = useIsMobile();
     const { updateReloadKey } = useReloadConversationBar();
     const [showDropdown, setShowDropdown] = useState(false);
     const dropdownRef = useRef<HTMLDivElement | null>(null);
     const router = useRouter();
 
-    // Close dropdown when clicking outside
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    // Close dropdown when delete modal open/close
+    useEffect(() => {
+        setShowDropdown(false);
+    }, [showDeleteModal]);
+
+    // Close dropdown when clicking outside the dropdown
     useEffect(() => {
         if (!showDropdown) return;
 
@@ -61,6 +70,28 @@ const ChatDropdown = ({
         }
     };
 
+    const handleDeleteConversation = async () => {
+        if (!conversationId) {
+            handleLeaveRoom();
+            return;
+        }
+        setIsDeleting(true);
+        try {
+            const response = await deleteConversation(conversationId);
+            if (response.success) {
+                setShowDeleteModal(false);
+                setShowDropdown(false);
+                router.refresh();
+                updateReloadKey();
+                handleLeaveRoom();
+            }
+        } catch (error: any) {
+            console.error("Error deleting conversation:", error);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     return (
         <div className="relative" ref={dropdownRef}>
             <button
@@ -75,6 +106,15 @@ const ChatDropdown = ({
 
             {showDropdown && (
                 <div className="absolute right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 w-48">
+
+                    <button
+                        onClick={handleLeaveRoom}
+                        className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                        disabled={!participants.current}
+                    >
+                        <RiLogoutBoxRLine size={18} /> Leave Room
+                    </button>
+                    <hr className="my-1 -mx-1 border-stone-300" />
                     <button
                         onClick={handleCleanHistory}
                         className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -83,13 +123,20 @@ const ChatDropdown = ({
                     </button>
                     <hr className="my-1 -mx-1 border-stone-300" />
                     <button
-                        onClick={handleLeaveRoom}
-                        className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
-                        disabled={!participants.current}
+                        onClick={() => setShowDeleteModal(true)}
+                        className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-100 dark:hover:bg-gray-700"
                     >
-                        <RiLogoutBoxRLine size={18} /> Leave Room
+                        <MdDeleteForever size={18} /> Delete Conversation
                     </button>
                 </div>
+            )}
+            {showDeleteModal && (
+                <DeleteConversationModal
+                    isOpen={showDeleteModal}
+                    isDeleting={isDeleting}
+                    onClose={() => setShowDeleteModal(false)}
+                    onConfirm={handleDeleteConversation}
+                />
             )}
         </div>
     );

@@ -37,6 +37,7 @@ export default async function handleSocketConnection(io, socket) {
 
 async function handleJoinRoom(body, socket) {
     const room = `chat_room_${body.conversationId}`;
+    console.log("Joining:", room);
     socket.join(room);
 }
 
@@ -57,7 +58,11 @@ async function handlePublishMessage(io, socket, message) {
             const memberSocketId = await RedisService.getUserSocketByEmail(member.email);
             const roomSockets = await io.in(room).allSockets();
             const isInRoom = memberSocketId && roomSockets.has(memberSocketId);
-
+            console.log(io);
+            console.log(room);
+            console.log(memberSocketId);
+            console.log(roomSockets);
+            console.log(roomSockets.has(memberSocketId));
             if (!isInRoom) {
                 // increment Redis notification counter per user/conversation
                 await RedisService.incrNotification(member.email, message.conversationID, 1);

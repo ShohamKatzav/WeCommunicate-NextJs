@@ -88,4 +88,24 @@ export default class ConversationRepository {
             throw err;
         }
     }
+
+    static async DeleteConversation(member: string, conversationId: string) {
+        try {
+            const convo = await Conversation.findById(conversationId);
+            if (!convo) {
+                throw new Error("Conversation not found");
+            }
+            const members = convo.members || [];
+            const newMembers = members.filter((m: Types.ObjectId) => m.toString() !== member.toString());
+
+            return await Conversation.updateOne(
+                { _id: conversationId },
+                { $set: { members: newMembers } }
+            );
+
+        } catch (err) {
+            console.error("Failed to delete member from conversation:", err);
+            throw err;
+        }
+    }
 }

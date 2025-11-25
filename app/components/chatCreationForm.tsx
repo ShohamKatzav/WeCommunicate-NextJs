@@ -31,7 +31,6 @@ const ChatCreationForm = ({ isOpen, onClose, participants, conversationId, setCh
             setParticipantsList(response);
         } catch (err) {
             console.error('Failed to fetch usernames', err);
-            // fallback: keep existing list (or empty)
         }
     }, [isOpen]);
 
@@ -42,7 +41,7 @@ const ChatCreationForm = ({ isOpen, onClose, participants, conversationId, setCh
 
 
 
-    const selectChange = (input: HTMLInputElement, participant: ChatUser) => {
+    const membersSelectChange = (input: HTMLInputElement, participant: ChatUser) => {
         if (conversationMode === 'single') {
             setSelectedParticipants([participant]);
         }
@@ -72,7 +71,7 @@ const ChatCreationForm = ({ isOpen, onClose, participants, conversationId, setCh
                     conversationMode === 'group' ? <h2 className="text-3xl font-bold mb-4">Create a new group</h2> :
                         <h2 className="text-3xl font-bold mb-4">Select a friend</h2>
                 }
-                <div className="flex flex-col flex-1">
+                <div className="flex flex-col flex-1 min-h-0">
                     {
                         conversationMode === 'group' &&
                         <label className="text-2xl block font-medium mb-2">
@@ -81,15 +80,15 @@ const ChatCreationForm = ({ isOpen, onClose, participants, conversationId, setCh
                     }
                     <input
                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg
-                        focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700
-                        dark:border-gray-600 dark:placeholder-gray-400 dark:text-white
-                        dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700
+                dark:border-gray-600 dark:placeholder-gray-400 dark:text-white
+                dark:focus:ring-blue-500 dark:focus:border-blue-500"
                         placeholder="Start typing a participants name..."
                         type="text"
                         value={participantsSearch}
                         onChange={(e) => setParticipantsSearch(e.target.value)}
                     />
-                    <div className="flex-1 overflow-y-auto mt-4">
+                    <div className="flex-1 overflow-y-auto mt-4 min-h-0">
                         {Array.isArray(participantsList) && participantsList.length > 0 &&
                             participantsList
                                 .filter((participant: ChatUser) =>
@@ -104,8 +103,8 @@ const ChatCreationForm = ({ isOpen, onClose, participants, conversationId, setCh
                                             <input
                                                 id={`participant-${index}`}
                                                 type={conversationMode === 'group' ? 'checkbox' : 'radio'}
-                                                name={conversationMode === 'group' ? undefined : 'participant'} // ensures radios belong to same group
-                                                onChange={(e) => selectChange(e.target as HTMLInputElement, participant)}
+                                                name={conversationMode === 'group' ? undefined : 'participant'}
+                                                onChange={(e) => membersSelectChange(e.target as HTMLInputElement, participant)}
                                                 hidden={!isVisible}
                                             /> {" "}
                                             {isVisible &&
@@ -115,22 +114,22 @@ const ChatCreationForm = ({ isOpen, onClose, participants, conversationId, setCh
                                     );
                                 })}
                     </div>
-                    <div className="flex justify-end gap-2 mt-4">
-                        <button
-                            type="button"
-                            onClick={groupCreation}
-                            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                        >
-                            {conversationMode === 'group' ? 'Create Group' : 'Start chatting'}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-                        >
-                            Cancel
-                        </button>
-                    </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-4">
+                    <button
+                        type="button"
+                        onClick={groupCreation}
+                        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                    >
+                        {conversationMode === 'group' ? 'Create Group' : 'Start chatting'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                    >
+                        Cancel
+                    </button>
                 </div>
             </div>
         </div>) : null
