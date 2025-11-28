@@ -12,7 +12,6 @@ export const cleanHistory = async (conversationId: string) => {
         const userID = await extractUserIDFromCoockie();
 
         const result = await CleanHistoryRepository.updateCleanHistory(userID, conversationId);
-
         // Ensure write is committed (if using MongoDB, check writeConcern)
         if (result.acknowledged) {
             revalidatePath('/chat');

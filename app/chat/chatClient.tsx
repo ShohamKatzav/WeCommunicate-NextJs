@@ -1,6 +1,11 @@
 'use client';
-import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
+import { useUser } from '../hooks/useUser';
+import { useSocket } from '../hooks/useSocket';
+import { useNotification } from '../hooks/useNotification';
+import useIsMobile from '../hooks/useIsMobile';
+import { saveMessage, revalidateChatRoute, getConversationMembers } from '@/app/lib/chatActions';
 import Message from '@/types/message';
 import MessageDTO from '@/types/messageDTO';
 import ChatUser from '@/types/chatUser';
@@ -9,12 +14,6 @@ import ChatInputBar from '../components/chatInputBar';
 import ChatWindow from '../components/chatWindow';
 import Loading from '../components/loading';
 import ChatCreationForm from '../components/chatCreationForm';
-import { useUser } from '../hooks/useUser';
-import { useSocket } from '../hooks/useSocket';
-import { useNotification } from '../hooks/useNotification';
-import { useReloadConversationBar } from '../hooks/useReloadConversationBar';
-import { saveMessage } from '@/app/lib/chatActions';
-import useIsMobile from '../hooks/useIsMobile';
 import ConversationsBar from '../components/conversationsBar';
 import ChatHeader from '../components/chatHeader';
 import UsersList from '../components/usersList';
@@ -29,10 +28,8 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
     const { socket, loadingSocket } = useSocket();
     const { user, loadingUser } = useUser();
     const { increaseNotifications } = useNotification();
-    const { updateReloadKey } = useReloadConversationBar(); // reload for the conversations list
     const isMobile = useIsMobile();
     const pathname = usePathname();
-    const router = useRouter();
 
     const [chat, setChat] = useState<Message[]>([]);
     const [messageToSend, setMessageToSend] = useState<Message>({ text: '' });
@@ -42,12 +39,10 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
     const [isMobileChatsSidebarOpen, setMobileChatsSidebarOpen] = useState(false);
     const [isMobileUsersSidebarOpen, setMobileUsersSidebarOpen] = useState(false);
     const [newConversationMode, setNewConversationMode] = useState('single');
+    const [conversationsForBar, setConversationsForBar] = useState<Conversation[]>(initialConversationsWithMessages);
 
     const currentConversationId = useRef<string>("");
     const participants = useRef<ChatUser[] | null>(null);
-    const chatBox = useRef<HTMLDivElement | null>(null);
-
-
 
     function findConversationByExactParticipants(
         conversations: Conversation[],
@@ -56,7 +51,9 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
         const targetIds = participants.map(p => p._id).sort();
 
         return conversations.find(conv => {
-            const targetMembers = conv.members.filter(member => member.email?.toUpperCase() != user?.email?.toUpperCase());
+            const targetMembers = conv.members.filter(member =>
+                member.email?.toUpperCase() != user?.email?.toUpperCase()
+            );
             const convMembersIds = targetMembers
                 .map(m => m._id)
                 .sort();
@@ -72,9 +69,8 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
         const conversation = findConversationByExactParticipants(initialConversationsWithMessages, roomParticipants);
         currentConversationId.current = conversation?._id ? conversation?._id : "";
         socket?.emit('join room', { conversationId: currentConversationId.current });
-        if (currentConversationId.current.length > 0) {
-            setChat(conversation?.messages!);
-        }
+        setChat(conversation?.messages?.sort((a: Message, b: Message) =>
+            new Date(a.date!).getTime() - new Date(b.date!).getTime()) || []);
         participants.current = roomParticipants;
         setMessageToSend(prev => ({
             ...prev,
@@ -86,28 +82,20 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
         setMobileUsersSidebarOpen(false);
     };
 
-    const handleIncomingMessage = useCallback(async (data: Message) => {
+    const handleIncomingMessage = useCallback((data: Message) => {
         if (data.sender?.toUpperCase() === user?.email!.toUpperCase()) return;
         if (data.conversationID?.toUpperCase() === currentConversationId.current.toUpperCase()) {
-            setChat((prevChat) => {
-                if (prevChat.some(msg => msg._id === data._id)) {
-                    return prevChat;
-                }
-                return [...prevChat, {
-                    _id: data._id,
-                    date: data.date,
-                    sender: data.sender,
-                    text: data.text,
-                    status: data.status,
-                    file: data.file
-                }];
+            setChat(prev => {
+                const updated = [...prev, data];
+                updated.sort((a: Message, b: Message) => new Date(a.date!).getTime() - new Date(b.date!).getTime());
+                return updated;
             });
         }
         else {
             increaseNotifications(data.conversationID as string);
         }
-        updateReloadKey();
         setLastRecievedMessage(data as Message);
+        updateConversationsBar(data);
     }, [user?.email, increaseNotifications]);
 
     const handleSendMessage = async () => {
@@ -135,20 +123,94 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
                 newMessage._id = result.messageDoc._id;
                 let newConversationId;
                 if (!currentConversationId.current) {
-                    socket.disconnect();
                     newConversationId = result.messageDoc?.conversation;
-                    socket.io.opts.extraHeaders = { email: user!.email!, conversationId: newConversationId }
-                    socket.connect();
                     currentConversationId.current = newConversationId;
+                    socket.emit('join room', { conversationId: newConversationId });
+                    await revalidateChatRoute();
                 }
 
-                socket.emit('publish message', newMessage);
+                const messageToEmit = {
+                    ...result.messageDoc,
+                    conversationID: result.messageDoc.conversation || currentConversationId.current
+                };
+                socket.emit('publish message', messageToEmit);
                 setMessageToSend((prev) => ({ ...prev, text: '', file: null }));
-                setLastRecievedMessage({ ...newMessage, conversationID: currentConversationId.current || newConversationId });
+                const finalMessage = {
+                    ...newMessage,
+                    conversationID: currentConversationId.current || newConversationId
+                };
+                setLastRecievedMessage(finalMessage);
+                updateConversationsBar(finalMessage);
             } catch (error) {
                 console.error("Error sending message:", error);
             }
         }
+    };
+
+    const updateConversationsBar = async (message: Message | null, mode: string = "") => {
+        if (mode === "Clean" && message) {
+            setConversationsForBar(prev => {
+                let updated = [...prev];
+
+                const idx = updated.findIndex(
+                    c => c._id?.toUpperCase() === message.conversationID?.toUpperCase()
+                );
+                if (idx !== -1) {
+                    const conv = { ...updated[idx], messages: [] };
+                    updated.splice(idx, 1);
+                    updated.unshift(conv);
+                }
+                return updated;
+            })
+        }
+        if (mode === "Delete") {
+            setConversationsForBar(prev => {
+                if (!currentConversationId.current) return prev;
+                return prev.filter(
+                    c => c._id?.toUpperCase() !== currentConversationId.current.toUpperCase()
+                );
+            });
+            return;
+        }
+        setConversationsForBar(prevConversations => {
+            if (!message) return [];
+            const updatedConversations = [...prevConversations];
+            const conversationIndex = updatedConversations.findIndex(
+                conv => conv._id?.toUpperCase() === message.conversationID?.toUpperCase()
+            );
+
+            if (conversationIndex > -1) {
+                // Move conversation to top with new message
+                const [conversation] = updatedConversations.splice(conversationIndex, 1);
+                if (!conversation.messages?.some(m => m._id === message._id)) {
+                    conversation.messages = [...(conversation.messages || []), message];
+                }
+                updatedConversations.unshift(conversation);
+            } else {
+                // New conversation - fetch members from server
+                const newConversation: Conversation = {
+                    _id: message.conversationID!,
+                    members: [],
+                    messages: [message],
+                };
+                updatedConversations.unshift(newConversation);
+
+                // Fetch members in the next tick
+                queueMicrotask(async () => {
+                    const result = await getConversationMembers(message.conversationID!);
+                    if (result.success) {
+                        setConversationsForBar(prev =>
+                            prev.map(conv =>
+                                conv._id === message.conversationID
+                                    ? { ...conv, members: result.members }
+                                    : conv
+                            )
+                        );
+                    }
+                });
+            }
+            return updatedConversations;
+        });
     };
 
     const handleLeaveRoom = async () => {
@@ -159,13 +221,17 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
     };
 
     useEffect(() => {
-        router.refresh();
-    }, [chat]);
+        const messages = initialConversationsWithMessages.find(c => c._id === currentConversationId.current)?.messages;
+        if (messages && messages.length === 0) {
+            setChat([]);
+            updateConversationsBar({ conversationID: currentConversationId.current }, "Clean");
+        }
+    }, [initialConversationsWithMessages]);
 
     useEffect(() => {
         if (!socket || loadingSocket) return;
 
-        const handleMessageDeleted = (deletedMessage: Message) => {
+        const handleMessageDeleted = async (deletedMessage: Message) => {
             // Update chat state
             setChat(prevChat =>
                 prevChat.map(msg =>
@@ -174,6 +240,11 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
                         : msg
                 )
             );
+            try {
+                await revalidateChatRoute();
+            } catch (error) {
+                console.error("Error revalidating chat route:", error);
+            }
         };
 
         socket.on("delete message", handleMessageDeleted);
@@ -182,7 +253,6 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
             socket.off("delete message", handleMessageDeleted);
         };
     }, [socket, loadingSocket]);
-
 
     useEffect(() => {
         if (!socket || !(user?.email)) return;
@@ -225,18 +295,14 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
     }, [socket, pathname]);
 
     useEffect(() => {
-        if (!loadingSocket) {
-            socket?.on("publish message", handleIncomingMessage);
+        if (!loadingSocket && socket) {
+            socket.on("publish message", handleIncomingMessage);
+
             return () => {
-                socket?.off("publish message", handleIncomingMessage);
+                socket.off("publish message", handleIncomingMessage);
             };
         }
-    }, [loadingSocket, user?.token]);
-
-    useLayoutEffect(() => {
-        if (chatBox.current)
-            chatBox.current.scrollTop = chatBox.current.scrollHeight;
-    }, [chat]);
+    }, [socket, loadingSocket, handleIncomingMessage]);
 
     const handleOpenModal = (mode: string) => {
         setNewConversationMode(mode);
@@ -262,7 +328,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
                 getLastMessages={getLastMessages}
                 lastRecievedMessage={lastRecievedMessage}
                 participants={participants}
-                initialRecentConversations={initialConversationsWithMessages}
+                initialRecentConversations={conversationsForBar}
             />
 
             <div className="flex flex-1 flex-col" >
@@ -274,19 +340,18 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
                     chat={chat}
                     setChat={setChat}
                     conversationId={currentConversationId.current}
+                    updateConversationsBar={updateConversationsBar}
                 />
 
-                { }
                 <ChatWindow
-                    messages={currentConversationId.current ? initialConversationsWithMessages.find(
-                        c => c._id === currentConversationId.current)?.messages! : []}
+                    messages={chat}
                     participants={participants}
                     isMobile={isMobile} />
 
                 {/* Input Area */}
                 {
                     participants.current && (
-                        <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-3 md:p-4 shadow-lg z-15">
+                        <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-3 md:p-4 shadow-lg z-15 mb-4">
                             <ChatInputBar
                                 message={messageToSend}
                                 setMessage={setMessageToSend}

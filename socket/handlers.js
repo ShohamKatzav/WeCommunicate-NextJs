@@ -20,7 +20,7 @@ export default async function handleSocketConnection(io, socket) {
 
         socket.on('join room', (body) => handleJoinRoom(body, socket));
         socket.on('publish message', (message) => handlePublishMessage(io, socket, message));
-        socket.on('delete message', (message) => handleDeleteMessage(io, socket, message));
+        socket.on('delete message', (message) => handleDeleteMessage(io, message));
         socket.on('notifications update', () => handleNotificationsUpdate(socket, email));
         socket.on("notifications checked", (roomID) => handleNotificationsChecked(roomID, email));
         socket.on('get locations', () => handleGetLocation(io, socket));
@@ -37,7 +37,6 @@ export default async function handleSocketConnection(io, socket) {
 
 async function handleJoinRoom(body, socket) {
     const room = `chat_room_${body.conversationId}`;
-    console.log("Joining:", room);
     socket.join(room);
 }
 
@@ -58,11 +57,6 @@ async function handlePublishMessage(io, socket, message) {
             const memberSocketId = await RedisService.getUserSocketByEmail(member.email);
             const roomSockets = await io.in(room).allSockets();
             const isInRoom = memberSocketId && roomSockets.has(memberSocketId);
-            console.log(io);
-            console.log(room);
-            console.log(memberSocketId);
-            console.log(roomSockets);
-            console.log(roomSockets.has(memberSocketId));
             if (!isInRoom) {
                 // increment Redis notification counter per user/conversation
                 await RedisService.incrNotification(member.email, message.conversationID, 1);
@@ -77,9 +71,22 @@ async function handlePublishMessage(io, socket, message) {
     }
 }
 
-async function handleDeleteMessage(io, socket, message) {
+async function handleDeleteMessage(io, message) {
     const room = `chat_room_${message?.conversationID}`;
-    io.emit('delete message', message);
+    io.to(room).emit('delete message', message);
+    const conversation = await Conversation.findById(message?.conversationID).populate('members', 'email');
+    if (conversation) {
+        for (const member of conversation.members) {
+            const memberSocketId = await RedisService.getUserSocketByEmail(member.email);
+            const roomSockets = await io.in(room).allSockets();
+            const isInRoom = memberSocketId && roomSockets.has(memberSocketId);
+            if (!isInRoom) {
+                if (memberSocketId) {
+                    io.to(memberSocketId).emit('delete message', message);
+                }
+            }
+        }
+    }
 }
 
 async function handleNotificationsUpdate(socket, email) {

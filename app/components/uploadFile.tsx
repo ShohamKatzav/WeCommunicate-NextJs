@@ -142,7 +142,6 @@ export default function UploadFile({ message, setMessage }: UploadFileProps) {
             });
 
             // Debug: Log upload result and useful context for troubleshooting
-            // Please check the browser Network tab for the POST `/api/send-file` response too.
             console.log('upload debug', {
                 pathname: newBlob?.pathname,
                 contentType: newBlob?.contentType,
@@ -156,7 +155,6 @@ export default function UploadFile({ message, setMessage }: UploadFileProps) {
 
             setBlob(newBlob);
 
-            // Optional: Reset the form
             if (inputFileRef.current) {
                 inputFileRef.current.value = '';
             }

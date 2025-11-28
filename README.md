@@ -55,18 +55,22 @@ cp .env.example .env.local
 
 Add your environment variables:
 ```env
-TOKEN_SECRET=<Secrete for signing user auth tokens>
-DB_URI=<MongoDB connection string>
 
+NEXT_PUBLIC_BASE_ADDRESS=<Deployment URL used to intialize socket>
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=<In order to access google maps api - create one on google cloud console>
-
-UPSTASH_REDIS_REST_URL=<Private URL endpoint used to create connection to upstash -> upstash dashboard>
-UPSTASH_REDIS_REST_TOKEN=<Token for upstash -> Upstash dashboard>
+NEXT_PUBLIC_MESSAGES_PER_PAGE=<Number of messages to load per page (default 5)>
+JWT_SECRET_KEY=<Secrete for signing user auth tokens>
+DB_URI=<MongoDB connection string>
 
 BLOB_READ_WRITE_TOKEN=<Token for Vercel blob from their dashboard>
 VERCEL_BLOB_CALLBACK_URL=<Deployment URL (Public/Ngrok) for testing - vercel blob will update this url when file uploading done>
 
-MESSAGES_PER_PAGE=<Number of messages to load per page (default 5)>
+UPSTASH_REDIS_REST_URL=<Private URL endpoint used to create connection to upstash -> upstash dashboard>
+UPSTASH_REDIS_REST_TOKEN=<Token for upstash -> Upstash dashboard>
+
+BREVO_API_KEY=<Breavo api key for mail sending from their dashboard>
+SMTP_USER=<The email address from which emails will be sent>
+
 ```
 
 4. Run the development server:

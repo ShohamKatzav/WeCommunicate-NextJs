@@ -1,0 +1,33 @@
+{
+    "name": "WeCommunicate",
+    "short_name": "WeCommunicate",
+    "description": "WeCommunicate is a chat app",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "dir": "auto",
+    "lang": "en-US",
+    "theme_color": "#8936FF",
+    "background_color": "#2EC6FE",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "purpose": "maskable",
+            "sizes": "512x512",
+            "src": "icon512_maskable.png",
+            "type": "image/png"
+        },
+        {
+            "purpose": "any",
+            "sizes": "512x512",
+            "src": "icon512_rounded.png",
+            "type": "image/png"
+        },
+        {
+            "purpose": "any",
+            "sizes": "512x512",
+            "src": "icon.png",
+            "type": "image/png"
+        }
+    ]
+}

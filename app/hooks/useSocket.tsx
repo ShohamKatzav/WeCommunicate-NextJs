@@ -4,8 +4,6 @@ import SocketContext from "../context/socketContext";
 
 export const useSocket = () => {
     const context = useContext(SocketContext);
-    if (context === undefined) {
-        throw new Error('useSocket must be used within a SocketProvider');
-    }
+    if (!context) throw new Error("UserContext missing!");
     return context;
 };

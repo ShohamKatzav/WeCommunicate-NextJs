@@ -60,8 +60,19 @@ const Navbar = () => {
   ];
 
   const handleLogOut: any = async () => {
-    updateUser(null);
-    socket?.disconnect();
+    try {
+      updateUser(null);
+      socket?.disconnect();
+
+      // Clear service worker cache
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'CLEAR_CACHE'
+        });
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const isUserConnected = () => {

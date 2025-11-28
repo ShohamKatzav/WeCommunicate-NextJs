@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Message from "@/types/message";
 import MessageBubble from "./messageBubble";
 import MoreMessagesLoader from "./moreMessagesLoader";
@@ -24,6 +24,11 @@ const ChatWindow = ({ messages, participants, isMobile }: ChatWindowProps) => {
             setLoadNew(true);
         }
     }
+
+    useLayoutEffect(() => {
+        if (chatBox.current)
+            chatBox.current.scrollTop = chatBox.current.scrollHeight;
+    }, [messages]);
 
     useEffect(() => {
         const currentChatBox = chatBox?.current;

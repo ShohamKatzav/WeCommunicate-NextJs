@@ -1,9 +1,7 @@
+import { env } from '@/app/config/env'
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import jwt from 'jsonwebtoken'
-
-const jwtSecretKey = process.env.TOKEN_SECRET
-if (!jwtSecretKey) throw new Error('TOKEN_SECRET environment variable is not set')
 
 const protectedRoutes = ['/chat', '/locations']
 const publicRoutes = ['/about', '/contact']
@@ -25,7 +23,7 @@ export default async function middleware(req: NextRequest) {
     if (cookie) {
         try {
             const user = JSON.parse(cookie)
-            verified = jwt.verify(user.token, jwtSecretKey!)
+            verified = jwt.verify(user.token, env.JWT_SECRET_KEY!)
         } catch {
             verified = null
         }

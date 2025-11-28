@@ -5,8 +5,7 @@ import { MdDeleteForever } from "react-icons/md";
 import useIsMobile from "../hooks/useIsMobile";
 import Message from "@/types/message";
 import ChatUser from "@/types/chatUser";
-import { cleanHistory, deleteConversation } from "../lib/conversationActions"; // <-- ADD YOUR DELETE FN
-import { useReloadConversationBar } from "../hooks/useReloadConversationBar";
+import { cleanHistory, deleteConversation } from "../lib/conversationActions";
 import { useRouter } from 'next/navigation'
 import DeleteConversationModal from "./deleteConversationModal";
 
@@ -16,6 +15,7 @@ interface ChatDropdownProps {
     setChat: Dispatch<SetStateAction<Message[]>>;
     conversationId: string;
     participants: RefObject<ChatUser[] | null | undefined>;
+    updateConversationsBar: (message: Message | null, mode?: string) => void;
 }
 
 const ChatDropdown = ({
@@ -23,15 +23,14 @@ const ChatDropdown = ({
     chat,
     setChat,
     conversationId,
-    participants
+    participants,
+    updateConversationsBar
 }: ChatDropdownProps) => {
 
     const isMobile = useIsMobile();
-    const { updateReloadKey } = useReloadConversationBar();
-    const [showDropdown, setShowDropdown] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement | null>(null);
     const router = useRouter();
-
+    const dropdownRef = useRef<HTMLDivElement | null>(null);
+    const [showDropdown, setShowDropdown] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -61,9 +60,8 @@ const ChatDropdown = ({
             const response = await cleanHistory(conversationId);
             if (response.success) {
                 setChat([]);
+                updateConversationsBar(null, "Clean");
                 setShowDropdown(false);
-                router.refresh();
-                updateReloadKey();
             }
         } catch (error: any) {
             window.alert("Error occurred while cleaning chat history: " + error);
@@ -81,8 +79,7 @@ const ChatDropdown = ({
             if (response.success) {
                 setShowDeleteModal(false);
                 setShowDropdown(false);
-                router.refresh();
-                updateReloadKey();
+                updateConversationsBar(null, "Delete");
                 handleLeaveRoom();
             }
         } catch (error: any) {

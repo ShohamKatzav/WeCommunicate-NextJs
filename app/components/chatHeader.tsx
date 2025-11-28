@@ -14,9 +14,10 @@ interface ChatHeaderProps {
     chat: Message[];
     setChat: Dispatch<SetStateAction<Message[]>>;
     conversationId: string;
+    updateConversationsBar: (message: Message | null, mode?: string) => void;
 }
 
-const ChatHeader = ({ setMobileChatsSidebarOpen, setMobileUsersSidebarOpen, participants, handleLeaveRoom, chat, setChat, conversationId }: ChatHeaderProps) => {
+const ChatHeader = ({ setMobileChatsSidebarOpen, setMobileUsersSidebarOpen, participants, handleLeaveRoom, chat, setChat, conversationId, updateConversationsBar }: ChatHeaderProps) => {
 
     const { user } = useUser();
 
@@ -72,7 +73,8 @@ const ChatHeader = ({ setMobileChatsSidebarOpen, setMobileUsersSidebarOpen, part
                             chat={chat}
                             setChat={setChat}
                             conversationId={conversationId}
-                            participants={participants} />
+                            participants={participants}
+                            updateConversationsBar={updateConversationsBar} />
                     }
                 </div>
             </div>

@@ -1,13 +1,9 @@
 "use server"
+import { env } from '@/app/config/env'
 import connectDB from "@/app/lib/MongoDb";
 import AccountRepository from "@/repositories/AccountRepository"
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-
-const jwtSecretKey = process.env.TOKEN_SECRET;
-if (!jwtSecretKey) {
-    throw new Error("TOKEN_SECRET environment variable is not set");
-}
 
 export const isExist = async (email: string) => {
     try {
@@ -33,7 +29,7 @@ export const createUser = async (email: string, password: string) => {
             const hash = await bcrypt.hash(password, 10);
             const user = await AccountRepository.addUser(email, hash);
             const loginData = { _id: user._id, email, signInTime: Date.now() };
-            const token = jwt.sign(loginData, jwtSecretKey!);
+            const token = jwt.sign(loginData, env.JWT_SECRET_KEY!);
             return JSON.parse(JSON.stringify({ success: true, token, status: 201 }));
         }
 
@@ -54,7 +50,7 @@ export const authenticateUser = async (email: string, password: string) => {
             const passwordMatch = await bcrypt.compare(password, user.password);
             if (passwordMatch) {
                 const loginData = { _id: user._id, email, signInTime: Date.now() };
-                const token = jwt.sign(loginData, jwtSecretKey!);
+                const token = jwt.sign(loginData, env.JWT_SECRET_KEY!);
                 return JSON.parse(JSON.stringify({ success: true, token, status: 200 }));
             }
             else

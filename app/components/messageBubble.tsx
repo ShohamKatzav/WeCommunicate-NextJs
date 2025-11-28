@@ -34,10 +34,11 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
     message.status?.includes("revoked") ?? false
   );
 
-  const messageStyle = `self-start max-w-[80%] md:max-w-[60%] px-4 py-3 overflow-hidden ${message.sender === user?.email
-    ? "bg-green-500 rounded-br-3xl justify-self-start"
-    : "bg-gray-500 rounded-bl-3xl col-start-2 md:col-start-3 justify-self-end"
-    } rounded-tl-3xl rounded-tr-xl text-white wrap-break-word overflow-auto gap-6 mb-6`;
+  const messageStyle = `self-start max-w-[80%] md:max-w-[60%] px-2 py-1 md:px-4 md:py-3 overflow-hidden 
+  ${message.sender === user?.email ? "bg-green-500 rounded-br-3xl justify-self-start"
+      : "bg-gray-500 rounded-bl-3xl col-start-2 md:col-start-3 justify-self-end"
+    } rounded-tl-3xl rounded-tr-xl text-white wrap-break-word mb-3 md:mb-6
+    ${deleted ? "gap-1 flex text-lg md:text-2xl" : "gap-6"}`;
 
   // React to prop changes
   useEffect(() => {
@@ -59,9 +60,9 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
       'This message was deleted';
     return (
       <div
-        className={messageStyle + " flex text-lg md:text-2xl"}
+        className={messageStyle}
       >
-        <IoBan size={30} />
+        <IoBan size={isMobile ? 25 : 30} />
         {deletedMessageText}
       </div >
     )

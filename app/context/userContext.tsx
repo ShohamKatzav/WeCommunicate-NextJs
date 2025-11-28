@@ -7,5 +7,9 @@ type UserContextType = {
   updateUser: (user: User | null) => void;
 };
 
-const UserContext = createContext<UserContextType | undefined>(undefined);
+const UserContext = createContext<UserContextType>({
+  user: null,
+  loadingUser: false,
+  updateUser: () => { }
+});
 export default UserContext;

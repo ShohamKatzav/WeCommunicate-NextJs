@@ -1,12 +1,8 @@
 'use server';
-import { cookies } from 'next/headers'
-import User from '@/types/user'
+import { env } from '@/app/config/env';
+import { cookies } from 'next/headers';
+import User from '@/types/user';
 import jwt from 'jsonwebtoken';
-
-const jwtSecretKey = process.env.TOKEN_SECRET;
-if (!jwtSecretKey) {
-  throw new Error("TOKEN_SECRET environment variable is not set");
-}
 
 interface DecodedToken {
   _id: string;
@@ -18,9 +14,12 @@ interface DecodedToken {
 export async function createUserCoockie(data: User): Promise<any> {
   const cookieStore = await cookies();
   cookieStore.set({
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24 * 7,
     name: 'user',
     value: JSON.stringify({ email: data.email, token: data.token }),
-    httpOnly: true
   });
 }
 
@@ -43,13 +42,10 @@ export const fetchgetUserObJFromCoockie = async (): Promise<User> => {
 }
 
 export async function extractUserIDFromCoockie(): Promise<any> {
-  if (!jwtSecretKey) {
-    throw new Error("TOKEN_SECRET environment variable is not set");
-  }
   try {
     const user = await fetchgetUserObJFromCoockie();
     if (!user) return null;
-    const decoded = jwt.verify(user.token as string, jwtSecretKey) as unknown as DecodedToken;
+    const decoded = jwt.verify(user.token as string, env.JWT_SECRET_KEY) as unknown as DecodedToken;
     return decoded._id || null;
   } catch {
     throw new Error("Failed retrieving users ID");
@@ -57,9 +53,6 @@ export async function extractUserIDFromCoockie(): Promise<any> {
 }
 
 export async function extractUsersEmailFromCoockie(): Promise<any> {
-  if (!jwtSecretKey) {
-    throw new Error("TOKEN_SECRET environment variable is not set");
-  }
   try {
     const user = await fetchgetUserObJFromCoockie();
     if (!user) return null;

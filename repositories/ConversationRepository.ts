@@ -6,6 +6,16 @@ import CleanHistoryRepository from "./CleanHistoryRepository";
 
 export default class ConversationRepository {
 
+    static async GetConversationById(conversationId: string) {
+        try {
+            const conversation = await Conversation.findOne({ _id: conversationId }).populate('members', 'email');
+            return conversation;
+        } catch (error) {
+            console.error('Error finding conversation:', error);
+            throw new Error('Unable to find conversation');
+        }
+    }
+
     static async GetConversationByMembers(members: Types.ObjectId[]) {
         try {
             const conversation = await Conversation.findOne({
@@ -19,6 +29,7 @@ export default class ConversationRepository {
             throw new Error('Unable to find conversation');
         }
     }
+
     static async GetRecentConversations(user: Types.ObjectId, perDocumentLimit: number = 1) {
         try {
             const cleanHistoryRecords = await CleanHistoryRepository.findAllForUser(user);

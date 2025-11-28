@@ -1,13 +1,15 @@
 "use server"
+import { env } from '@/app/config/env';
 import connectDB from "@/app/lib/MongoDb";
 import mongoose, { Types } from "mongoose";
 import AccountRepository from "@/repositories/AccountRepository";
-import MessageRepository from "@/repositories/MessageRepository"
+import MessageRepository from "@/repositories/MessageRepository";
 import ConversationRepository from "@/repositories/ConversationRepository";
-import CleanHistoryRepository from "@/repositories/CleanHistoryRepository"
-import { extractUserIDFromCoockie } from '@/app/lib/cookieActions'
+import CleanHistoryRepository from "@/repositories/CleanHistoryRepository";
+import { extractUserIDFromCoockie } from '@/app/lib/cookieActions';
 import { IAccount } from "@/models/Account";
 import MessageDTO from "@/types/messageDTO";
+import { revalidatePath } from 'next/cache';
 
 export const getMessages = async (participantsId: string[], page: number) => {
     if (typeof page !== 'number' || page < 1) {
@@ -26,7 +28,7 @@ export const getMessages = async (participantsId: string[], page: number) => {
             conversation: null
         };
     }
-    const messagesPerPage = parseInt(process.env.NEXT_PUBLIC_MESSAGES_PER_PAGE || '5');
+    const messagesPerPage: number = env.NEXT_PUBLIC_MESSAGES_PER_PAGE;
     try {
         await connectDB();
         let chatQuery: any;
@@ -106,7 +108,10 @@ export const saveMessage = async (message: MessageDTO) => {
         }
         const messageDoc = await MessageRepository.SaveMessage(message, userID);
         const result = JSON.parse(JSON.stringify({ success: true, messageDoc }));
-        return result;
+        if (result) {
+            revalidatePath('/chat');
+            return result;
+        }
     } catch (err) {
         console.error('Failed to save message:', err);
         const result = JSON.parse(JSON.stringify({ success: false, message: 'Failed to save message' }))
@@ -122,8 +127,9 @@ export const deleteMessage = async (id: string) => {
             throw new Error('Unauthorized');
         }
         const result = await MessageRepository.deleteMessage(id);
-        if (result)
+        if (result) {
             return { success: true, message: "Message deleted" };
+        }
         else
             return { success: false, message: "Failed to delete message" };
     } catch (err) {
@@ -131,5 +137,28 @@ export const deleteMessage = async (id: string) => {
         const result = { success: false, message: 'Failed to delete message' };
         return result;
     }
+}
+
+export const getConversationMembers = async (conversationId: string) => {
+    try {
+        await connectDB();
+        const conversation = await ConversationRepository.GetConversationById(conversationId);
+        if (!conversation) {
+            return { success: false, members: [] };
+        }
+        const result = JSON.parse(JSON.stringify({
+            success: true,
+            members: conversation.members
+        }));
+        return result;
+    } catch (err) {
+        console.error('Failed to get conversation members:', err);
+        return { success: false, members: [] };
+    }
+}
+
+export const revalidateChatRoute = async () => {
+    revalidatePath('/chat');
+    return { success: true };
 }
 

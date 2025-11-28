@@ -1,11 +1,9 @@
+import { env } from '@/app/config/env';
 import mongoose from 'mongoose';
 
-const MONGO_URI = process.env.DB_URI!;
+const MONGO_URI = env.DB_URI;
 const cached: { connection?: typeof mongoose; promise?: Promise<typeof mongoose> } = {};
 async function connectMongo() {
-  if (!MONGO_URI) {
-    throw new Error('Please define the DB_URI environment variable inside .env.local');
-  }
   if (cached.connection) {
     return cached.connection;
   }

@@ -1,10 +1,6 @@
-import RedisService from '@/services/RedisService'
+import { env } from '@/app/config/env';
+import RedisService from '@/services/RedisService';
 import jwt from 'jsonwebtoken';
-const jwtSecretKey = process.env.TOKEN_SECRET;
-
-if (!jwtSecretKey) {
-    throw new Error("TOKEN_SECRET environment variable is not set");
-}
 
 export default async function authMiddleware(socket, next) {
     const email = socket.handshake.headers?.email;
@@ -22,7 +18,7 @@ export default async function authMiddleware(socket, next) {
     }
 
     try {
-        jwt.verify(token, jwtSecretKey);
+        jwt.verify(token, env.JWT_SECRET_KEY);
     } catch (err) {
         await RedisService.deleteUserSocket(email);
         socket.emit("unauthorized");

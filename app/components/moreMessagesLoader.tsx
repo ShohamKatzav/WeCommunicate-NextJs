@@ -1,12 +1,11 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useInView } from "react-intersection-observer";
 import Message from "@/types/message";
 import ChatUser from "@/types/chatUser";
 import { getMessages } from '@/app/lib/chatActions';
 import { Spinner } from "./spinner";
 import MessageBubble from "./messageBubble";
-import { useSocket } from "../hooks/useSocket";
 
 interface LoadMoreProps {
   oldMessages: Message[];
@@ -23,31 +22,20 @@ export default function MoreMessagesLoader({ oldMessages, participants }: LoadMo
   const [observerEnabled, setObserverEnabled] = useState(false);
 
   const { ref, inView } = useInView();
-  const { socket, loadingSocket } = useSocket();
 
   const container = useRef<HTMLDivElement | null>(null);
   const participantsIdRef = useRef<string>('');
 
-  // Listen for delete message events
-  useEffect(() => {
-    if (!socket || loadingSocket) return;
+  // Duplicate messages fix - If user sent message and try to load more message, RSC and this component might not sync
+  // Create a Set of message IDs from oldMessages to check for duplicates
+  const oldMessageIds = useMemo(() => {
+    return new Set(oldMessages.map(m => m._id).filter(Boolean));
+  }, [oldMessages]);
 
-    const handleMessageDeleted = (deletedMessage: Message) => {
-      setMessages(prevMessages =>
-        prevMessages.map(msg =>
-          msg._id === deletedMessage._id
-            ? { ...msg, status: 'revoked' }
-            : msg
-        )
-      );
-    };
-
-    socket.on("delete message", handleMessageDeleted);
-
-    return () => {
-      socket.off("delete message", handleMessageDeleted);
-    };
-  }, [socket, loadingSocket]);
+  // Filter out messages that are already in oldMessages
+  const uniqueLoadedMessages = useMemo(() => {
+    return messages.filter(msg => !oldMessageIds.has(msg._id));
+  }, [messages, oldMessageIds]);
 
   const loadMoreMessages = async (currentParticipantsId: string) => {
     if (fetching || allDataFetched) return;
@@ -72,7 +60,12 @@ export default function MoreMessagesLoader({ oldMessages, participants }: LoadMo
       const newMessages = res?.chat ?? [];
       if (newMessages.length > 0) {
         setNewMessagesCount(newMessages.length);
-        setMessages((prevMessages: Message[]) => [...newMessages, ...prevMessages]);
+        setMessages((prevMessages: Message[]) => {
+          // Filter out any duplicates from new messages
+          const existingIds = new Set(prevMessages.map(m => m._id));
+          const uniqueNew = newMessages.filter((m: Message) => !existingIds.has(m._id));
+          return [...uniqueNew, ...prevMessages];
+        });
         setPage(nextPage);
       } else {
         setAllDataFetched(true);
@@ -118,17 +111,17 @@ export default function MoreMessagesLoader({ oldMessages, participants }: LoadMo
     return () => clearTimeout(timeout);
   }, [participants]);
 
-  const messagesPerPage = parseInt(process.env.NEXT_PUBLIC_MESSAGES_PER_PAGE || '5');
+  const messagesPerPage = parseInt((process.env.NEXT_PUBLIC_MESSAGES_PER_PAGE) || '5');
 
   return (
     <>
       <div ref={container}>
-        {messages.slice(newMessagesCount).map((message, index) =>
+        {uniqueLoadedMessages.slice(newMessagesCount).map((message, index) =>
           <MessageBubble key={message._id || `old-${index}`} message={message} />
         )}
       </div>
       <div>
-        {messages.slice(0, newMessagesCount).map((message, index) =>
+        {uniqueLoadedMessages.slice(0, newMessagesCount).map((message, index) =>
           <MessageBubble key={message._id || `new-${index}`} message={message} />
         )}
       </div>

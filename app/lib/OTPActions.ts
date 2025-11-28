@@ -1,14 +1,11 @@
 "use server"
+import { env } from '@/app/config/env';
 import Brevo from "@getbrevo/brevo";
 import { isExist, updatePassword, createUser } from './accountActions'
 import RedisService from '@/services/RedisService'
 
-if (!process.env.BREVO_API_KEY) {
-    throw new Error("BREVO_API_KEY environment variable is not set");
-}
-
 const apiInstance = new Brevo.TransactionalEmailsApi();
-apiInstance.setApiKey(Brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY!);
+apiInstance.setApiKey(Brevo.TransactionalEmailsApiApiKeys.apiKey, env.BREVO_API_KEY!);
 
 function generateOTP(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -18,7 +15,7 @@ async function sendEmailOTP(email: string, otp: string, mode: string = 'sign-up'
     const sendSmtpEmail = new Brevo.SendSmtpEmail();
 
     sendSmtpEmail.to = [{ email: email }];
-    sendSmtpEmail.sender = { name: "WeCommunicate", email: process.env.SMTP_USER };
+    sendSmtpEmail.sender = { name: "WeCommunicate", email: env.SMTP_USER };
     sendSmtpEmail.subject = mode === 'sign-up' ? 'Verify Your Email Address' :
         'Password Reset OTP';
     sendSmtpEmail.htmlContent = mode === 'sign-up' ? `
