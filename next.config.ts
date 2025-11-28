@@ -2,19 +2,25 @@ import type { NextConfig } from "next";
 
 const CSP_DIRECTIVES = [
     "default-src 'self'",
-    // Allows scripts from 'self', Google Maps (and 'unsafe-inline' for inline helper scripts)
+    // Scripts: Your app logic, Google Maps libraries
     "script-src 'self' https://maps.googleapis.com https://maps.gstatic.com 'unsafe-inline'",
 
-    // Allows styles from 'self', Google Fonts stylesheets ('unsafe-inline' for Next.js internal/libraries)
+    // Styles: Your CSS, Google Fonts stylesheets
     "style-src 'self' 'unsafe-inline' https://maps.googleapis.com https://fonts.googleapis.com",
 
-    // Allows images from 'self', data URIs, Google Maps assets, and Vercel storage
+    // Images: Map tiles, Vercel Blob images
     "img-src 'self' data: https://maps.googleapis.com https://maps.gstatic.com https://kvhqatb9r0bjfpjq.public.blob.vercel-storage.com",
 
-    // https://fonts.gstatic.com to connect-src for Service Worker fetch calls.
-    "connect-src 'self' https://maps.googleapis.com https://maps.gstatic.com https://fonts.googleapis.com https://fonts.gstatic.com https://your-api.vercel.app https://kvhqatb9r0bjfpjq.public.blob.vercel-storage.com https://vercel.com http://localhost:3000 ws://localhost:3000 wss://localhost:3000",
+    // Media: Vercel Blob audio/video
+    "media-src 'self' https://kvhqatb9r0bjfpjq.public.blob.vercel-storage.com",
 
-    // Allows font files from 'self' and Google Fonts static servers
+    // Documents: Vercel Blob PDF/Word/Excel loaded via <object>/<embed>/<iframe>
+    "object-src 'self' https://kvhqatb9r0bjfpjq.public.blob.vercel-storage.com",
+
+    // Connections: HMR, Service Worker fetches, Vercel Blob API Handshake
+    "connect-src 'self' https://maps.googleapis.com https://maps.gstatic.com https://fonts.googleapis.com https://fonts.gstatic.com https://vercel.com https://kvhqatb9r0bjfpjq.public.blob.vercel-storage.com http://localhost:3000 ws://localhost:3000 wss://localhost:3000",
+
+    // Fonts: Google Fonts static files
     "font-src 'self' https://fonts.gstatic.com",
 ];
 
