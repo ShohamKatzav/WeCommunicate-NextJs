@@ -180,45 +180,41 @@
     </ul>
 
     <script>
-        const statusIcon = document.getElementById('status-icon');
-        const statusText = document.getElementById('status-text');
-        const connectionIndicator = document.getElementById('connection-indicator');
-        const retryBtn = document.getElementById('retry-btn');
-
-        // Initial state: assume offline
-        statusText.textContent = "You're offline 📡";
-        statusIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-  <path stroke-linecap="round" stroke-linejoin="round" d="M2 12h20M2 6h20M2 18h20"/>
-</svg>`;
-        statusIcon.className = "icon animate-bounce";
-        connectionIndicator.textContent = "✗ No connection";
-        connectionIndicator.className = "status offline";
-
-        // Function to update status dynamically
-        function updateStatus() {
-            const online = navigator.onLine;
-            if (online) {
-                statusText.textContent = "You're back online! 🎉";
-                statusIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-        </svg>`;
-                statusIcon.className = "icon animate-pulse";
-                connectionIndicator.textContent = "✓ Connected";
-                connectionIndicator.className = "status online";
-            } else {
-                statusText.textContent = "You're offline 📡";
-                statusIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M2 12h20M2 6h20M2 18h20"/>
-        </svg>`;
-                statusIcon.className = "icon animate-bounce";
-                connectionIndicator.textContent = "✗ No connection";
-                connectionIndicator.className = "status offline";
-            }
-        }
-
-        // Attach events after DOM is ready
         document.addEventListener('DOMContentLoaded', () => {
-            // Run one check in case the browser is online
+            const statusIcon = document.getElementById('status-icon');
+            const statusText = document.getElementById('status-text');
+            const connectionIndicator = document.getElementById('connection-indicator');
+            const retryBtn = document.getElementById('retry-btn');
+
+            // Defensive check: avoid null crash
+            if (!statusIcon || !statusText || !connectionIndicator || !retryBtn) {
+                console.warn("Offline page: DOM not fully loaded.");
+                return;
+            }
+
+            function updateStatus() {
+                const online = navigator.onLine;
+
+                if (online) {
+                    statusText.textContent = "You're back online! 🎉";
+                    statusIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>`;
+                    statusIcon.className = "icon animate-pulse";
+                    connectionIndicator.textContent = "✓ Connected";
+                    connectionIndicator.className = "status online";
+                } else {
+                    statusText.textContent = "You're offline 📡";
+                    statusIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2 12h20M2 6h20M2 18h20"/>
+                </svg>`;
+                    statusIcon.className = "icon animate-bounce";
+                    connectionIndicator.textContent = "✗ No connection";
+                    connectionIndicator.className = "status offline";
+                }
+            }
+
+            // Initial update
             updateStatus();
 
             window.addEventListener('online', updateStatus);
@@ -232,7 +228,6 @@
                 }
             });
         });
-        updateStatus();
     </script>
 </body>
 

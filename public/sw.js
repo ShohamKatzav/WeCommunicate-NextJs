@@ -1,9 +1,6 @@
-const CACHE_NAME = 'wecommunicate-v5';
-const urlsToCache = [
-    '/offline.html'
-];
+const CACHE_NAME = 'wecommunicate-v1';
+const urlsToCache = ['/offline.html'];
 
-// Routes that should NEVER be cached
 const NEVER_CACHE = [
     '/',
     '_not-found',
@@ -16,70 +13,63 @@ const NEVER_CACHE = [
     '/sign-up',
 ];
 
-// Check if URL should never be cached
 function shouldNeverCache(url) {
     return NEVER_CACHE.some(path => url.includes(path));
 }
 
-// Install event - cache the offline page
-self.addEventListener('install', (event) => {
+// Install
+self.addEventListener('install', event => {
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then((cache) => cache.addAll(urlsToCache))
+        caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
     );
     self.skipWaiting();
 });
 
-// Activate event - clean up old caches
-self.addEventListener('activate', (event) => {
+// Activate
+self.addEventListener('activate', event => {
     event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.map((cacheName) => {
-                    if (cacheName !== CACHE_NAME) {
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
-        })
+        caches.keys().then(names =>
+            Promise.all(names.map(n => n !== CACHE_NAME && caches.delete(n)))
+        )
     );
     self.clients.claim();
 });
 
-// Fetch event
-self.addEventListener('fetch', (event) => {
-    const url = event.request.url;
+// Fetch
+self.addEventListener('fetch', event => {
+    const req = event.request;
+    const url = req.url;
 
-    // Don't cache POST requests or non-GET requests
-    if (event.request.method !== 'GET') {
+    // 🚨 MUST ALWAYS HANDLE NAVIGATION — mobile depends on this
+    if (req.mode === 'navigate') {
+        event.respondWith(
+            fetch(req).catch(() => caches.match('/offline.html'))
+        );
         return;
     }
 
-    // Never cache auth-related routes - always fetch fresh, fallback to offline
+    // Don't cache or apply stale responses for these pages
     if (shouldNeverCache(url)) {
         event.respondWith(
-            fetch(event.request, { credentials: "include" })
-                .catch(() => caches.match('/offline.html'))
+            fetch(req).catch(() => caches.match('/offline.html'))
         );
         return;
     }
 
-    // For navigation requests (page loads)
-    if (event.request.mode === 'navigate') {
+    // For non-GET requests → just try network, fallback offline
+    if (req.method !== 'GET') {
         event.respondWith(
-            fetch(event.request, { credentials: "include" })
-                .catch(() => caches.match('/offline.html'))
+            fetch(req).catch(() => caches.match('/offline.html'))
         );
         return;
     }
 
-    // For all other requests, try network first
+    // GET requests: network first + cache static assets
     event.respondWith(
-        fetch(event.request, { credentials: "include" })
-            .then((response) => {
-                // Cache successful responses for static assets
-                if (response && response.status === 200) {
-                    const shouldCache =
+        fetch(req)
+            .then(res => {
+                if (res && res.status === 200) {
+                    const isStatic =
                         url.includes('/_next/static/') ||
                         url.endsWith('.css') ||
                         url.endsWith('.js') ||
@@ -87,33 +77,26 @@ self.addEventListener('fetch', (event) => {
                         url.endsWith('.woff') ||
                         url.endsWith('.ttf');
 
-                    if (shouldCache) {
-                        const responseToCache = response.clone();
-                        caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(event.request, responseToCache);
-                        });
+                    if (isStatic) {
+                        const clone = res.clone();
+                        caches.open(CACHE_NAME).then(cache =>
+                            cache.put(req, clone)
+                        );
                     }
                 }
-                return response;
+                return res;
             })
-            .catch(() => {
-                // Try to serve from cache
-                return caches.match(event.request);
-            })
+            .catch(() => caches.match(req))
     );
 });
 
-// Listen for messages from the client
-self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'CLEAR_CACHE') {
+// Clear cache
+self.addEventListener('message', event => {
+    if (event.data?.type === 'CLEAR_CACHE') {
         event.waitUntil(
-            caches.keys().then((cacheNames) => {
-                return Promise.all(
-                    cacheNames.map((cacheName) => caches.delete(cacheName))
-                );
-            }).then(() => {
-                return self.clients.claim();
-            })
+            caches.keys().then(names =>
+                Promise.all(names.map(n => caches.delete(n)))
+            )
         );
     }
 });
