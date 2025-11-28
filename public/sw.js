@@ -50,9 +50,14 @@ self.addEventListener('fetch', event => {
 
     // Don't cache or apply stale responses for these pages
     if (shouldNeverCache(url)) {
-        event.respondWith(
-            fetch(req).catch(() => caches.match('/offline.html'))
-        );
+        if (req.mode === 'navigate') {
+            event.respondWith(
+                fetch(req).catch(() => caches.match('/offline.html'))
+            );
+        } else {
+            // For scripts or API calls, just try network
+            event.respondWith(fetch(req));
+        }
         return;
     }
 
