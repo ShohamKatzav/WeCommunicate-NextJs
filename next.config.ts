@@ -11,8 +11,8 @@ const CSP_DIRECTIVES = [
     // Allows images from 'self', data URIs, Google Maps assets, and Vercel storage
     "img-src 'self' data: https://maps.googleapis.com https://maps.gstatic.com https://kvhqatb9r0bjfpjq.public.blob.vercel-storage.com",
 
-    // ✅ CRITICAL FIX: ADDED https://fonts.gstatic.com to connect-src for Service Worker fetch calls.
-    "connect-src 'self' https://maps.googleapis.com https://maps.gstatic.com https://fonts.googleapis.com https://fonts.gstatic.com https://your-api.vercel.app https://kvhqatb9r0bjfpjq.public.blob.vercel-storage.com http://localhost:3000 ws://localhost:3000 wss://localhost:3000",
+    // https://fonts.gstatic.com to connect-src for Service Worker fetch calls.
+    "connect-src 'self' https://maps.googleapis.com https://maps.gstatic.com https://fonts.googleapis.com https://fonts.gstatic.com https://your-api.vercel.app https://kvhqatb9r0bjfpjq.public.blob.vercel-storage.com https://vercel.com http://localhost:3000 ws://localhost:3000 wss://localhost:3000",
 
     // Allows font files from 'self' and Google Fonts static servers
     "font-src 'self' https://fonts.gstatic.com",
