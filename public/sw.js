@@ -38,30 +38,27 @@ self.addEventListener('activate', event => {
 // Fetch
 self.addEventListener('fetch', event => {
     const req = event.request;
-    const url = req.url;
+    const url = new URL(req.url);
 
-    // 🚨 MUST ALWAYS HANDLE NAVIGATION — mobile depends on this
-    if (req.mode === 'navigate') {
+    // Check if this is a navigation request (more reliable)
+    const isNavigation = req.mode === 'navigate' ||
+        req.destination === 'document' ||
+        (req.method === 'GET' && req.headers.get('accept')?.includes('text/html'));
+
+    // Handle navigation requests
+    if (isNavigation) {
         event.respondWith(
             fetch(req).catch(() => caches.match('/offline.html'))
         );
         return;
     }
 
-    // Don't cache or apply stale responses for these pages
-    if (shouldNeverCache(url)) {
-        if (req.mode === 'navigate') {
-            event.respondWith(
-                fetch(req).catch(() => caches.match('/offline.html'))
-            );
-        } else {
-            // For scripts or API calls, just try network
-            event.respondWith(fetch(req));
-        }
+    if (shouldNeverCache(url.pathname)) {
+        event.respondWith(fetch(req));
         return;
     }
 
-    // For non-GET requests → just try network, fallback offline
+    // For non-GET requests → network only
     if (req.method !== 'GET') {
         event.respondWith(
             fetch(req).catch(() => caches.match('/offline.html'))
@@ -75,12 +72,12 @@ self.addEventListener('fetch', event => {
             .then(res => {
                 if (res && res.status === 200) {
                     const isStatic =
-                        url.includes('/_next/static/') ||
-                        url.endsWith('.css') ||
-                        url.endsWith('.js') ||
-                        url.endsWith('.woff2') ||
-                        url.endsWith('.woff') ||
-                        url.endsWith('.ttf');
+                        url.pathname.includes('/_next/static/') ||
+                        url.pathname.endsWith('.css') ||
+                        url.pathname.endsWith('.js') ||
+                        url.pathname.endsWith('.woff2') ||
+                        url.pathname.endsWith('.woff') ||
+                        url.pathname.endsWith('.ttf');
 
                     if (isStatic) {
                         const clone = res.clone();
@@ -101,7 +98,6 @@ self.addEventListener('message', event => {
         event.waitUntil(
             caches.keys().then(names =>
                 Promise.all(names.map(n => caches.delete(n)))
-            )
-        );
+            ));
     }
 });
