@@ -78,12 +78,10 @@ self.addEventListener('fetch', event => {
     // GET inside a NEVER_CACHE route + RSC internal fetches
     if (shouldNeverCache(url.pathname)) {
         event.respondWith(
-            fetch(req).catch(() => {
-                if (url.pathname.endsWith('/chat') || url.pathname.endsWith('/locations')) {
-                    return caches.match('/offline.html');
-                }
-                throw new Error('Failed to fetch resource when offline.');
-            })
+            fetch(req)
+                .catch(() => {
+                    return caches.match(req);
+                })
         );
         return;
     }
