@@ -5,6 +5,7 @@ const envSchema = z.object({
     NEXT_PUBLIC_BASE_ADDRESS: z.url(),
     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: z.string(),
     NEXT_PUBLIC_MESSAGES_PER_PAGE: z.coerce.number().min(5).default(5),
+    NEXT_OFFLINE_CACHE_NAME: z.string().default("wecommunicate-v5"),
     JWT_SECRET_KEY: z.string().min(32),
     DB_URI: z.string(),
     BLOB_READ_WRITE_TOKEN: z.string(),
@@ -12,7 +13,7 @@ const envSchema = z.object({
     UPSTASH_REDIS_REST_URL: z.url(),
     UPSTASH_REDIS_REST_TOKEN: z.string(),
     BREVO_API_KEY: z.string(),
-    SMTP_USER: z.email()
+    SMTP_USER: z.email(),
 });
 
 export const env = envSchema.parse(process.env);

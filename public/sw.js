@@ -1,4 +1,6 @@
-const CACHE_NAME = 'wecommunicate-v1';
+
+
+const CACHE_NAME = globalThis.__NEXT_PUBLIC_OFFLINE_CACHE_NAME__;
 const urlsToCache = ['/offline.html'];
 
 const NEVER_CACHE = [
@@ -25,14 +27,14 @@ self.addEventListener('install', event => {
     self.skipWaiting();
 });
 
+
 // Activate
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(names =>
             Promise.all(names.map(n => n !== CACHE_NAME && caches.delete(n)))
-        )
+        ).then(() => self.clients.claim())
     );
-    self.clients.claim();
 });
 
 // Fetch
@@ -40,12 +42,32 @@ self.addEventListener('fetch', event => {
     const req = event.request;
     const url = new URL(req.url);
 
-    // Check if this is a navigation request (more reliable)
+    if (req.url.includes('/_next/') || req.url.includes('/rsc')) {
+        event.respondWith(
+            fetch(req).catch(() => caches.match('/offline.html'))
+        );
+        return;
+    }
+
+    // Non GET Actions.. POST etc..
+    if (req.method !== 'GET') {
+        event.respondWith(
+            fetch(req).catch(() => {
+                return new Response('{"error": "offline", "message": "Failed to connect to the server."}', {
+                    status: 503,
+                    statusText: 'Service Unavailable',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            })
+        );
+        return;
+    }
+
+    // Full reload
     const isNavigation = req.mode === 'navigate' ||
         req.destination === 'document' ||
         (req.method === 'GET' && req.headers.get('accept')?.includes('text/html'));
 
-    // Handle navigation requests
     if (isNavigation) {
         event.respondWith(
             fetch(req).catch(() => caches.match('/offline.html'))
@@ -53,15 +75,15 @@ self.addEventListener('fetch', event => {
         return;
     }
 
+    // GET inside a NEVER_CACHE route + RSC internal fetches
     if (shouldNeverCache(url.pathname)) {
-        event.respondWith(fetch(req));
-        return;
-    }
-
-    // For non-GET requests → network only
-    if (req.method !== 'GET') {
         event.respondWith(
-            fetch(req).catch(() => caches.match('/offline.html'))
+            fetch(req).catch(() => {
+                if (url.pathname.endsWith('/chat') || url.pathname.endsWith('/locations')) {
+                    return caches.match('/offline.html');
+                }
+                throw new Error('Failed to fetch resource when offline.');
+            })
         );
         return;
     }

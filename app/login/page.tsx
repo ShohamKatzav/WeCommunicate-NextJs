@@ -71,7 +71,8 @@ const Login = () => {
 
       if (authResponse.success) {
         await updateUser({ email, token: authResponse.token });
-        router.push("/chat");
+        window.location.href = "/chat";
+        //router.push("/chat");
         return true;
       } else if (authResponse.status === 401) {
         setGeneralError("Wrong email or password. Please try again.");
