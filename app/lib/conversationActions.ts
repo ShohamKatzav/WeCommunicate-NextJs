@@ -26,7 +26,7 @@ export const cleanHistory = async (conversationId: string) => {
     }
 }
 
-export const deleteConversation = async (conversationId: string) => {
+export const deleteConversation = async (conversationId: string, type: string = "conversation") => {
     if (!conversationId) throw new Error("Invalid Conversation Id")
     try {
         await connectDB();

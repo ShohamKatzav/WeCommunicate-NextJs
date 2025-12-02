@@ -18,6 +18,7 @@ export default function MoreMessagesLoader({ oldMessages, participants }: LoadMo
   const [page, setPage] = useState(1);
   const [allDataFetched, setAllDataFetched] = useState(false);
   const [fetching, setFetching] = useState(false);
+  const [offline, setOffline] = useState(false);
   const [newMessagesCount, setNewMessagesCount] = useState(parseInt(process.env.NEXT_PUBLIC_MESSAGES_PER_PAGE || '5'));
   const [observerEnabled, setObserverEnabled] = useState(false);
 
@@ -38,7 +39,7 @@ export default function MoreMessagesLoader({ oldMessages, participants }: LoadMo
   }, [messages, oldMessageIds]);
 
   const loadMoreMessages = async (currentParticipantsId: string) => {
-    if (fetching || allDataFetched) return;
+    if (fetching || allDataFetched || offline) return;
 
     setFetching(true);
     const nextPage = page + 1;
@@ -47,6 +48,11 @@ export default function MoreMessagesLoader({ oldMessages, participants }: LoadMo
         participants?.map(p => p._id).filter((id): id is string => id !== undefined),
         nextPage
       );
+
+      if (res?.offline) {
+        setOffline(true);
+        return;
+      }
 
       if (participantsIdRef.current !== currentParticipantsId) {
         return;
@@ -70,6 +76,17 @@ export default function MoreMessagesLoader({ oldMessages, participants }: LoadMo
       } else {
         setAllDataFetched(true);
       }
+    } catch (err: any) {
+      // Browser throws BEFORE SW fallback for server actions
+      if (err?.message?.includes("Unexpected response") ||
+        err?.message?.includes("Failed to fetch") ||
+        navigator.onLine === false
+      ) {
+        setOffline(true);
+        return;
+      }
+
+      console.error("Unexpected error:", err);
     }
     finally {
       if (participantsIdRef.current === currentParticipantsId) {

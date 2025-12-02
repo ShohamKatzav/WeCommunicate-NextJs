@@ -43,6 +43,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
 
     const currentConversationId = useRef<string>("");
     const participants = useRef<ChatUser[] | null>(null);
+    const chatRef = useRef<Message[]>(chat);
 
     function findConversationByExactParticipants(
         conversations: Conversation[],
@@ -98,11 +99,59 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
         updateConversationsBar(data);
     }, [user?.email, increaseNotifications]);
 
+    const handleServerSavedMessageResponse = (async (savedMessage: any, tempId: string) => {
+        const tempMessage = chatRef.current.find(
+            msg => msg._id?.toUpperCase() === tempId.toUpperCase()
+        );
+
+        if (!tempMessage) {
+            console.warn("Temp message not found:", tempId);
+            return;
+        }
+
+        const messageDoc = savedMessage.messageDoc || savedMessage;
+
+        setChat(prevChat =>
+            prevChat.map(msg =>
+                msg._id === tempMessage._id ? messageDoc : msg
+            )
+        );
+        tempMessage._id = messageDoc._id;
+
+        let newConversationId;
+
+        if (!currentConversationId.current) {
+            newConversationId = messageDoc?.conversation;
+            currentConversationId.current = newConversationId;
+
+            socket?.emit('join room', { conversationId: newConversationId });
+            await revalidateChatRoute();
+        }
+
+        const messageToEmit = {
+            ...messageDoc,
+            conversationID: messageDoc.conversation || currentConversationId.current
+        };
+
+        socket?.emit('publish message', messageToEmit);
+
+        setMessageToSend(prev => ({ ...prev, text: '', file: null }));
+
+        const finalMessage = {
+            ...messageDoc,
+            conversationID: currentConversationId.current || newConversationId
+        };
+
+        setLastRecievedMessage(finalMessage);
+        updateConversationsBar(finalMessage);
+
+    });
+
     const handleSendMessage = async () => {
         const tempId = new Date().getTime().toString();
         if (socket && !loadingSocket && participants.current?.length) {
 
-            const newMessage: MessageDTO = {
+            const newTempMessage: MessageDTO = {
                 _id: tempId,
                 date: new Date(),
                 sender: messageToSend.sender || "",
@@ -111,38 +160,13 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
                 participantID: messageToSend.participantID || [],
                 conversationID: messageToSend.conversationID || ""
             };
-            setChat((prevChat) => [...prevChat, newMessage as Message]);
+            setChat((prevChat) => [...prevChat, newTempMessage as Message]);
 
             try {
-                const result = await saveMessage(newMessage);
-                setChat(prevChat =>
-                    prevChat.map(msg =>
-                        msg._id === tempId ? result.messageDoc : msg
-                    )
-                );
-                newMessage._id = result.messageDoc._id;
-                let newConversationId;
-                if (!currentConversationId.current) {
-                    newConversationId = result.messageDoc?.conversation;
-                    currentConversationId.current = newConversationId;
-                    socket.emit('join room', { conversationId: newConversationId });
-                    await revalidateChatRoute();
-                }
-
-                const messageToEmit = {
-                    ...result.messageDoc,
-                    conversationID: result.messageDoc.conversation || currentConversationId.current
-                };
-                socket.emit('publish message', messageToEmit);
-                setMessageToSend((prev) => ({ ...prev, text: '', file: null }));
-                const finalMessage = {
-                    ...newMessage,
-                    conversationID: currentConversationId.current || newConversationId
-                };
-                setLastRecievedMessage(finalMessage);
-                updateConversationsBar(finalMessage);
+                const result = await saveMessage(newTempMessage);
+                await handleServerSavedMessageResponse(result, tempId);
             } catch (error) {
-                console.error("Error sending message:", error);
+                alert("Could not complete the operation now. The message will be sent when the connection is restored.");
             }
         }
     };
@@ -221,6 +245,38 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
     };
 
     useEffect(() => {
+        chatRef.current = chat;
+    }, [chat]);
+
+    useEffect(() => {
+        if ('serviceWorker' in navigator) {
+            const swListener = async (event: any) => {
+
+                if (event.data.type === 'CONVERSATION_DELETED_QUEUED') {
+                    setConversationsForBar(prev =>
+                        prev.filter(c =>
+                            c._id?.toUpperCase() !== event.data.id.toUpperCase()
+                        )
+                    );
+                    return;
+                }
+
+                if (event.data.type === 'MESSAGE_SYNCED') {
+                    const { savedMessage, tempId } = event.data;
+                    await handleServerSavedMessageResponse(
+                        savedMessage,
+                        tempId
+                    );
+                }
+            };
+
+            navigator.serviceWorker.addEventListener('message', swListener);
+            return () =>
+                navigator.serviceWorker.removeEventListener('message', swListener);
+        }
+    }, []);
+
+    useEffect(() => {
         const messages = initialConversationsWithMessages.find(c => c._id === currentConversationId.current)?.messages;
         if (messages && messages.length === 0) {
             setChat([]);
@@ -230,9 +286,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
 
     useEffect(() => {
         if (!socket || loadingSocket) return;
-
         const handleMessageDeleted = async (deletedMessage: Message) => {
-            // Update chat state
             setChat(prevChat =>
                 prevChat.map(msg =>
                     msg._id === deletedMessage._id
@@ -295,14 +349,18 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
     }, [socket, pathname]);
 
     useEffect(() => {
-        if (!loadingSocket && socket) {
-            socket.on("publish message", handleIncomingMessage);
+        if (!socket || loadingSocket || !socket.connected) return;
 
-            return () => {
-                socket.off("publish message", handleIncomingMessage);
-            };
-        }
-    }, [socket, loadingSocket, handleIncomingMessage]);
+        const handlePublish = (data: Message) => {
+            handleIncomingMessage(data);
+        };
+
+        socket.on("publish message", handlePublish);
+
+        return () => {
+            socket.off("publish message", handlePublish);
+        };
+    }, [socket, loadingSocket, socket?.connected, handleIncomingMessage]);
 
     const handleOpenModal = (mode: string) => {
         setNewConversationMode(mode);

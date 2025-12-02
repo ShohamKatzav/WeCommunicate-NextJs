@@ -40,15 +40,34 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
     } rounded-tl-3xl rounded-tr-xl text-white wrap-break-word mb-3 md:mb-6
     ${deleted ? "gap-1 flex text-lg md:text-2xl" : "gap-6"}`;
 
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      const swListener = (event: any) => {
+        if (event.data.type === 'MESSAGE_DELETED_QUEUED') {
+          if (event.data.id === message._id)
+            setDeleted(true);
+        }
+      };
+      navigator.serviceWorker.addEventListener('message', swListener);
+      return () => navigator.serviceWorker.removeEventListener('message', swListener);
+    }
+  }, []);
+
   // React to prop changes
   useEffect(() => {
     setDeleted(message.status?.includes("revoked") ?? false);
   }, [message.status]);
 
   const deleteMessageHandler = async () => {
-    await deleteMessage(message._id!);
-    setDeleted(true);
-    socket?.emit("delete message", message);
+    try {
+      await deleteMessage(message._id!, "message");
+      setDeleted(true);
+      socket?.emit("delete message", message);
+    }
+    catch {
+      alert("Could not complete the operation now. The message will be deleted when the connection is restored.");
+    }
   }
 
   const handleMediaDoubleClick = () => {

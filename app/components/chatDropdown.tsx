@@ -75,17 +75,15 @@ const ChatDropdown = ({
         }
         setIsDeleting(true);
         try {
-            const response = await deleteConversation(conversationId);
-            if (response.success) {
-                setShowDeleteModal(false);
-                setShowDropdown(false);
-                updateConversationsBar(null, "Delete");
-                handleLeaveRoom();
-            }
+            await deleteConversation(conversationId, "conversation");
         } catch (error: any) {
-            console.error("Error deleting conversation:", error);
+            alert("Could not complete the operation now. The conversation will be deleted when the connection is restored.");
         } finally {
+            setShowDeleteModal(false);
             setIsDeleting(false);
+            handleLeaveRoom();
+            setShowDropdown(false);
+            updateConversationsBar(null, "Delete");
         }
     };
 

@@ -13,7 +13,7 @@ export default async function handler(req, res) {
 
     if (!io)
         io = new Server(res.socket.server, {
-            path: "/api/socket/",
+            path: "/api/socket",
             connectionStateRecovery: {
                 maxDisconnectionDuration: 2 * 60 * 1000,
                 skipMiddlewares: true,

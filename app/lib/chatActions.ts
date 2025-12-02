@@ -119,7 +119,7 @@ export const saveMessage = async (message: MessageDTO) => {
     }
 }
 
-export const deleteMessage = async (id: string) => {
+export const deleteMessage = async (id: string, type: string = "message") => {
     try {
         await connectDB();
         const userID = await extractUserIDFromCoockie();
@@ -128,6 +128,7 @@ export const deleteMessage = async (id: string) => {
         }
         const result = await MessageRepository.deleteMessage(id);
         if (result) {
+            revalidatePath('/chat');
             return { success: true, message: "Message deleted" };
         }
         else

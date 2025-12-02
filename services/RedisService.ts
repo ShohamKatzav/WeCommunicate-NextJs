@@ -40,7 +40,7 @@ export default class RedisService {
 
     static async addUserSocket(email: string, socketId: string) {
         if (!email || typeof email !== 'string' || !socketId || typeof socketId !== 'string') {
-            console.warn('Invalid email provided to addUserSucket');
+            console.warn('Invalid email provided to addUserSocket');
             return null;
         }
         if (!RedisService.instance) {

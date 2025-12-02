@@ -64,7 +64,6 @@ const Navbar = () => {
       updateUser(null);
       socket?.disconnect();
 
-      // Clear service worker cache
       if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
         navigator.serviceWorker.controller.postMessage({
           type: 'CLEAR_CACHE'

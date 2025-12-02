@@ -72,9 +72,9 @@ async function handlePublishMessage(io, socket, message) {
 }
 
 async function handleDeleteMessage(io, message) {
-    const room = `chat_room_${message?.conversationID}`;
+    const room = `chat_room_${message?.conversation}`;
     io.to(room).emit('delete message', message);
-    const conversation = await Conversation.findById(message?.conversationID).populate('members', 'email');
+    const conversation = await Conversation.findById(message?.conversation).populate('members', 'email');
     if (conversation) {
         for (const member of conversation.members) {
             const memberSocketId = await RedisService.getUserSocketByEmail(member.email);
