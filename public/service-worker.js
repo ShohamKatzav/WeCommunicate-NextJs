@@ -197,13 +197,13 @@ self.addEventListener('fetch', event => {
     }
 
     // Let Next.js handle API/_next/component requests
-    const shouldSkipSW =
-        url.pathname.startsWith('/_next/') ||
-        url.pathname.startsWith('/api/') ||
-        url.pathname.includes('__nextjs') ||
-        req.headers.get('Accept')?.includes('text/x-component');
-
-    if (shouldSkipSW) return;
+    const isRSC =
+        req.headers.get('Accept')?.includes('text/x-component') ||
+        req.headers.has('Next-RSC') ||
+        req.headers.has('Rsc') ||
+        url.searchParams.has('__next_rsc') ||
+        req.headers.has('Next-Router-State-Tree');
+    if (isRSC) return;
 
     // Navigation (HTML documents)
     const isNavigation =
@@ -212,20 +212,24 @@ self.addEventListener('fetch', event => {
         req.headers.get('accept')?.includes('text/html');
 
     if (isNavigation) {
-        const isRestricted = shouldNeverCache(url.pathname);
         event.respondWith(
             (async () => {
                 try {
                     const networkRes = await fetch(req);
-                    if (networkRes && networkRes.status === 200 && !isRestricted) {
-                        cachePut(CACHE_NAME, req, networkRes.clone());
+                    if (networkRes && networkRes.status === 200 && !shouldNeverCache(url.pathname)) {
+                        cachePut(CACHE_NAME, req, networkRes);
                     }
                     return networkRes;
                 } catch {
-                    return caches.match('/offline.html') || new Response('Offline page not found', {
-                        status: 503,
-                        headers: { 'Content-Type': 'text/html' }
-                    });
+                    // Only fallback for the main HTML document
+                    if (req.destination === 'document' || req.mode === 'navigate') {
+                        const fallback = await caches.match('/offline.html');
+                        return fallback || new Response('Offline page not found', {
+                            status: 503,
+                            headers: { 'Content-Type': 'text/html' }
+                        });
+                    }
+                    return new Response('Offline subresource', { status: 503 });
                 }
             })()
         );
