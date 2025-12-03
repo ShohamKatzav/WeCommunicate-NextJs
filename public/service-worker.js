@@ -208,7 +208,7 @@ self.addEventListener('fetch', async event => {
             fetch(req)
                 .catch(async () => {
                     console.log('RSC failed → forcing immediate navigation fallback');
-                    return Response.redirect(url.pathname, 307);
+                    return Response.redirect('/offline.html', 307);
                 })
         );
     }
