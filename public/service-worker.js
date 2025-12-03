@@ -204,30 +204,13 @@ self.addEventListener('fetch', async event => {
         req.headers.has('Next-Router-State-Tree');
 
     if (isRSC) {
-        if (TARGETED_PATHS.some(path => url.pathname.startsWith(path))) {
-            try {
-                const networkRes = await fetch(req);
-                return networkRes;
-            } catch (err) {
-                const fallback = await caches.match('/offline.html');
-                return fallback || new Response('Offline page not found', {
-                    status: 503,
-                    headers: { 'Content-Type': 'text/html' }
-                });
-            }
-        }
         event.respondWith(
             fetch(req)
                 .catch(async () => {
-                    console.log('RSC Fetch failed (offline). Returning empty payload.');
-                    return new Response(JSON.stringify({}), {
-                        status: 200,
-                        headers: { 'Content-Type': 'application/json' }
-                    });
+                    console.log('RSC failed → forcing immediate navigation fallback');
+                    return Response.redirect(url.pathname, 307);
                 })
         );
-        return;
-
     }
 
     // Static assets (CSS, JS, Fonts, Images, Video)
