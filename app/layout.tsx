@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import ClientProviders from "./context/clientProviders";
 import ServiceWorkerRegister from "./components/ServiceWorkerRegister";
 import InstallPrompt from "./components/InstallPrompt";
+import OfflineHandler from "./components/offlineHandler";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -42,7 +43,9 @@ export default function RootLayout({
         <ServiceWorkerRegister />
         <InstallPrompt />
         <ClientProviders>
-          {children}
+          <OfflineHandler>
+            {children}
+          </OfflineHandler>
         </ClientProviders>
       </body>
     </html>
