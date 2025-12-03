@@ -1,7 +1,6 @@
 import { removeFromQueue, addToQueue, getDeleteQueue } from '/indexdb-queue.js';
 
 const CACHE_NAME = 'my-pwa-cache-v5';
-const TARGETED_PATHS = ['/chat', '/locations'];
 const STATIC_ASSET_CACHE = 'next-static-assets-v5';
 
 const OFFLINE_ASSETS = [
@@ -103,30 +102,45 @@ self.addEventListener('fetch', async event => {
         req.destination === 'document' ||
         req.headers.get('accept')?.includes('text/html');
 
+    const isRSC =
+        req.headers.get('Accept')?.includes('text/x-component') ||
+        req.headers.has('Next-RSC') ||
+        req.headers.has('Rsc') ||
+        url.searchParams.has('__next_rsc') ||
+        req.headers.has('Next-Router-State-Tree');
+
     if (isNavigation) {
         event.respondWith(
             (async () => {
                 try {
                     const networkRes = await fetch(req);
-                    if (networkRes && networkRes.status === 200 && !shouldNeverCache(url.pathname)) {
+
+                    if (networkRes.status === 200 && !shouldNeverCache(url.pathname)) {
                         cachePut(CACHE_NAME, req, networkRes);
                     }
                     return networkRes;
+
                 } catch {
-                    // Only fallback for the main HTML document
-                    if (req.destination === 'document' || req.mode === 'navigate') {
-                        const fallback = await caches.match('/offline.html');
-                        return fallback || new Response('Offline page not found', {
-                            status: 503,
-                            headers: { 'Content-Type': 'text/html' }
-                        });
-                    }
-                    return new Response('Offline subresource', { status: 503 });
+                    const fallback = await caches.match('/offline.html');
+                    return fallback || new Response('Offline page not found', {
+                        status: 503,
+                        headers: { 'Content-Type': 'text/html' }
+                    });
                 }
             })()
         );
         return;
     }
+
+    if (isRSC) {
+        event.respondWith(
+            fetch(req).catch(() => {
+                return new Response('RSC Data Unavailable', { status: 503 });
+            })
+        );
+        return;
+    }
+
 
     if (event.request.method === 'POST' && url.pathname === '/chat') {
         event.respondWith(
@@ -195,23 +209,6 @@ self.addEventListener('fetch', async event => {
         return;
     }
 
-    // Let Next.js handle API/_next/component requests
-    const isRSC =
-        req.headers.get('Accept')?.includes('text/x-component') ||
-        req.headers.has('Next-RSC') ||
-        req.headers.has('Rsc') ||
-        url.searchParams.has('__next_rsc') ||
-        req.headers.has('Next-Router-State-Tree');
-
-    if (isRSC) {
-        event.respondWith(
-            fetch(req)
-                .catch(async () => {
-                    console.log('RSC failed → forcing immediate navigation fallback');
-                    return Response.redirect('/offline.html', 307);
-                })
-        );
-    }
 
     // Static assets (CSS, JS, Fonts, Images, Video)
     const isStaticImage =
@@ -230,13 +227,15 @@ self.addEventListener('fetch', async event => {
 
                 try {
                     const networkRes = await fetch(req);
-                    if (!networkRes || networkRes.status !== 200) return networkRes;
-                    cachePut(STATIC_ASSET_CACHE, req, networkRes.clone());
+                    if (networkRes && networkRes.status === 200) {
+                        cachePut(STATIC_ASSET_CACHE, req, networkRes.clone());
+                    }
                     return networkRes;
                 } catch (error) {
-                    cachedRes = await caches.match(req);
-                    if (cachedRes) return cachedRes;
-                    const fallback = isStaticImage ? caches.match('/offlineimage.webp') : caches.match('/offlinevideo.webm');
+                    const fallback = isStaticImage
+                        ? await caches.match('/offlineimage.webp')
+                        : await caches.match('/offlinevideo.webm');
+
                     if (fallback) return fallback;
                     return new Response('Asset not available offline', { status: 404 });
                 }
@@ -244,7 +243,6 @@ self.addEventListener('fetch', async event => {
         );
         return;
     }
-
 });
 
 
