@@ -10,12 +10,16 @@ export default function OfflineHandler({ children }: { children: ReactNode }) {
     const [showOffline, setShowOffline] = useState(false);
 
     useEffect(() => {
-        if (!navigator.onLine && TARGETED_PATHS.includes(pathname!)) {
-            setShowOffline(true);
-        } else {
-            setShowOffline(false);
-        }
-    }, [pathname, navigator.onLine]);
+        if (typeof window === 'undefined') return;
+        const checkOnlineStatus = () => {
+            if (!navigator.onLine && TARGETED_PATHS.includes(pathname!)) {
+                setShowOffline(true);
+            } else {
+                setShowOffline(false);
+            }
+        };
+        checkOnlineStatus();
+    }, [pathname]);
 
     if (showOffline) return <OfflinePage />;
     return <>{children}</>;
