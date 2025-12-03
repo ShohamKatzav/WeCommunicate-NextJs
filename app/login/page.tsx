@@ -69,7 +69,7 @@ const Login = () => {
       // Authenticate user
       const authResponse = await authenticateUser(email, password);
       if (await authResponse.success) {
-        updateUser({ email, token: authResponse.token });
+        await updateUser({ email, token: authResponse.token });
         router.push("/chat");
         return true;
       } else if (authResponse.status === 401) {

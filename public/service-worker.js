@@ -96,6 +96,56 @@ self.addEventListener('fetch', event => {
     const req = event.request;
     const url = new URL(req.url);
 
+    const isNavigation =
+        req.mode === 'navigate' ||
+        req.destination === 'document' ||
+        req.headers.get('accept')?.includes('text/html');
+
+    if (isNavigation) {
+        event.respondWith(
+            (async () => {
+                try {
+                    const networkRes = await fetch(req);
+                    if (networkRes && networkRes.status === 200 && !shouldNeverCache(url.pathname)) {
+                        cachePut(CACHE_NAME, req, networkRes);
+                    }
+                    return networkRes;
+                } catch {
+                    // Only fallback for the main HTML document
+                    if (req.destination === 'document' || req.mode === 'navigate') {
+                        const fallback = await caches.match('/offline.html');
+                        return fallback || new Response('Offline page not found', {
+                            status: 503,
+                            headers: { 'Content-Type': 'text/html' }
+                        });
+                    }
+                    return new Response('Offline subresource', { status: 503 });
+                }
+            })()
+        );
+        return;
+    }
+
+    // Let Next.js handle API/_next/component requests
+    const isRSC =
+        req.headers.get('Accept')?.includes('text/x-component') ||
+        req.headers.has('Next-RSC') ||
+        req.headers.has('Rsc') ||
+        url.searchParams.has('__next_rsc') ||
+        req.headers.has('Next-Router-State-Tree');
+    if (isRSC) {
+        event.respondWith(
+            fetch(req)
+                .catch(async () => {
+                    console.log('RSC Fetch failed (offline). Returning empty payload.');
+                    return new Response(JSON.stringify({}), {
+                        status: 200,
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                })
+        );
+        return;
+    }
 
     if (event.request.method === 'POST' && url.pathname === '/chat') {
         event.respondWith(
@@ -196,45 +246,6 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Let Next.js handle API/_next/component requests
-    const isRSC =
-        req.headers.get('Accept')?.includes('text/x-component') ||
-        req.headers.has('Next-RSC') ||
-        req.headers.has('Rsc') ||
-        url.searchParams.has('__next_rsc') ||
-        req.headers.has('Next-Router-State-Tree');
-    if (isRSC) return;
-
-    // Navigation (HTML documents)
-    const isNavigation =
-        req.mode === 'navigate' ||
-        req.destination === 'document' ||
-        req.headers.get('accept')?.includes('text/html');
-
-    if (isNavigation) {
-        event.respondWith(
-            (async () => {
-                try {
-                    const networkRes = await fetch(req);
-                    if (networkRes && networkRes.status === 200 && !shouldNeverCache(url.pathname)) {
-                        cachePut(CACHE_NAME, req, networkRes);
-                    }
-                    return networkRes;
-                } catch {
-                    // Only fallback for the main HTML document
-                    if (req.destination === 'document' || req.mode === 'navigate') {
-                        const fallback = await caches.match('/offline.html');
-                        return fallback || new Response('Offline page not found', {
-                            status: 503,
-                            headers: { 'Content-Type': 'text/html' }
-                        });
-                    }
-                    return new Response('Offline subresource', { status: 503 });
-                }
-            })()
-        );
-        return;
-    }
 });
 
 
