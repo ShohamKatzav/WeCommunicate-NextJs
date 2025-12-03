@@ -14,7 +14,7 @@ interface ChatHeaderProps {
     chat: Message[];
     setChat: Dispatch<SetStateAction<Message[]>>;
     conversationId: string;
-    updateConversationsBar: (message: Message | null, mode?: string) => void;
+    updateConversationsBar: (message: Message | null, mode?: string, cleanId?: string) => Promise<void>;
 }
 
 const ChatHeader = ({ setMobileChatsSidebarOpen, setMobileUsersSidebarOpen, participants, handleLeaveRoom, chat, setChat, conversationId, updateConversationsBar }: ChatHeaderProps) => {

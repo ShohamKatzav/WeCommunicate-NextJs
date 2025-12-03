@@ -19,7 +19,7 @@ export default async function handler(req, res) {
                 skipMiddlewares: true,
             },
             cors: {
-                origin: ["http://localhost:3000", "https://we-communicate.vercel.app"],
+                origin: ["http://localhost:3000/", "https://we-communicate.vercel.app"],
                 methods: ["GET", "POST"],
             },
             addTrailingSlash: false,

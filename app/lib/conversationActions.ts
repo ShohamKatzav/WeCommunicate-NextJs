@@ -5,7 +5,7 @@ import { extractUserIDFromCoockie } from '@/app/lib/cookieActions'
 import { revalidatePath } from "next/cache";
 import ConversationRepository from "@/repositories/ConversationRepository";
 
-export const cleanHistory = async (conversationId: string) => {
+export const cleanHistory = async (conversationId: string, type: string = "cleanHistory") => {
     if (!conversationId) throw new Error("Invalid Conversation Id")
     try {
         await connectDB();

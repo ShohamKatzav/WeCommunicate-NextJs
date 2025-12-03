@@ -52,7 +52,7 @@ export default class ConversationRepository {
                 .populate({
                     path: 'messages',
                     model: Message,
-                    options: { sort: { date: -1 }, perDocumentLimit }, // <-- ALWAYS DESC + LIMIT
+                    options: { sort: { date: -1 }, perDocumentLimit },
                     populate: populateOptionsFiles,
                 });
 
@@ -65,7 +65,6 @@ export default class ConversationRepository {
                         (msg: any) => new Date(msg.date) > new Date(cleanTime)
                     );
                 }
-
                 if (perDocumentLimit !== 1) {
                     obj.messages.sort(
                         (a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()

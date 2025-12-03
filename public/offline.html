@@ -7,7 +7,6 @@
     <title>Offline - WeCommunicate</title>
     <link rel="icon" href="/favicon.ico">
     <style>
-        /* Minimal Tailwind-like styles extracted from your page */
         body {
             margin: 0;
             font-family: system-ui, sans-serif;
@@ -76,6 +75,7 @@
             margin-top: 2rem;
             cursor: pointer;
             transition: all 0.2s;
+            border: none;
         }
 
         .button.retry {
@@ -85,6 +85,11 @@
 
         .button.retry:hover {
             background-color: #1d4ed8;
+        }
+
+        .button.retry:disabled {
+            background-color: #6b7280;
+            cursor: not-allowed;
         }
 
         .button.back {
@@ -126,6 +131,34 @@
             animation: pulse 1.5s infinite;
         }
 
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 1rem 2rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            animation: slideDown 0.3s ease;
+        }
+
+        .toast.error {
+            background-color: #ef4444;
+            color: white;
+        }
+
+        .toast.success {
+            background-color: #10b981;
+            color: white;
+        }
+
+        .toast.info {
+            background-color: #3b82f6;
+            color: white;
+        }
+
         @keyframes bounce {
 
             0%,
@@ -149,13 +182,31 @@
                 opacity: 0.5;
             }
         }
+
+        @keyframes slideDown {
+            from {
+                transform: translate(-50%, -100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translate(-50%, 0);
+                opacity: 1;
+            }
+        }
+
+        .redirect-message {
+            margin-top: 1rem;
+            font-size: 0.875rem;
+            color: #10b981;
+            font-weight: 600;
+        }
     </style>
 </head>
 
 <body>
 
     <div id="status-icon" class="icon animate-bounce">
-        <!-- offline icon -->
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M2 12h20M2 6h20M2 18h20" />
         </svg>
@@ -163,14 +214,16 @@
 
     <h1 id="status-text">You're offline 📡</h1>
 
-    <p>Looks like you've lost your <strong>internet connection</strong></p>
+    <p id="description-text">Looks like you've lost your <strong>internet connection</strong></p>
     <p class="italic">"Sometimes you need to disconnect to reconnect." — Anonymous</p>
+
+    <div id="redirect-message" class="redirect-message" style="display: none;"></div>
 
     <div id="connection-indicator" class="status offline">✗ No connection</div>
 
     <div>
         <button id="retry-btn" class="button retry">🔄 Retry connection</button>
-        <button onclick="history.back()" class="button back">❌ Go back</button>
+        <button id="back-btn" class="button back">❌ Go back</button>
     </div>
 
     <ul>
@@ -180,54 +233,135 @@
     </ul>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        (function () {
             const statusIcon = document.getElementById('status-icon');
             const statusText = document.getElementById('status-text');
+            const descriptionText = document.getElementById('description-text');
             const connectionIndicator = document.getElementById('connection-indicator');
             const retryBtn = document.getElementById('retry-btn');
+            const backBtn = document.getElementById('back-btn');
+            const redirectMessage = document.getElementById('redirect-message');
 
-            // Defensive check: avoid null crash
-            if (!statusIcon || !statusText || !connectionIndicator || !retryBtn) {
-                console.warn("Offline page: DOM not fully loaded.");
-                return;
+            let redirectTimer = null;
+
+            // Show toast notification
+            function showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.style.animation = 'slideDown 0.3s ease reverse';
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
             }
 
+            // Update UI based on connection status
             function updateStatus() {
                 const online = navigator.onLine;
 
                 if (online) {
                     statusText.textContent = "You're back online! 🎉";
+                    descriptionText.innerHTML = 'Your <strong>internet connection</strong> has been restored';
+
                     statusIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                </svg>`;
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                    </svg>`;
                     statusIcon.className = "icon animate-pulse";
+
                     connectionIndicator.textContent = "✓ Connected";
                     connectionIndicator.className = "status online";
+
+                    retryBtn.disabled = false;
                 } else {
                     statusText.textContent = "You're offline 📡";
+                    descriptionText.innerHTML = 'Looks like you\'ve lost your <strong>internet connection</strong>';
+
                     statusIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2 12h20M2 6h20M2 18h20"/>
-                </svg>`;
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2 12h20M2 6h20M2 18h20"/>
+                    </svg>`;
                     statusIcon.className = "icon animate-bounce";
+
                     connectionIndicator.textContent = "✗ No connection";
                     connectionIndicator.className = "status offline";
+
+                    redirectMessage.style.display = 'none';
+                    if (redirectTimer) {
+                        clearTimeout(redirectTimer);
+                        redirectTimer = null;
+                    }
                 }
             }
 
-            // Initial update
+            // Handle online event
+            function handleOnline() {
+                updateStatus();
+                showToast("Connection restored! Redirecting...", "success");
+
+                // Show countdown message
+                let countdown = 3;
+                redirectMessage.textContent = `Redirecting in ${countdown} seconds...`;
+                redirectMessage.style.display = 'block';
+
+                const countdownInterval = setInterval(() => {
+                    countdown--;
+                    if (countdown > 0) {
+                        redirectMessage.textContent = `Redirecting in ${countdown} seconds...`;
+                    } else {
+                        clearInterval(countdownInterval);
+                    }
+                }, 1000);
+
+                // Redirect after 3 seconds
+                redirectTimer = setTimeout(() => {
+                    window.location.href = '/chat';
+                }, 3000);
+            }
+
+            // Handle offline event
+            function handleOffline() {
+                updateStatus();
+                showToast("Connection lost", "error");
+            }
+
+            // Retry button click handler
+            function handleRetry() {
+                if (navigator.onLine) {
+                    showToast("Redirecting...", "info");
+                    retryBtn.disabled = true;
+                    retryBtn.textContent = "⏳ Redirecting...";
+                    setTimeout(() => {
+                        window.location.href = '/chat';
+                    }, 500);
+                } else {
+                    showToast("Still offline. Please check your connection.", "error");
+                }
+            }
+
+            // Back button click handler
+            function handleBack() {
+                window.history.back();
+            }
+
+            // Initial status update
             updateStatus();
 
-            window.addEventListener('online', updateStatus);
-            window.addEventListener('offline', updateStatus);
+            // Add event listeners
+            window.addEventListener('online', handleOnline);
+            window.addEventListener('offline', handleOffline);
+            retryBtn.addEventListener('click', handleRetry);
+            backBtn.addEventListener('click', handleBack);
 
-            retryBtn.addEventListener('click', () => {
-                if (navigator.onLine) {
-                    location.href = '/chat';
-                } else {
-                    alert("Still offline. Please check your connection.");
+            // Cleanup on page unload (good practice for SPAs)
+            window.addEventListener('beforeunload', () => {
+                window.removeEventListener('online', handleOnline);
+                window.removeEventListener('offline', handleOffline);
+                if (redirectTimer) {
+                    clearTimeout(redirectTimer);
                 }
             });
-        });
+        })();
     </script>
 </body>
 

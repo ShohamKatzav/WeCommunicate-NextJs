@@ -6,7 +6,6 @@ import useIsMobile from "../hooks/useIsMobile";
 import Message from "@/types/message";
 import ChatUser from "@/types/chatUser";
 import { cleanHistory, deleteConversation } from "../lib/conversationActions";
-import { useRouter } from 'next/navigation'
 import DeleteConversationModal from "./deleteConversationModal";
 
 interface ChatDropdownProps {
@@ -15,7 +14,7 @@ interface ChatDropdownProps {
     setChat: Dispatch<SetStateAction<Message[]>>;
     conversationId: string;
     participants: RefObject<ChatUser[] | null | undefined>;
-    updateConversationsBar: (message: Message | null, mode?: string) => void;
+    updateConversationsBar: (message: Message | null, mode?: string, cleanId?: string) => Promise<void>;
 }
 
 const ChatDropdown = ({
@@ -28,7 +27,6 @@ const ChatDropdown = ({
 }: ChatDropdownProps) => {
 
     const isMobile = useIsMobile();
-    const router = useRouter();
     const dropdownRef = useRef<HTMLDivElement | null>(null);
     const [showDropdown, setShowDropdown] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -53,18 +51,35 @@ const ChatDropdown = ({
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [showDropdown]);
 
+    useEffect(() => {
+        if ('serviceWorker' in navigator) {
+            const swListener = async (event: any) => {
+                if (event.data.type === 'CLEAN_HISTORY_QUEUED') {
+                    setChat([]);
+                    updateConversationsBar(null, "Clean", conversationId);
+                    return;
+                }
+            };
+            navigator.serviceWorker.addEventListener('message', swListener);
+            return () =>
+                navigator.serviceWorker.removeEventListener('message', swListener);
+        }
+    }, []);
+
     const handleCleanHistory = async () => {
         if (chat.length === 0) return;
 
         try {
-            const response = await cleanHistory(conversationId);
+            const response = await cleanHistory(conversationId, "cleanHistory");
             if (response.success) {
                 setChat([]);
-                updateConversationsBar(null, "Clean");
-                setShowDropdown(false);
+                updateConversationsBar(null, "Clean", conversationId);
             }
         } catch (error: any) {
-            window.alert("Error occurred while cleaning chat history: " + error);
+            alert("Could not complete the operation now. Conversation history will be cleared when the connection is restored.");
+        }
+        finally {
+            setShowDropdown(false);
         }
     };
 
@@ -81,9 +96,9 @@ const ChatDropdown = ({
         } finally {
             setShowDeleteModal(false);
             setIsDeleting(false);
+            await updateConversationsBar(null, "Delete");
             handleLeaveRoom();
             setShowDropdown(false);
-            updateConversationsBar(null, "Delete");
         }
     };
 

@@ -1,7 +1,7 @@
 import { removeFromQueue, addToQueue, getDeleteQueue } from '/indexdb-queue.js';
 
-const CACHE_NAME = 'my-pwa-cache-v5';
-const STATIC_ASSET_CACHE = 'next-static-assets-v5';
+const CACHE_NAME = 'my-pwa-cache-v6';
+const STATIC_ASSET_CACHE = 'next-static-assets-v6';
 
 const OFFLINE_ASSETS = [
     '/offline.html',
@@ -55,8 +55,9 @@ async function processQueue() {
     const queue = await getDeleteQueue();
     for (const item of queue) {
         try {
-            const endpoint = item.operation === "deleteConversation" ? "conversation" : "chat";
-            const method = item.operation === "saveMessage" ? "POST" : "DELETE";
+            const endpoint = item.operation === "deleteConversation" ? "conversation" :
+                item.operation === "cleanHistory" ? "cleanhistory" : "chat";
+            const method = (item.operation === "saveMessage" || item.operation === "cleanHistory") ? "POST" : "DELETE";
 
             const response = await fetch('/api/' + endpoint, {
                 method: method,
@@ -164,6 +165,7 @@ self.addEventListener('fetch', async event => {
 
                         const isDeleteMessage = hasObjectIdPayload && body.length === 2 && body[1] === 'message';
                         const isDeleteConversation = hasObjectIdPayload && body.length === 2 && body[1] === 'conversation';
+                        const isCleanHistory = hasObjectIdPayload && body.length === 2 && body[1] === 'cleanHistory';
                         const isSaveMessage =
                             Array.isArray(body) &&
                             typeof body[0]?._id === "string" &&
@@ -191,11 +193,22 @@ self.addEventListener('fetch', async event => {
                                     });
                                 });
                             });
-
                         }
                         else if (isSaveMessage) {
                             const messageToSave = { ...body[0], date: new Date().toISOString(), file: body[0].file === "$undefined" ? undefined : body[0].file }
                             await addToQueue('saveMessage', { messageBody: messageToSave });
+                        }
+
+                        else if (isCleanHistory) {
+                            await addToQueue('cleanHistory', { conversationId: body[0] });
+                            self.clients.matchAll({ includeUncontrolled: true }).then(clients => {
+                                clients.forEach(client => {
+                                    client.postMessage({
+                                        type: 'CLEAN_HISTORY_QUEUED',
+                                        id: body[0]
+                                    });
+                                });
+                            });
                         }
 
                         return new Response(JSON.stringify({

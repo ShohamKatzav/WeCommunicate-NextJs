@@ -170,13 +170,13 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
         }
     };
 
-    const updateConversationsBar = async (message: Message | null, mode: string = "") => {
-        if (mode === "Clean" && message) {
+    const updateConversationsBar = async (message: Message | null, mode: string = "", cleanId?: string) => {
+        if (mode === "Clean" && cleanId) {
             setConversationsForBar(prev => {
                 let updated = [...prev];
 
                 const idx = updated.findIndex(
-                    c => c._id?.toUpperCase() === message.conversationID?.toUpperCase()
+                    c => c._id?.toUpperCase() === cleanId.toUpperCase()
                 );
                 if (idx !== -1) {
                     const conv = { ...updated[idx], messages: [] };
@@ -185,8 +185,10 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
                 }
                 return updated;
             })
+            return;
         }
-        if (mode === "Delete") {
+        else if (mode === "Delete") {
+            console.log(currentConversationId.current);
             setConversationsForBar(prev => {
                 if (!currentConversationId.current) return prev;
                 return prev.filter(
@@ -195,45 +197,47 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
             });
             return;
         }
-        setConversationsForBar(prevConversations => {
-            if (!message) return [];
-            const updatedConversations = [...prevConversations];
-            const conversationIndex = updatedConversations.findIndex(
-                conv => conv._id?.toUpperCase() === message.conversationID?.toUpperCase()
-            );
+        else {
+            setConversationsForBar(prevConversations => {
+                if (!message) return prevConversations;
+                const updatedConversations = [...prevConversations];
+                const conversationIndex = updatedConversations.findIndex(
+                    conv => conv._id?.toUpperCase() === message.conversationID?.toUpperCase()
+                );
 
-            if (conversationIndex > -1) {
-                // Move conversation to top with new message
-                const [conversation] = updatedConversations.splice(conversationIndex, 1);
-                if (!conversation.messages?.some(m => m._id === message._id)) {
-                    conversation.messages = [...(conversation.messages || []), message];
-                }
-                updatedConversations.unshift(conversation);
-            } else {
-                // New conversation - fetch members from server
-                const newConversation: Conversation = {
-                    _id: message.conversationID!,
-                    members: [],
-                    messages: [message],
-                };
-                updatedConversations.unshift(newConversation);
-
-                // Fetch members in the next tick
-                queueMicrotask(async () => {
-                    const result = await getConversationMembers(message.conversationID!);
-                    if (result.success) {
-                        setConversationsForBar(prev =>
-                            prev.map(conv =>
-                                conv._id === message.conversationID
-                                    ? { ...conv, members: result.members }
-                                    : conv
-                            )
-                        );
+                if (conversationIndex > -1) {
+                    // Move conversation to top with new message
+                    const [conversation] = updatedConversations.splice(conversationIndex, 1);
+                    if (!conversation.messages?.some(m => m._id === message._id)) {
+                        conversation.messages = [...(conversation.messages || []), message];
                     }
-                });
-            }
-            return updatedConversations;
-        });
+                    updatedConversations.unshift(conversation);
+                } else {
+                    // New conversation - fetch members from server
+                    const newConversation: Conversation = {
+                        _id: message.conversationID!,
+                        members: [],
+                        messages: [message],
+                    };
+                    updatedConversations.unshift(newConversation);
+
+                    // Fetch members in the next tick
+                    queueMicrotask(async () => {
+                        const result = await getConversationMembers(message.conversationID!);
+                        if (result.success) {
+                            setConversationsForBar(prev =>
+                                prev.map(conv =>
+                                    conv._id === message.conversationID
+                                        ? { ...conv, members: result.members }
+                                        : conv
+                                )
+                            );
+                        }
+                    });
+                }
+                return updatedConversations;
+            });
+        }
     };
 
     const handleLeaveRoom = async () => {
@@ -279,7 +283,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
         const messages = initialConversationsWithMessages.find(c => c._id === currentConversationId.current)?.messages;
         if (messages && messages.length === 0) {
             setChat([]);
-            updateConversationsBar({ conversationID: currentConversationId.current }, "Clean");
+            updateConversationsBar(null, "Clean", currentConversationId.current);
         }
     }, [initialConversationsWithMessages]);
 

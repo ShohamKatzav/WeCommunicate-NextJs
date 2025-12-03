@@ -10,5 +10,5 @@ export async function DELETE(request: any) {
       catch {
             console.error("Faild deleting");
       }
-      return NextResponse.json({ message: 'Successfully deleted message' });
+      return NextResponse.json({ message: 'Successfully deleted conversation' });
 }

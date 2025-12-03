@@ -1,10 +1,9 @@
-const DB_NAME = 'offline-queue-db';
-const STORE_NAME = 'delete-queue';
-const DB_VERSION = 1;
+const DB_NAME = 'offline-queue-db-v6';
+const STORE_NAME = 'delete-queue-v6';
 
 export function openDB() {
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        const request = indexedDB.open(DB_NAME);
 
         request.onerror = () => reject(request.error);
         request.onsuccess = () => resolve(request.result);
