@@ -1,35 +1,31 @@
 'use client';
-import { useState, useEffect, ReactNode, useCallback } from 'react';
+import { useState, useEffect, useCallback, ReactNode } from 'react';
 import OfflinePage from './offlinePage';
 
+const TARGETED_PATHS = ['/chat', '/locations'];
+
 export default function OfflineHandler({ children }: { children: ReactNode }) {
-    const [offlinePageVisible, setOfflinePageVisible] = useState(false);
-    const TARGETED_PATHS = ['/chat', '/locations'];
+    const [showOffline, setShowOffline] = useState(false);
 
-    const handleNavigationAttempt = useCallback((e: MouseEvent) => {
-        const target = e.target as HTMLElement;
-        const navTarget = target.closest('a[href]') as HTMLAnchorElement | null;
-        if (!navTarget) return;
+    const handleLinkClick = useCallback((e: MouseEvent) => {
+        const link = (e.target as HTMLElement).closest('a[href]') as HTMLAnchorElement | null;
+        if (!link) return;
 
-        const targetLink = navTarget.getAttribute('href');
-        if (!targetLink) return;
+        const href = link.getAttribute('href');
+        if (!href) return;
 
-        const isTargeted = TARGETED_PATHS.includes(targetLink);
-
-        if (isTargeted && !navigator.onLine) {
+        if (TARGETED_PATHS.includes(href) && !navigator.onLine) {
             e.preventDefault();
-            setOfflinePageVisible(true);
+            setShowOffline(true);
         }
     }, []);
 
     useEffect(() => {
-        document.addEventListener('click', handleNavigationAttempt, true);
-        return () => document.removeEventListener('click', handleNavigationAttempt, true);
-    }, [handleNavigationAttempt]);
+        document.addEventListener('click', handleLinkClick, true);
+        return () => document.removeEventListener('click', handleLinkClick, true);
+    }, [handleLinkClick]);
 
-    if (offlinePageVisible) {
-        return <OfflinePage />;
-    }
+    if (showOffline) return <OfflinePage />;
 
     return <>{children}</>;
 }

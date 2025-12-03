@@ -3,10 +3,11 @@ import { removeFromQueue, addToQueue, getDeleteQueue } from '/indexdb-queue.js';
 const CACHE_NAME = 'my-pwa-cache-v5';
 const STATIC_ASSET_CACHE = 'next-static-assets-v5';
 
-const urlsToCache = [
+const OFFLINE_ASSETS = [
     '/offline.html',
     '/offlineimage.webp',
-    '/offlinevideo.webm'
+    '/offlinevideo.webm',
+    '/manifest.json'
 ];
 
 const NEVER_CACHE = [
@@ -35,7 +36,7 @@ async function cachePut(cacheName, req, res) {
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then(cache => cache.addAll(urlsToCache))
+            .then(cache => cache.addAll(OFFLINE_ASSETS))
             .catch(err => console.error('Failed to cache files during install:', err))
     );
     self.skipWaiting();
