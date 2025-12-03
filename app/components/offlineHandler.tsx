@@ -1,31 +1,22 @@
 'use client';
-import { useState, useEffect, useCallback, ReactNode } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import OfflinePage from './offlinePage';
 
 const TARGETED_PATHS = ['/chat', '/locations'];
 
 export default function OfflineHandler({ children }: { children: ReactNode }) {
+    const pathname = usePathname();
     const [showOffline, setShowOffline] = useState(false);
 
-    const handleLinkClick = useCallback((e: MouseEvent) => {
-        const link = (e.target as HTMLElement).closest('a[href]') as HTMLAnchorElement | null;
-        if (!link) return;
-
-        const href = link.getAttribute('href');
-        if (!href) return;
-
-        if (TARGETED_PATHS.includes(href) && !navigator.onLine) {
-            e.preventDefault();
-            setShowOffline(true);
-        }
-    }, []);
-
     useEffect(() => {
-        document.addEventListener('click', handleLinkClick, true);
-        return () => document.removeEventListener('click', handleLinkClick, true);
-    }, [handleLinkClick]);
+        if (!navigator.onLine && TARGETED_PATHS.includes(pathname!)) {
+            setShowOffline(true);
+        } else {
+            setShowOffline(false);
+        }
+    }, [pathname]);
 
     if (showOffline) return <OfflinePage />;
-
     return <>{children}</>;
 }
