@@ -102,13 +102,6 @@ self.addEventListener('fetch', async event => {
         req.destination === 'document' ||
         req.headers.get('accept')?.includes('text/html');
 
-    const isRSC =
-        req.headers.get('Accept')?.includes('text/x-component') ||
-        req.headers.has('Next-RSC') ||
-        req.headers.has('Rsc') ||
-        url.searchParams.has('__next_rsc') ||
-        req.headers.has('Next-Router-State-Tree');
-
     if (isNavigation) {
         event.respondWith(
             (async () => {
@@ -132,11 +125,26 @@ self.addEventListener('fetch', async event => {
         return;
     }
 
-    if (isRSC) {
+    if (url.pathname.startsWith('/api/conversations') || url.pathname.startsWith('/api/messages')) {
         event.respondWith(
-            fetch(req).catch(() => {
-                return new Response('RSC Data Unavailable', { status: 503 });
-            })
+            (async () => {
+                let cachedRes = await caches.match(req);
+                if (cachedRes) {
+                    return cachedRes;
+                }
+                try {
+                    const networkRes = await fetch(req);
+                    if (networkRes.status === 200) {
+                        cachePut(CACHE_NAME, req, networkRes.clone());
+                    }
+                    return networkRes;
+                } catch {
+                    return new Response(JSON.stringify({ error: 'Data unavailable offline' }), {
+                        status: 503,
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                }
+            })()
         );
         return;
     }

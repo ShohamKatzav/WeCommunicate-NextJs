@@ -85,6 +85,19 @@ const Navbar = () => {
     return false;
   };
 
+
+  const handleLinkClick = (e: React.MouseEvent, link: string, onclick: () => void) => {
+    onclick();
+
+    if (!navigator.onLine) {
+      if (link !== '/' && link !== 'about' && link !== 'contact' && link !== 'login' && link !== 'offline.html') {
+        e.preventDefault();
+        window.location.href = '/offline.html';
+        return;
+      }
+    }
+  };
+
   return (
     <div className='container z-1'>
       <div className="navbar flex justify-between items-center h-20 px-4 text-white bg-black nav wrap-break-word">
@@ -108,7 +121,7 @@ const Navbar = () => {
               className="nav-links px-4 cursor-pointer capitalize font-medium
              text-gray-500 hover:scale-105 hover:text-white duration-200 link-underline"
             >
-              <Link onClick={onclick} href={link}>{text}</Link>
+              <Link onClick={(e) => handleLinkClick(e, link, onclick)} href={link}>{text}</Link>
             </li>
 
           ))}
