@@ -135,8 +135,6 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
 
         socket?.emit('publish message', messageToEmit);
 
-        setMessageToSend(prev => ({ ...prev, text: '', file: null }));
-
         const finalMessage = {
             ...messageDoc,
             conversationID: currentConversationId.current || newConversationId
@@ -160,6 +158,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
                 participantID: messageToSend.participantID || [],
                 conversationID: messageToSend.conversationID || ""
             };
+            setMessageToSend(prev => ({ ...prev, text: '', file: null }));
             setChat((prevChat) => [...prevChat, newTempMessage as Message]);
 
             try {

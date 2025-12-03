@@ -15,7 +15,7 @@ export default function OfflineHandler({ children }: { children: ReactNode }) {
         } else {
             setShowOffline(false);
         }
-    }, [pathname]);
+    }, [pathname, navigator.onLine]);
 
     if (showOffline) return <OfflinePage />;
     return <>{children}</>;

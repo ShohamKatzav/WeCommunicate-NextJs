@@ -1,6 +1,7 @@
 import { removeFromQueue, addToQueue, getDeleteQueue } from '/indexdb-queue.js';
 
 const CACHE_NAME = 'my-pwa-cache-v5';
+const TARGETED_PATHS = ['/chat', '/locations'];
 const STATIC_ASSET_CACHE = 'next-static-assets-v5';
 
 const OFFLINE_ASSETS = [
@@ -93,7 +94,7 @@ async function processQueue() {
 }
 
 // Fetch
-self.addEventListener('fetch', event => {
+self.addEventListener('fetch', async event => {
     const req = event.request;
     const url = new URL(req.url);
 
@@ -123,27 +124,6 @@ self.addEventListener('fetch', event => {
                     return new Response('Offline subresource', { status: 503 });
                 }
             })()
-        );
-        return;
-    }
-
-    // Let Next.js handle API/_next/component requests
-    const isRSC =
-        req.headers.get('Accept')?.includes('text/x-component') ||
-        req.headers.has('Next-RSC') ||
-        req.headers.has('Rsc') ||
-        url.searchParams.has('__next_rsc') ||
-        req.headers.has('Next-Router-State-Tree');
-    if (isRSC) {
-        event.respondWith(
-            fetch(req)
-                .catch(async () => {
-                    console.log('RSC Fetch failed (offline). Returning empty payload.');
-                    return new Response(JSON.stringify({}), {
-                        status: 200,
-                        headers: { 'Content-Type': 'application/json' }
-                    });
-                })
         );
         return;
     }
@@ -213,6 +193,41 @@ self.addEventListener('fetch', event => {
                 })
         );
         return;
+    }
+
+    // Let Next.js handle API/_next/component requests
+    const isRSC =
+        req.headers.get('Accept')?.includes('text/x-component') ||
+        req.headers.has('Next-RSC') ||
+        req.headers.has('Rsc') ||
+        url.searchParams.has('__next_rsc') ||
+        req.headers.has('Next-Router-State-Tree');
+
+    if (isRSC) {
+        if (TARGETED_PATHS.some(path => url.pathname.startsWith(path))) {
+            try {
+                const networkRes = await fetch(req);
+                return networkRes;
+            } catch (err) {
+                const fallback = await caches.match('/offline.html');
+                return fallback || new Response('Offline page not found', {
+                    status: 503,
+                    headers: { 'Content-Type': 'text/html' }
+                });
+            }
+        }
+        event.respondWith(
+            fetch(req)
+                .catch(async () => {
+                    console.log('RSC Fetch failed (offline). Returning empty payload.');
+                    return new Response(JSON.stringify({}), {
+                        status: 200,
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                })
+        );
+        return;
+
     }
 
     // Static assets (CSS, JS, Fonts, Images, Video)
