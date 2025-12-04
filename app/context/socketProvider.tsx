@@ -29,7 +29,6 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
                     reconnectionDelay: 10000,
                     reconnectionDelayMax: 10000,
                     path: "/api/socket",
-                    transports: ['websocket', 'polling'],
                     auth: {
                         token: user?.token
                     }
