@@ -18,7 +18,7 @@ const CSP_DIRECTIVES = [
     "object-src 'self' https://kvhqatb9r0bjfpjq.public.blob.vercel-storage.com",
 
     // Connections: HMR, Service Worker fetches, Vercel Blob API Handshake
-    "connect-src 'self' https://maps.googleapis.com https://maps.gstatic.com https://fonts.googleapis.com https://fonts.gstatic.com https://vercel.com https://kvhqatb9r0bjfpjq.public.blob.vercel-storage.com http://localhost:3000 ws://localhost:3000 wss://localhost:3000",
+    "connect-src 'self' https://maps.googleapis.com https://maps.gstatic.com https://fonts.googleapis.com https://fonts.gstatic.com https://vercel.com https://kvhqatb9r0bjfpjq.public.blob.vercel-storage.com https://localhost:3000 ws://localhost:3000 wss://localhost:3000",
 
     // Fonts: Google Fonts static files
     "font-src 'self' https://fonts.gstatic.com",
@@ -55,7 +55,14 @@ const nextConfig: NextConfig = {
                 ],
             },
             {
-                source: "/sw.js",
+                source: "/service-worker.js",
+                headers: [
+                    { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+                    { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+                ],
+            },
+            {
+                source: "/indexdb-queue.js",
                 headers: [
                     { key: "Content-Type", value: "application/javascript; charset=utf-8" },
                     { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },

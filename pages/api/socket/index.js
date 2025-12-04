@@ -19,10 +19,13 @@ export default async function handler(req, res) {
                 skipMiddlewares: true,
             },
             cors: {
-                origin: ["http://localhost:3000/", "https://we-communicate.vercel.app"],
+                origin: process.env.NODE_ENV === 'production'
+                    ? ["https://wecommunicate-nextjs.onrender.com"]
+                    : true,
                 methods: ["GET", "POST"],
-            },
-            addTrailingSlash: false,
+                credentials: true,
+                addTrailingSlash: false,
+            }
         });
 
     io.use(rateLimitMiddleware);

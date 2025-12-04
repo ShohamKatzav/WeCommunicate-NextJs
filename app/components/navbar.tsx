@@ -6,6 +6,8 @@ import { useUser } from "../hooks/useUser";
 import { useSocket } from "../hooks/useSocket";
 import './bars.css';
 
+const DYNAMIC_OFFLINE_LINKS = ['chat', 'locations'];
+
 const Navbar = () => {
   const [nav, setNav] = useState(false);
   const { user, updateUser } = useUser();
@@ -20,46 +22,7 @@ const Navbar = () => {
     }
   };
 
-  const links = [
-    {
-      id: 1,
-      text: "login",
-      link: "login",
-      onclick: () => { }
-    },
-    {
-      id: 2,
-      text: "chat",
-      link: "chat",
-      onclick: () => { }
-    },
-    {
-      id: 3,
-      text: "locations",
-      link: "locations",
-      onclick: () => { }
-    },
-    {
-      id: 4,
-      text: "about",
-      link: "about",
-      onclick: () => { }
-    },
-    {
-      id: 5,
-      text: "contact",
-      link: "contact",
-      onclick: () => { }
-    },
-    {
-      id: 6,
-      text: "Log out",
-      link: "/",
-      onclick: () => handleLogOut()
-    },
-  ];
-
-  const handleLogOut: any = async () => {
+  const handleLogOut = async () => {
     try {
       updateUser(null);
       socket?.disconnect();
@@ -74,22 +37,32 @@ const Navbar = () => {
     }
   };
 
+  const links = [
+    { id: 1, text: "login", link: "login", auth: false, action: () => { } },
+    { id: 2, text: "chat", link: "chat", auth: true, action: () => { } },
+    { id: 3, text: "locations", link: "locations", auth: true, action: () => { } },
+    { id: 4, text: "about", link: "about", auth: null, action: () => { } },
+    { id: 5, text: "contact", link: "contact", auth: null, action: () => { } },
+    { id: 6, text: "log out", link: "/", auth: true, action: () => handleLogOut() },
+  ];
+
   const isUserConnected = () => {
     return user != null && Object.keys(user).length > 0;
   }
 
-  const shouldDisplayLink = (id: number) => {
-    if ((id === 2 || id === 3 || id === 6) && isUserConnected()) return true;
-    if (id === 1 && !isUserConnected()) return true;
-    if (id !== 1 && id !== 2 && id !== 3 && id !== 6) return true;
-    return false;
+  const shouldDisplayLink = ({ auth }: typeof links[0]) => {
+    const connected = isUserConnected();
+
+    if (auth === true) return connected;
+    if (auth === false) return !connected;
+    return true;
   };
 
 
   const handleLinkClick = (e: React.MouseEvent, link: string, onclick: () => void) => {
     onclick();
     if (!navigator.onLine) {
-      if (link === 'chat' || link === 'locations') {
+      if (DYNAMIC_OFFLINE_LINKS.includes(link)) {
         e.preventDefault();
         window.location.replace('/offline.html');
         return;
@@ -113,14 +86,20 @@ const Navbar = () => {
         </div>
 
         <ul className="hidden md:flex">
-          {links.map(({ id, text, link, onclick }) => (
-            shouldDisplayLink(id) &&
+          {links.map((item) => (
+            shouldDisplayLink(item) &&
             <li
-              key={id}
+              key={item.id}
               className="nav-links px-4 cursor-pointer capitalize font-medium
-             text-gray-500 hover:scale-105 hover:text-white duration-200 link-underline"
+              text-gray-500 hover:scale-105 hover:text-white duration-200 link-underline"
             >
-              <Link onClick={(e) => handleLinkClick(e, link, onclick)} href={link}>{text}</Link>
+              <Link
+                onClick={(e) => handleLinkClick(e, item.link, item.action)}
+                href={item.link}
+                prefetch={!DYNAMIC_OFFLINE_LINKS.includes(item.link)}
+              >
+                {item.text}
+              </Link>
             </li>
 
           ))}
@@ -135,15 +114,19 @@ const Navbar = () => {
 
         {nav && (
           <ul className="flex flex-col justify-center items-center absolute top-0 left-0
-        w-full h-screen bg-linear-to-b from-black to-gray-800 text-gray-500">
-            {links.map(({ id, text, link, onclick }) => (
-              shouldDisplayLink(id) &&
+          w-full h-screen bg-linear-to-b from-black to-gray-800 text-gray-500">
+            {links.map((item) => (
+              shouldDisplayLink(item) &&
               <li
-                key={id}
+                key={item.id}
                 className="px-4 cursor-pointer capitalize py-6 text-4xl"
               >
-                <Link onClick={() => { onclick(); toggleNav() }} href={link}>
-                  {text}
+                <Link
+                  onClick={() => { item.action(); toggleNav() }}
+                  href={item.link}
+                  prefetch={!DYNAMIC_OFFLINE_LINKS.includes(item.link)}
+                >
+                  {item.text}
                 </Link>
               </li>
             ))}

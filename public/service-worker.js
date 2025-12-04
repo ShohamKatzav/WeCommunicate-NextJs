@@ -107,14 +107,12 @@ self.addEventListener('fetch', async event => {
             (async () => {
                 try {
                     const networkRes = await fetch(req);
-
                     if (networkRes.status === 200 && !shouldNeverCache(url.pathname)) {
                         cachePut(CACHE_NAME, req, networkRes);
                     }
                     return networkRes;
 
                 } catch {
-                    // This is the desired path for ANY failed navigation or explicit /offline.html request
                     const fallback = await caches.match('/offline.html');
                     return fallback || new Response('Offline page not found', {
                         status: 503,
