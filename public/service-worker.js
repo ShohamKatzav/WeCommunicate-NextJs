@@ -97,11 +97,11 @@ async function processQueue() {
 self.addEventListener('fetch', async event => {
     const req = event.request;
     const url = new URL(req.url);
-
     const isNavigation =
         req.mode === 'navigate' ||
         req.destination === 'document' ||
-        req.headers.get('accept')?.includes('text/html');
+        req.headers.get('accept')?.includes('text/html') ||
+        (req.method === 'GET' && url.pathname === '/chat' && req.headers.get('Rsc')?.includes('1'));
 
     if (isNavigation) {
         event.respondWith(
@@ -149,7 +149,6 @@ self.addEventListener('fetch', async event => {
         );
         return;
     }
-
 
     if (event.request.method === 'POST' && url.pathname === '/chat') {
         event.respondWith(

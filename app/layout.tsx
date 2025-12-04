@@ -42,11 +42,11 @@ export default function RootLayout({
       >
         <ServiceWorkerRegister />
         <InstallPrompt />
-        <ClientProviders>
-          <OfflineHandler>
+        <OfflineHandler>
+          <ClientProviders>
             {children}
-          </OfflineHandler>
-        </ClientProviders>
+          </ClientProviders>
+        </OfflineHandler>
       </body>
     </html>
   );
