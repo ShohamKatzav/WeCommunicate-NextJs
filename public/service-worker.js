@@ -101,7 +101,7 @@ self.addEventListener('fetch', async event => {
         req.mode === 'navigate' ||
         req.destination === 'document' ||
         req.headers.get('accept')?.includes('text/html') ||
-        (req.method === 'GET' && req.headers.get('Rsc')?.includes('1') && req.headers.get('Next-Router-State-Tree'));
+        (req.headers.get('Next-Url')?.includes('/chat') && req.headers.get('Rsc')?.includes('1') && req.headers.get('Next-Router-State-Tree'));
 
     if (isNavigation) {
         event.respondWith(

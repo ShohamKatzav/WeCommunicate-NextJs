@@ -29,7 +29,9 @@ export default function OfflinePage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 to-slate-900 text-gray-50 flex flex-col items-center justify-center text-center px-6">
+        // 1. ADD z-index: z-50 to ensure it's on top of PWA install banners.
+        // 2. Add fixed positioning (or h-screen/min-h-screen) to ensure full coverage.
+        <div className="min-h-screen w-full bg-gradient-to-br from-gray-900 to-slate-900 text-gray-50 flex flex-col items-center justify-center text-center px-6 relative z-50">
             {/* Status Icon */}
             <div className={`w-24 h-24 ${isOnline ? 'animate-pulse' : 'animate-bounce'}`}>
                 {isOnline ? (
@@ -65,13 +67,13 @@ export default function OfflinePage() {
                 )}
             </div>
 
-            {/* Status Text */}
-            <h1 className="mt-6 text-5xl font-extrabold">
+            {/* Status Text - Reduced size for better mobile fit */}
+            <h1 className="mt-6 text-4xl sm:text-5xl font-extrabold">
                 {isOnline ? "You're back online! 🎉" : "You're offline 📡"}
             </h1>
 
             {/* Description */}
-            <p className="mt-4 text-lg">
+            <p className="mt-4 text-base sm:text-lg">
                 {isOnline ? (
                     <>Your <strong>internet connection</strong> has been restored</>
                 ) : (
@@ -86,24 +88,26 @@ export default function OfflinePage() {
             {/* Connection Indicator */}
             <div
                 className={`mt-6 px-4 py-2 rounded-full font-medium inline-block ${isOnline
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-red-100 text-red-800'
                     }`}
             >
                 {isOnline ? '✓ Connected' : '✗ No connection'}
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-3 mt-8">
+            <div className="flex flex-col sm:flex-row gap-3 mt-8 w-full max-w-sm"> {/* Added w-full max-w-sm for better button sizing */}
                 <button
                     onClick={handleRetry}
-                    className="inline-flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-2xl transition-all duration-200"
+                    // Reduced padding (p-2/py-2/px-4) and added w-full for mobile
+                    className="flex-1 w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all duration-200 text-base"
                 >
                     🔄 Retry connection
                 </button>
                 <button
                     onClick={handleGoBack}
-                    className="inline-flex items-center gap-2 px-5 py-3 bg-gray-700 hover:bg-gray-600 text-gray-100 font-semibold rounded-2xl border border-gray-600 transition-all duration-200"
+                    // Reduced padding (p-2/py-2/px-4) and added w-full for mobile
+                    className="flex-1 w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-100 font-semibold rounded-xl border border-gray-600 transition-all duration-200 text-base"
                 >
                     ❌ Go back
                 </button>
