@@ -88,11 +88,10 @@ const Navbar = () => {
 
   const handleLinkClick = (e: React.MouseEvent, link: string, onclick: () => void) => {
     onclick();
-
     if (!navigator.onLine) {
-      if (link !== '/' && link !== 'about' && link !== 'contact' && link !== 'login' && link !== 'offline.html') {
+      if (link === 'chat' || link === 'locations') {
         e.preventDefault();
-        window.location.href = '/offline.html';
+        window.location.replace('/offline.html');
         return;
       }
     }

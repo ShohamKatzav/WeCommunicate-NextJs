@@ -100,10 +100,9 @@ self.addEventListener('fetch', async event => {
     const isNavigation =
         req.mode === 'navigate' ||
         req.destination === 'document' ||
-        req.headers.get('accept')?.includes('text/html') ||
-        (req.headers.get('Next-Url')?.includes('/chat') && req.headers.get('Rsc')?.includes('1') && req.headers.get('Next-Router-State-Tree'));
+        req.headers.get('accept')?.includes('text/html');
 
-    if (isNavigation) {
+    if (isNavigation || url.pathname === '/offline.html') {
         event.respondWith(
             (async () => {
                 try {
@@ -115,6 +114,7 @@ self.addEventListener('fetch', async event => {
                     return networkRes;
 
                 } catch {
+                    // This is the desired path for ANY failed navigation or explicit /offline.html request
                     const fallback = await caches.match('/offline.html');
                     return fallback || new Response('Offline page not found', {
                         status: 503,
