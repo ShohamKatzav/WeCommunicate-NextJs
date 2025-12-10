@@ -7,9 +7,6 @@ interface UseNotificationSoundOptions {
     volume?: number // 0.0–1.0
 }
 
-/**
- * Automatically plays a notification sound when a socket event is received.
- */
 export default function useNotificationSound(options: UseNotificationSoundOptions = {}) {
     const { event = "notifications update", volume = 0.5 } = options
     const soundRef = useRef<HTMLAudioElement | null>(null)

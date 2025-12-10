@@ -48,30 +48,32 @@ export default function InstallPrompt() {
     }
 
     return (
-        <div
-            style={{
-                position: "fixed",
-                bottom: isMobile ? "85px" : "10px",
-                right: isMobile ? "5px" : "15%",
-                zIndex: isMobile ? 10 : 100,
-                border: "3px solid yellow"
-            }}
-        >
-            <button
-                onClick={handleInstallClick}
+        <>
+            <div
                 style={{
-                    padding: "12px 24px",
-                    backgroundColor: "#000",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    fontSize: "16px",
-                    boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+                    position: "fixed",
+                    bottom: isMobile ? "85px" : "10px",
+                    right: isMobile ? "5px" : "15%",
+                    zIndex: isMobile ? 10 : 100,
+                    border: "3px solid yellow"
                 }}
             >
-                Install App
-            </button>
-        </div>
+                <button
+                    onClick={handleInstallClick}
+                    style={{
+                        padding: "12px 24px",
+                        backgroundColor: "#000",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        fontSize: "16px",
+                        boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+                    }}
+                >
+                    Install App
+                </button>
+            </div>
+        </>
     );
 }

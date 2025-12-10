@@ -84,3 +84,18 @@ export const updatePassword = async (email: string, newPassword: string) => {
         throw err;
     }
 }
+
+
+export async function getUsersByEmails(userEmails: string[]) {
+    try {
+        if (!userEmails || userEmails.length === 0) {
+            return [];
+        }
+        const usersByEmail = JSON.parse(JSON.stringify(await AccountRepository.getUsersByEmails(userEmails)));
+        return usersByEmail;
+
+    } catch (error) {
+        console.error("Server Action: Failed to find users by email:", error);
+        return [];
+    }
+}

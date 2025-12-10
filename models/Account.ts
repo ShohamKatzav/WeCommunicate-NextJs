@@ -1,7 +1,6 @@
 import { Document, Schema, models, model } from 'mongoose';
 
 export interface IAccount extends Document {
-    _id: Schema.Types.ObjectId;
     email: string;
     password: string;
     cleanHistory?: Date;

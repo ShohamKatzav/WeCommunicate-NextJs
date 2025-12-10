@@ -20,6 +20,14 @@ export default class AccountRepository {
             throw new Error('Failed to find users by ID');
         }
     }
+    static async getUsersByEmails(emails: string[]) {
+        try {
+            return await Account.find({ email: { $in: emails } }).exec();
+        } catch (err) {
+            console.error('Failed to find users by email:', err);
+            throw new Error('Failed to find users by email');
+        }
+    }
     static async getUserByEmail(email: string) {
         try {
             return await Account.findOne({

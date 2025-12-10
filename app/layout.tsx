@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import ClientProviders from "./context/clientProviders";
-import ServiceWorkerRegister from "./components/ServiceWorkerRegister";
 import InstallPrompt from "./components/InstallPrompt";
 import OfflineHandler from "./components/offlineHandler";
 import "./globals.css";
@@ -40,7 +39,6 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ServiceWorkerRegister />
         <InstallPrompt />
         <OfflineHandler>
           <ClientProviders>

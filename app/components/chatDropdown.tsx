@@ -11,7 +11,7 @@ import DeleteConversationModal from "./deleteConversationModal";
 interface ChatDropdownProps {
     handleLeaveRoom: () => void;
     chat: Message[];
-    setChat: Dispatch<SetStateAction<Message[]>>;
+    setChat: (newChat: Message[]) => void;
     conversationId: string;
     participants: RefObject<ChatUser[] | null | undefined>;
     updateConversationsBar: (message: Message | null, mode?: string, cleanId?: string) => Promise<void>;

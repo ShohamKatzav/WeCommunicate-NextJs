@@ -10,7 +10,7 @@ interface ChatCreationProps {
     onClose: () => void;
     participants: RefObject<ChatUser[] | null | undefined>;
     conversationId: RefObject<string | null | undefined>;
-    setChat: Dispatch<SetStateAction<Message[]>>;
+    setChat: (newChat: Message[]) => void;
     conversationMode: string;
     setMobileSidebarOpen: Dispatch<SetStateAction<boolean>>;
 }

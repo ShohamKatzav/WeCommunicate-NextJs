@@ -6,7 +6,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { requestOTP, verifyOTP, resetPassword, createAccount } from '@/app/lib/OTPActions'
 
 interface OTPProcessProps {
-    mode: string;
+    mode: 'forgot' | 'sign-up';
 }
 
 const OTPProcess = ({ mode }: OTPProcessProps) => {

@@ -12,7 +12,7 @@ interface ChatHeaderProps {
     participants: React.RefObject<ChatUser[] | null | undefined>;
     handleLeaveRoom: () => Promise<void>;
     chat: Message[];
-    setChat: Dispatch<SetStateAction<Message[]>>;
+    setChat: (newChat: Message[]) => void;
     conversationId: string;
     updateConversationsBar: (message: Message | null, mode?: string, cleanId?: string) => Promise<void>;
 }

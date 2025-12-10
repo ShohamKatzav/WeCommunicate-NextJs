@@ -51,6 +51,28 @@ self.addEventListener('activate', event => {
     );
 });
 
+self.addEventListener('push', function (event) {
+    if (event.data) {
+        const data = event.data.json()
+        const options = {
+            body: data.body,
+            icon: data.icon || '/icon.png',
+            badge: data.icon || '/icon.png',
+            vibrate: [100, 50, 100],
+            data: {
+                dateOfArrival: Date.now(),
+                primaryKey: '2',
+            },
+        }
+        event.waitUntil(self.registration.showNotification(data.title, options))
+    }
+})
+
+self.addEventListener('notificationclick', function (event) {
+    event.notification.close()
+    event.waitUntil(clients.openWindow('https://wecommunicate-nextjs.onrender.com/chat'))
+})
+
 async function processQueue() {
     const queue = await getDeleteQueue();
     for (const item of queue) {
@@ -97,6 +119,12 @@ async function processQueue() {
 self.addEventListener('fetch', async event => {
     const req = event.request;
     const url = new URL(req.url);
+
+    // Do not catch my SW
+    if (url.pathname === '/service-worker.js') {
+        return;
+    }
+
     const isNavigation =
         req.mode === 'navigate' ||
         req.destination === 'document' ||
