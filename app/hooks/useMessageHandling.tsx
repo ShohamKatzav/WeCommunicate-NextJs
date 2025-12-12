@@ -4,6 +4,7 @@ import Message from '@/types/message';
 import MessageDTO from '@/types/messageDTO';
 import ChatUser from '@/types/chatUser';
 import { saveMessage, revalidateChatRoute } from '@/app/lib/chatActions';
+import { toast } from "sonner";
 
 interface UseMessageHandlingProps {
     socket: Socket | null;
@@ -118,14 +119,15 @@ export const useMessageHandling = ({
                 const result = await saveMessage(newTempMessage);
                 await handleServerSavedMessageResponse(result, tempId);
             } catch (error) {
-                alert("Could not complete the operation now. The message will be sent when the connection is restored.");
+                toast.info("Offline right now - I’ll send this message when you’re back online.");
             }
         }
     }, [socket, loadingSocket, participants, messageToSend, chatRef, setChat, setMessageToSend, handleServerSavedMessageResponse]);
 
+
     return {
         handleIncomingMessage,
         handleServerSavedMessageResponse,
-        handleSendMessage
+        handleSendMessage,
     };
 };

@@ -4,11 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { deleteMessage } from '@/app/lib/chatActions'
-import { useUser } from "../hooks/useUser";
-import { useSocket } from "../hooks/useSocket";
-import useIsMobile from '../hooks/useIsMobile';
+import { useUser } from "@/app/hooks/useUser";
+import { useSocket } from "@/app/hooks/useSocket";
+import useIsMobile from '@/app/hooks/useIsMobile';
 import { TiDeleteOutline } from "react-icons/ti";
 import { IoBan } from "react-icons/io5";
+import { TbClockQuestion } from "react-icons/tb";
+import { toast } from "sonner";
 import FullscreenMediaViewer from './fullscreenMediaViewer';
 import { AsShortName } from "../utils/stringFormat";
 
@@ -20,21 +22,20 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
 
   const { user } = useUser();
   const { socket } = useSocket();
+  const isMobile = useIsMobile();
 
-  const sender = message.sender === user?.email ? "You" : AsShortName(message.sender);
-  const dateToDisplay = new Date(message.date!).toLocaleString();
   const messageRef = useRef<HTMLDivElement | null>(null);
   const deleteButtonRef = useRef<HTMLButtonElement | null>(null);
   const [hover, setHover] = useState(false);
   const [showActions, setShowActions] = useState(false);
-  const isMobile = useIsMobile();
   const [isFullscreen, setIsFullscreen] = useState(false);
-
   const [deleted, setDeleted] = useState(
     message.status?.includes("revoked") ?? false
   );
 
-  const messageStyle = `self-start max-w-[80%] md:max-w-[60%] px-2 py-1 md:px-4 md:py-3 overflow-hidden 
+  const sender = message.sender === user?.email ? "You" : AsShortName(message.sender);
+  const dateToDisplay = new Date(message.date!).toLocaleString();
+  const messageStyle = `self-start max-w-[80%] md:max-w-[60%] px-3.5 py-2 md:px-4 md:py-3 overflow-hidden 
   ${message.sender === user?.email ? "bg-green-500 rounded-br-3xl justify-self-start"
       : "bg-gray-500 rounded-bl-3xl col-start-2 md:col-start-3 justify-self-end"
     } rounded-tl-3xl rounded-tr-xl text-white wrap-break-word mb-3 md:mb-6
@@ -42,31 +43,19 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
 
 
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      const swListener = (event: any) => {
-        if (event.data.type === 'MESSAGE_DELETED_QUEUED') {
-          if (event.data.id === message._id)
-            setDeleted(true);
-        }
-      };
-      navigator.serviceWorker.addEventListener('message', swListener);
-      return () => navigator.serviceWorker.removeEventListener('message', swListener);
-    }
-  }, []);
-
-  // React to prop changes
-  useEffect(() => {
     setDeleted(message.status?.includes("revoked") ?? false);
   }, [message.status]);
 
   const deleteMessageHandler = async () => {
     try {
       await deleteMessage(message._id!, "message");
-      setDeleted(true);
       socket?.emit("delete message", message);
     }
     catch {
-      alert("Could not complete the operation now. The message will be deleted when the connection is restored.");
+      toast.info("Could not complete the operation now. The message will be deleted when the connection is restored.");
+    }
+    finally {
+      setDeleted(true);
     }
   }
 
@@ -86,6 +75,8 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
       </div >
     )
   }
+
+  const isPending = !message._id?.match(/^[a-f0-9]{24}$/);
 
   return (
     <div className={message.sender === user?.email ? "flex" : ''}>
@@ -166,6 +157,9 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
         }
         <div className="text-xs md:text-sm text-gray-200 mt-1 text-right">
           {dateToDisplay}
+          {
+            isPending && <TbClockQuestion color="red" size={38} className="inline p-2" />
+          }
         </div>
       </div>
       <button onClick={deleteMessageHandler}

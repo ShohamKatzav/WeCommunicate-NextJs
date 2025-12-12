@@ -1,4 +1,4 @@
-import { Dispatch, RefObject, SetStateAction, useState, useRef, useEffect } from "react";
+import { RefObject, useState, useRef, useEffect } from "react";
 import { HiOutlineEllipsisHorizontalCircle } from "react-icons/hi2";
 import { RiHistoryLine, RiLogoutBoxRLine } from "react-icons/ri";
 import { MdDeleteForever } from "react-icons/md";
@@ -7,6 +7,7 @@ import Message from "@/types/message";
 import ChatUser from "@/types/chatUser";
 import { cleanHistory, deleteConversation } from "../lib/conversationActions";
 import DeleteConversationModal from "./deleteConversationModal";
+import { toast } from "sonner";
 
 interface ChatDropdownProps {
     handleLeaveRoom: () => void;
@@ -51,32 +52,18 @@ const ChatDropdown = ({
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [showDropdown]);
 
-    useEffect(() => {
-        if ('serviceWorker' in navigator) {
-            const swListener = async (event: any) => {
-                if (event.data.type === 'CLEAN_HISTORY_QUEUED') {
-                    setChat([]);
-                    updateConversationsBar(null, "Clean", conversationId);
-                    return;
-                }
-            };
-            navigator.serviceWorker.addEventListener('message', swListener);
-            return () =>
-                navigator.serviceWorker.removeEventListener('message', swListener);
-        }
-    }, []);
-
     const handleCleanHistory = async () => {
         if (chat.length === 0) return;
 
         try {
-            const response = await cleanHistory(conversationId, "cleanHistory");
-            if (response.success) {
+            const result = await cleanHistory(conversationId, "cleanHistory");
+            if (result.success) {
                 setChat([]);
                 updateConversationsBar(null, "Clean", conversationId);
             }
         } catch (error: any) {
-            alert("Could not complete the operation now. Conversation history will be cleared when the connection is restored.");
+            toast.info("Offline right now - I’ll clear your chat history when you’re back online.");
+
         }
         finally {
             setShowDropdown(false);
@@ -92,7 +79,7 @@ const ChatDropdown = ({
         try {
             await deleteConversation(conversationId, "conversation");
         } catch (error: any) {
-            alert("Could not complete the operation now. The conversation will be deleted when the connection is restored.");
+            toast.info("You’re offline. I’ll delete this conversation once the connection is restored.");
         } finally {
             setShowDeleteModal(false);
             setIsDeleting(false);

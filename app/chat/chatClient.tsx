@@ -92,6 +92,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
         chatRef
     });
 
+
     // Service worker sync
     useServiceWorkerSync({
         handleServerSavedMessageResponse,

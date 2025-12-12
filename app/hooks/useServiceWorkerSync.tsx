@@ -14,14 +14,10 @@ export const useServiceWorkerSync = ({
 
     const swListener = useCallback(async (event: any) => {
         if (!event.data) return;
-        if (event.data.type === 'CONVERSATION_DELETED_QUEUED') {
-
-            await setConversationsForBar(null, "Delete", event.data.id);
-            return;
-        }
         if (event.data.type === 'MESSAGE_SYNCED') {
             const { savedMessage, tempId } = event.data;
             await handleServerSavedMessageResponse(savedMessage, tempId);
+            return;
         }
     }, [handleServerSavedMessageResponse, setConversationsForBar]);
 

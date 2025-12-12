@@ -7,6 +7,7 @@ import Message from '@/types/message';
 import AccountRepository from '@/repositories/AccountRepository';
 import { IAccount } from '@/models/Account';
 import { IPushSubscription } from "@/models/PushSubscription";
+import { AsShortName } from "@/app/utils/stringFormat"
 
 webpush.setVapidDetails(
     `mailto:${env.SMTP_USER}`,
@@ -52,7 +53,8 @@ export async function sendNotification(message: Message) {
         let successCount = 0;
         const notificationPayload = {
             title: 'New Message from WeCommunicate',
-            body: message.sender + ": " + message.text,
+            body: message.text ? AsShortName(message.sender) + ": " + message.text :
+                AsShortName(message.sender) + " has sent you a file",
             icon: '/icon.png',
         };
         for (const sub of subscriptions) {

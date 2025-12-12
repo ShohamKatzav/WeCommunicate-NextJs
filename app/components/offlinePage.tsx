@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { toast } from "sonner";
 
 export default function OfflinePage() {
     const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -20,7 +21,7 @@ export default function OfflinePage() {
         if (navigator.onLine) {
             window.location.href = '/chat';
         } else {
-            alert("Still offline. Please check your connection.");
+            toast.error("Still offline. Please check your connection.");
         }
     };
 
@@ -29,8 +30,6 @@ export default function OfflinePage() {
     };
 
     return (
-        // 1. ADD z-index: z-50 to ensure it's on top of PWA install banners.
-        // 2. Add fixed positioning (or h-screen/min-h-screen) to ensure full coverage.
         <div className="min-h-screen w-full bg-gradient-to-br from-gray-900 to-slate-900 text-gray-50 flex flex-col items-center justify-center text-center px-6 relative z-50">
             {/* Status Icon */}
             <div className={`w-24 h-24 ${isOnline ? 'animate-pulse' : 'animate-bounce'}`}>
@@ -96,17 +95,15 @@ export default function OfflinePage() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 mt-8 w-full max-w-sm"> {/* Added w-full max-w-sm for better button sizing */}
+            <div className="flex flex-col sm:flex-row gap-3 mt-8 w-full max-w-sm">
                 <button
                     onClick={handleRetry}
-                    // Reduced padding (p-2/py-2/px-4) and added w-full for mobile
                     className="flex-1 w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all duration-200 text-base"
                 >
                     🔄 Retry connection
                 </button>
                 <button
                     onClick={handleGoBack}
-                    // Reduced padding (p-2/py-2/px-4) and added w-full for mobile
                     className="flex-1 w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-100 font-semibold rounded-xl border border-gray-600 transition-all duration-200 text-base"
                 >
                     ❌ Go back

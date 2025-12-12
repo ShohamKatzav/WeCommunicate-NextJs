@@ -1,4 +1,4 @@
-import { removeFromQueue, addToQueue, getDeleteQueue } from '/indexdb-queue.js';
+import { removeFromQueue, addToQueue, getDeleteQueue, mapQueuedId } from '/indexdb-queue.js';
 
 const CACHE_NAME = 'my-pwa-cache-v6';
 const STATIC_ASSET_CACHE = 'next-static-assets-v6';
@@ -74,8 +74,12 @@ self.addEventListener('notificationclick', function (event) {
 })
 
 async function processQueue() {
-    const queue = await getDeleteQueue();
-    for (const item of queue) {
+    let queue = await getDeleteQueue();
+    let i = 0;
+
+    while (i < queue.length) {
+        const item = queue[i];
+
         try {
             const endpoint = item.operation === "deleteConversation" ? "conversation" :
                 item.operation === "cleanHistory" ? "cleanhistory" : "chat";
@@ -88,25 +92,39 @@ async function processQueue() {
             });
 
             if (response.ok) {
-                await removeFromQueue(item.id);
-
+                // Handle saveMessage specially - update IDs BEFORE removing from queue
                 if (item.operation === "saveMessage") {
                     const savedDocument = await response.json();
                     const tempId = item.data.messageBody._id;
+                    const realId = savedDocument._id;
+                    const isDeleteQueued = await mapQueuedId('deleteMessage', tempId, realId);
+                    let messageStatus = 'sent';
+                    if (isDeleteQueued) {
+                        messageStatus = 'revoked';
+                    }
+
+                    queue = await getDeleteQueue();
 
                     self.clients.matchAll({ includeUncontrolled: true }).then(clients => {
                         clients.forEach(client => {
                             client.postMessage({
                                 type: 'MESSAGE_SYNCED',
                                 tempId: tempId,
-                                savedMessage: savedDocument
+                                savedMessage: {
+                                    ...savedDocument,
+                                    status: messageStatus
+                                },
                             });
                         });
                     });
                 }
 
+                await removeFromQueue(item.id);
+                queue = await getDeleteQueue();
+
             } else {
                 console.error(`Sync failed for ${item.operation} with status ${response.status}:`, item.id);
+                i++;
             }
         } catch (error) {
             console.log('Sync failed, will retry later:', error);
@@ -188,36 +206,25 @@ self.addEventListener('fetch', async event => {
                             typeof body[0] === 'string' &&
                             body[0].match(/^[a-f0-9]{24}$/);
 
-                        const isDeleteMessage = hasObjectIdPayload && body.length === 2 && body[1] === 'message';
+                        const hastempIdPayload = Array.isArray(body) &&
+                            body.length > 0 &&
+                            typeof body[0] === 'string' &&
+                            body[0].match(/^\d{13,}$/);
+
+                        const isDeleteMessage = (hasObjectIdPayload || hastempIdPayload) && body.length === 2 && body[1] === 'message';
                         const isDeleteConversation = hasObjectIdPayload && body.length === 2 && body[1] === 'conversation';
                         const isCleanHistory = hasObjectIdPayload && body.length === 2 && body[1] === 'cleanHistory';
                         const isSaveMessage =
                             Array.isArray(body) &&
                             typeof body[0]?._id === "string" &&
-                            /^\d+$/.test(body[0]._id) &&  // numeric tempId
+                            /^\d{13,}$/.test(body[0]._id) &&  // numeric tempId
                             Object.keys(body[0]).length === 7;
 
                         if (isDeleteMessage) {
                             await addToQueue('deleteMessage', { messageId: body[0] });
-                            self.clients.matchAll({ includeUncontrolled: true }).then(clients => {
-                                clients.forEach(client => {
-                                    client.postMessage({
-                                        type: 'MESSAGE_DELETED_QUEUED',
-                                        id: body[0]
-                                    });
-                                });
-                            });
                         }
                         else if (isDeleteConversation) {
                             await addToQueue('deleteConversation', { conversationId: body[0] });
-                            self.clients.matchAll({ includeUncontrolled: true }).then(clients => {
-                                clients.forEach(client => {
-                                    client.postMessage({
-                                        type: 'CONVERSATION_DELETED_QUEUED',
-                                        id: body[0]
-                                    });
-                                });
-                            });
                         }
                         else if (isSaveMessage) {
                             const messageToSave = { ...body[0], date: new Date().toISOString(), file: body[0].file === "$undefined" ? undefined : body[0].file }
@@ -226,14 +233,6 @@ self.addEventListener('fetch', async event => {
 
                         else if (isCleanHistory) {
                             await addToQueue('cleanHistory', { conversationId: body[0] });
-                            self.clients.matchAll({ includeUncontrolled: true }).then(clients => {
-                                clients.forEach(client => {
-                                    client.postMessage({
-                                        type: 'CLEAN_HISTORY_QUEUED',
-                                        id: body[0]
-                                    });
-                                });
-                            });
                         }
 
                         return new Response(JSON.stringify({
