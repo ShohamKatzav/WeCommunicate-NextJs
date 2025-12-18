@@ -17,7 +17,7 @@ export default defineConfig({
   use: {
     baseURL: 'https://wecommunicate-nextjs.onrender.com/',
     trace: 'on-first-retry',
-    headless: false,
+    headless: process.env.CI ? true : false,
     screenshot: 'only-on-failure',
   },
 
