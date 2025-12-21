@@ -1,11 +1,12 @@
 import { Locator, Page } from "@playwright/test";
+import General from "./General";
 
 interface LoginData {
     username: string;
     password: string;
 }
 
-export default class LoginPage {
+export default class LoginPage extends General {
 
     page: Page;
     emailInput: Locator;
@@ -16,6 +17,7 @@ export default class LoginPage {
     generalError: Locator;
 
     constructor(page: Page) {
+        super(page);
         this.page = page;
         this.emailInput = page.locator('#email');
         this.passwordInput = page.locator('#password');

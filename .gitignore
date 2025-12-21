@@ -72,3 +72,4 @@ certificates
 **/blob-report/
 **/playwright/.cache/
 **/playwright/.auth/
+**/state.json

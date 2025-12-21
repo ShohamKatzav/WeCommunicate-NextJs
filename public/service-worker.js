@@ -295,17 +295,28 @@ self.addEventListener('message', async event => {
     if (event.data.type === 'SYNC_QUEUE') {
         await processQueue();
     }
+
     if (event.data?.type === 'CLEAR_CACHE') {
-        event.waitUntil(
-            caches.keys().then(names => {
-                return Promise.all(
-                    names
-                        .filter(n => n !== CACHE_NAME)
-                        .map(n => {
-                            return caches.delete(n);
-                        })
-                );
-            })
-        );
+        const port = event.ports[0];
+        try {
+            await event.waitUntil(
+                caches.keys().then(names => {
+                    return Promise.all(
+                        names
+                            .filter(n => n !== CACHE_NAME)
+                            .map(n => caches.delete(n))
+                    );
+                })
+            );
+
+            if (port) {
+                port.postMessage({ success: true });
+            }
+        } catch (error) {
+            console.error('Cache clear error:', error);
+            if (port) {
+                port.postMessage({ success: false, error: error.message });
+            }
+        }
     }
 });

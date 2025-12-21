@@ -1,10 +1,14 @@
 import { test, expect } from '@playwright/test';
 import LoginPage from '../page-objects/LoginPage';
+import { customTest } from '../fixtures/test-base';
 import dataSet from "../Data/usersTestData.json" with { type: "json" };
+
+test.use({ storageState: { cookies: [], origins: [] } });
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 test.describe('Login Functionality', () => {
     let login: LoginPage;
-    const firstUser = dataSet[0];
 
     test.beforeEach(async ({ page }) => {
         login = new LoginPage(page);
@@ -19,20 +23,20 @@ test.describe('Login Functionality', () => {
         });
     }
 
-    test('@Login @Negative Missing credentials', async () => {
+    customTest('@Login @Negative Missing credentials', async ({ loginData }) => {
         await login.loginButton.click();
         expect(login.emailInputError).toContainText('Please enter your email');
         expect(login.passwordInputError).toContainText('Please enter a password');
-        await login.emailInput.fill(firstUser.username);
+        await login.emailInput.fill(loginData.username);
         await login.loginButton.click();
         expect(login.passwordInputError).toContainText('Please enter a password');
         await login.emailInput.fill('');
-        await login.passwordInput.fill(firstUser.password);
+        await login.passwordInput.fill(loginData.password);
         await login.loginButton.click();
         expect(login.emailInputError).toContainText('Please enter your email');
     });
 
-    test('@Login @Negative Invalid format and credentials', async () => {
+    customTest('@Login @Negative Invalid format and credentials', async ({ loginData }) => {
         await login.emailInput.fill('shoham');
         await login.loginButton.click();
         let validationError = await login.getEmailValidationError();
@@ -47,16 +51,16 @@ test.describe('Login Functionality', () => {
         await login.loginButton.click();
         await expect(login.emailInputError).toContainText('Please enter a valid email');
 
-        await login.emailInput.fill(firstUser.username);
+        await login.emailInput.fill(loginData.username);
         await login.passwordInput.fill('wrongPassword123');
         await login.loginButton.click();
         await expect(login.generalError).toContainText('Wrong email or password');
     });
 
-    test('@Login @EdgeCase Offline mode', async ({ context }) => {
+    customTest('@Login @EdgeCase Offline mode', async ({ context, loginData }) => {
         await context.setOffline(true);
-        await login.emailInput.fill(firstUser.username);
-        await login.passwordInput.fill(firstUser.password);
+        await login.emailInput.fill(loginData.username);
+        await login.passwordInput.fill(loginData.password);
         await login.loginButton.click();
         await expect(login.generalError).toContainText('Unable to connect to the server.');
     });

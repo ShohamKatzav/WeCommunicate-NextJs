@@ -1,7 +1,9 @@
 "use client"
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from 'next/navigation';
 import { FaBars, FaTimes } from "react-icons/fa";
+import { deleteUserCoockie } from '../lib/cookieActions';
 import { useUser } from "../hooks/useUser";
 import { useSocket } from "../hooks/useSocket";
 import './bars.css';
@@ -12,6 +14,7 @@ const Navbar = () => {
   const [nav, setNav] = useState(false);
   const { user, updateUser } = useUser();
   const { socket } = useSocket();
+  const router = useRouter();
 
   const toggleNav = () => {
     setNav(!nav);
@@ -26,12 +29,31 @@ const Navbar = () => {
     try {
       updateUser(null);
       socket?.disconnect();
+      await deleteUserCoockie();
 
       if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({
-          type: 'CLEAR_CACHE'
+
+        await new Promise<void>((resolve, reject) => {
+          const messageChannel = new MessageChannel();
+          const timeout = setTimeout(() => {
+            console.log('⚠️ TIMEOUT: No response from service worker');
+            messageChannel.port1.close();
+            resolve();
+          }, 3000);
+
+          messageChannel.port1.onmessage = (event) => {
+            clearTimeout(timeout);
+            messageChannel.port1.close();
+            resolve();
+          };
+
+          navigator.serviceWorker.controller!.postMessage(
+            { type: 'CLEAR_CACHE' },
+            [messageChannel.port2]
+          );
         });
       }
+      await router.push('/login');
     } catch (error) {
       console.error('Logout error:', error);
     }
