@@ -40,7 +40,10 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
     const [messageToPush, setMessageToPush] = useState<Message>({ text: '' });
     const [lastReceivedMessage, setLastReceivedMessage] = useState<Message>();
 
-    // Chat room management
+    const { conversationsForBar, updateConversationsBar } = useConversationsManager({
+        initialConversations: initialConversationsWithMessages,
+    });
+
     const {
         chat,
         setChat,
@@ -55,14 +58,9 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
         socket,
         userEmail: user?.email,
         initialConversations: initialConversationsWithMessages,
+        conversationsForBar: conversationsForBar,
         setMobileChatsSidebarOpen,
         setMobileUsersSidebarOpen
-    });
-
-    // Conversations management
-    const { conversationsForBar, updateConversationsBar } = useConversationsManager({
-        initialConversations: initialConversationsWithMessages,
-        currentConversationId
     });
 
     // Message handling
@@ -141,7 +139,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
     }
 
     return (
-        <div className="h-[85dvh] flex bg-linear-to-br bg-white dark:from-gray-900 dark:to-gray-800">
+        <div className="h-[85dvh] md:h-[calc(100dvh-80px)] md:mb-20 flex bg-linear-to-br bg-white dark:from-gray-900 dark:to-gray-800">
             <PushNotificationManager
                 message={messageToPush}
                 activeSocketUsers={chatListActiveUsers}
@@ -175,7 +173,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
                 />
 
                 {participants.current && (
-                    <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-3 md:p-4 shadow-lg z-15 mb-4">
+                    <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-3 md:p-4 md:pb-24 shadow-lg z-15 mb-4">
                         <ChatInputBar
                             message={messageToSend}
                             setMessage={setMessageToSend}

@@ -15,6 +15,9 @@ export default defineConfig({
   reporter: [['html', { outputFolder: 'playwright-report' }]],
 
   use: {
+    extraHTTPHeaders: {
+      'x-bypass-ratelimit': process.env.TEST_BYPASS_KEY || '',
+    },
     baseURL: process.env.CI ? 'https://wecommunicate-nextjs.onrender.com/' : 'https://localhost:3000/',
     trace: 'on-first-retry',
     headless: process.env.CI ? true : false,
@@ -27,13 +30,33 @@ export default defineConfig({
       testMatch: 'utils/global.setup.ts',
     },
     {
-      name: 'chromium',
-      testMatch: 'e2e/**/*.spec.ts',
+      name: 'parallel',
+      testIgnore: /(chat|presence)-.*\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'tests/state.json',
       },
       dependencies: ['setup'],
+    },
+    {
+      name: 'presence-serial',
+      testMatch: /(presence)-.*\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/state.json',
+      },
+      dependencies: ['setup', 'parallel'],
+      workers: 1,
+    },
+    {
+      name: 'chat-serial',
+      testMatch: /(chat)-.*\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/state.json',
+      },
+      dependencies: ['setup', 'parallel', 'presence-serial'],
+      workers: 1,
     },
   ],
 });

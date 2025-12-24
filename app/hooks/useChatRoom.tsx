@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Socket } from 'socket.io-client';
 import Message from '@/types/message';
 import ChatUser from '@/types/chatUser';
@@ -8,11 +8,19 @@ interface UseChatRoomProps {
     socket: Socket | null;
     userEmail?: string;
     initialConversations: Conversation[];
+    conversationsForBar: Conversation[]; // Add this
     setMobileChatsSidebarOpen: (value: boolean) => void;
     setMobileUsersSidebarOpen: (value: boolean) => void;
 }
 
-export const useChatRoom = ({ socket, userEmail, initialConversations, setMobileChatsSidebarOpen, setMobileUsersSidebarOpen }: UseChatRoomProps) => {
+export const useChatRoom = ({
+    socket,
+    userEmail,
+    initialConversations,
+    conversationsForBar, // Add this
+    setMobileChatsSidebarOpen,
+    setMobileUsersSidebarOpen
+}: UseChatRoomProps) => {
     const [chat, setChat] = useState<Message[]>([]);
     const [messageToSend, setMessageToSend] = useState<Message>({ text: '' });
 
@@ -48,8 +56,11 @@ export const useChatRoom = ({ socket, userEmail, initialConversations, setMobile
         if (currentConversationId.current) {
             socket?.emit('leave room', { conversationId: currentConversationId.current });
         }
+        let conversation = findConversationByExactParticipants(conversationsForBar, roomParticipants);
+        if (!conversation) {
+            conversation = findConversationByExactParticipants(initialConversations, roomParticipants);
+        }
 
-        const conversation = findConversationByExactParticipants(initialConversations, roomParticipants);
         currentConversationId.current = conversation?._id ? conversation._id : "";
 
         socket?.emit('join room', { conversationId: currentConversationId.current });
@@ -70,7 +81,7 @@ export const useChatRoom = ({ socket, userEmail, initialConversations, setMobile
 
         setMobileChatsSidebarOpen(false);
         setMobileUsersSidebarOpen(false);
-    }, [socket, findConversationByExactParticipants, initialConversations, updateChatRef, setMobileChatsSidebarOpen, setMobileUsersSidebarOpen]);
+    }, [socket, findConversationByExactParticipants, initialConversations, conversationsForBar, updateChatRef, setMobileChatsSidebarOpen, setMobileUsersSidebarOpen]);
 
     const handleLeaveRoom = useCallback(async () => {
         socket?.emit('leave room', { conversationId: currentConversationId.current });

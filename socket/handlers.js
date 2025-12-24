@@ -7,9 +7,8 @@ export default async function handleSocketConnection(io, socket) {
     const conversationId = socket.handshake.headers?.conversationid;
 
     try {
-        RedisService.getInstance();
         await RedisService.addUserSocket(email, socket.id);
-        const allUsers = await RedisService.getUserSockets();
+        const allUsers = await RedisService.getOnlineUsers();
         socket.on('update connected users', () => handleUpdateConnectedUsers(io));
         io.emit('update connected users', allUsers);
 
@@ -26,7 +25,7 @@ export default async function handleSocketConnection(io, socket) {
         socket.on('get locations', () => handleGetLocation(io, socket));
         socket.on('save location', (location) => handleSaveLocation(io, socket, location));
         socket.on('leave room', (body) => handleLeaveRoom(body, socket));
-        socket.on('disconnect', () => handleDisconnect(io, email));
+        socket.on('disconnect', () => handleDisconnect(io, email, socket.id));
 
     }
     catch (error) {
@@ -41,7 +40,7 @@ async function handleJoinRoom(body, socket) {
 }
 
 async function handleUpdateConnectedUsers(io) {
-    const fresh = await RedisService.getUserSockets();
+    const fresh = await RedisService.getOnlineUsers();
     io.emit('update connected users', fresh);
 }
 
@@ -54,7 +53,7 @@ async function handlePublishMessage(io, socket, message) {
     if (conversation) {
         for (const member of conversation.members) {
             if (member.email.toUpperCase() === message.sender.toUpperCase()) continue;
-            const memberSocketId = await RedisService.getUserSocketByEmail(member.email);
+            const memberSocketId = await RedisService.getUserSocketsByEmail(member.email);
             const roomSockets = await io.in(room).allSockets();
             const isInRoom = memberSocketId && roomSockets.has(memberSocketId);
             if (!isInRoom) {
@@ -77,7 +76,7 @@ async function handleDeleteMessage(io, message) {
     const conversation = await Conversation.findById(message?.conversation).populate('members', 'email');
     if (conversation) {
         for (const member of conversation.members) {
-            const memberSocketId = await RedisService.getUserSocketByEmail(member.email);
+            const memberSocketId = await RedisService.getUserSocketsByEmail(member.email);
             const roomSockets = await io.in(room).allSockets();
             const isInRoom = memberSocketId && roomSockets.has(memberSocketId);
             if (!isInRoom) {
@@ -113,7 +112,7 @@ async function handleLeaveRoom(body, socket) {
     socket.leave(room);
 }
 
-async function handleDisconnect(io, email) {
-    await RedisService.deleteUserSocket(email);
+async function handleDisconnect(io, email, socketId) {
+    await RedisService.removeUserSocket(email, socketId);
     await handleUpdateConnectedUsers(io);
 }

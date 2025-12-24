@@ -57,7 +57,6 @@ export async function requestOTP(email: string, mode: string = 'sign-up') {
         const newOTP = generateOTP();
         const expiresAt = Date.now() + 10 * 60 * 1000;
 
-        RedisService.getInstance();
         await RedisService.addOTP(email, { OTP: newOTP, expiresAt });
 
         await sendEmailOTP(email, newOTP, mode);

@@ -10,7 +10,6 @@ export default async function authMiddleware(socket, next) {
         token = socket.handshake.auth.token.toString();
     }
     else {
-        RedisService.getInstance();
         await RedisService.deleteUserSocket(email);
         socket.emit("unauthorized");
         socket.disconnect(true);

@@ -5,7 +5,7 @@ import { getConversationMembers } from '@/app/lib/chatActions';
 
 interface UseConversationsManagerProps {
     initialConversations: Conversation[];
-    currentConversationId: React.RefObject<string>;
+    currentConversationId?: React.RefObject<string>;
 }
 
 export const useConversationsManager = ({
@@ -37,7 +37,7 @@ export const useConversationsManager = ({
 
         if (mode === "Delete") {
             setConversationsForBar(prev => {
-                if (!currentConversationId.current) return prev;
+                if (!currentConversationId?.current) return prev;
                 return prev.filter(
                     c => c._id?.toUpperCase() !== currentConversationId.current.toUpperCase()
                 );

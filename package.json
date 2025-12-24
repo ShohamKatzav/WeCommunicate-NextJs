@@ -7,9 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "playwright test -c tests/playwright.config.ts",
-    "test-ui": "playwright test --ui -c tests/playwright.config.ts",
-    "test-debug": "playwright test --debug -c tests/playwright.config.ts"
+    "test": "cross-env SKIP_RATE_LIMIT=true playwright test -c tests/playwright.config.ts",
+    "test-ui": "cross-env SKIP_RATE_LIMIT=true playwright test --ui -c tests/playwright.config.ts",
+    "test-debug": "cross-env SKIP_RATE_LIMIT=true playwright test --debug -c tests/playwright.config.ts"
   },
   "type": "module",
   "dependencies": {
@@ -54,6 +54,7 @@
     "@types/ws": "^8.18.1",
     "autoprefixer": "^10.4.22",
     "baseline-browser-mapping": "^2.9.4",
+    "cross-env": "^10.1.0",
     "eslint": "^9.39.1",
     "eslint-config-next": "16.0.0",
     "postcss": "^8.5.6",

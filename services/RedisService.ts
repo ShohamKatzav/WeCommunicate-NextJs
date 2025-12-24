@@ -1,215 +1,104 @@
 import { Redis } from '@upstash/redis';
-import OTP from '@/types/OTP'
+import OTP from '@/types/OTP';
 
 export default class RedisService {
     private static instance: Redis | null = null;
 
-    private static normalizeEmail(email?: string | null): string {
-        if (!email || typeof email !== 'string') {
-            console.warn('Invalid email provided to normalizeEmail');
-            return "";
+    private static redis(): Redis {
+        if (!this.instance) {
+            this.instance = Redis.fromEnv();
         }
+        return this.instance;
+    }
+
+    private static normalizeEmail(email?: string | null): string {
+        if (!email || typeof email !== 'string') return '';
         return email.trim().toLowerCase();
     }
-
-    static getInstance(): Redis {
-        if (!RedisService.instance) {
-            RedisService.instance = Redis.fromEnv();
-        }
-        return RedisService.instance;
-    }
-
-    static async getUserSocketByEmail(email: string): Promise<string | null> {
-        if (!email || typeof email !== 'string') {
-            console.warn('Invalid email provided to getUserSocketByEmail');
-            return null;
-        }
-
-        if (!RedisService.instance) {
-            throw new Error('Redis instance not initialized');
-        }
-        const normalizedEmail = RedisService.normalizeEmail(email);
-        try {
-            const socketId = await RedisService.instance.hget('user_sockets', normalizedEmail!) as string;
-            return socketId || null;
-        } catch (error) {
-            console.error(`Error getting socket for email ${email}:`, error);
-            return null;
-        }
+    private static socketKey(email: string) {
+        return `user_sockets:${this.normalizeEmail(email)}`;
     }
 
     static async addUserSocket(email: string, socketId: string) {
-        if (!email || typeof email !== 'string' || !socketId || typeof socketId !== 'string') {
-            console.warn('Invalid email provided to addUserSocket');
-            return null;
-        }
-        if (!RedisService.instance) {
-            throw new Error('Redis instance not initialized');
-        }
-        try {
-            const normalizedEmail: string = RedisService.normalizeEmail(email);
-            await RedisService.instance.hset("user_sockets", { [normalizedEmail]: socketId });
-        } catch (error) {
-            console.error('Error adding user socket:', error);
-            return null;
-        }
+        if (!email || !socketId) return;
+        await this.redis().sadd(this.socketKey(email), socketId);
     }
 
-    static async deleteUserSocket(email: string) {
-        if (!email || typeof email !== 'string') {
-            console.warn('Invalid email provided to deleteUserSocket');
-            return null;
-        }
-        if (!RedisService.instance) {
-            throw new Error('Redis instance not initialized');
-        }
-        try {
-            const normalizedEmail: string = RedisService.normalizeEmail(email);
-            await RedisService.instance.hdel("user_sockets", normalizedEmail);
-        } catch (error) {
-            console.error('Error deleting user socket:', error);
-            return null;
-        }
+    static async removeUserSocket(email: string, socketId: string) {
+        if (!email || !socketId) return;
+        await this.redis().srem(this.socketKey(email), socketId);
     }
 
-    static async getUserSockets() {
-        if (!RedisService.instance) {
-            throw new Error('Redis instance not initialized');
-        }
-        try {
-            const allUsersRaw = await RedisService.instance.hgetall("user_sockets");
-            if (allUsersRaw) {
-                // Convert Redis hash → array of ChatUser-like objects
-                const allUsers = Object.entries(allUsersRaw).map(([email, socketId]) => ({
-                    email,
-                    socketId,
-                }));
-                return allUsers;
+    static async getUserSocketsByEmail(email: string): Promise<string[]> {
+        if (!email) return [];
+        return await this.redis().smembers(this.socketKey(email));
+    }
+
+    static async getUserPrimarySocket(email: string): Promise<string | null> {
+        const sockets = await this.getUserSocketsByEmail(email);
+        return sockets.length ? sockets[0] : null;
+    }
+
+    static async getOnlineUsers(): Promise<{ email: string; sockets: string[] }[]> {
+        const keys = await this.redis().keys('user_sockets:*');
+        const users: { email: string; sockets: string[] }[] = [];
+
+        for (const key of keys) {
+            const sockets = await this.redis().smembers(key);
+            if (sockets.length > 0) {
+                users.push({
+                    email: key.replace('user_sockets:', ''),
+                    sockets
+                });
             }
-        } catch (error) {
-            console.error('Error getting users socket:', error);
-            return null;
         }
+        return users;
     }
 
-    // increment notification count for a user/conversation (safe for Upstash)
-    static async incrNotification(recieverEmail: string, conversationId: string, by = 1) {
 
-        if (!recieverEmail || typeof recieverEmail !== 'string' || !conversationId || typeof conversationId !== 'string') {
-            console.warn('Invalid input provided to incrNotification');
-            return null;
-        }
-        if (!RedisService.instance) {
-            throw new Error('Redis instance not initialized');
-        }
-        const norm = this.normalizeEmail(recieverEmail);
-        if (!norm || !conversationId) return 0;
-        const key = `notifications:${norm}`;
-
-        try {
-            const next = await RedisService.instance.hincrby(key, conversationId, by);
-            return next;
-        } catch (error) {
-            console.error('Error incrNotification:', error);
-            return null;
-        }
-    }
-    // get all notifications for a user -> returns { conversationId: count, ... }
-    static async getNotifications(recieverEmail: string): Promise<Record<string, number> | null> {
-        if (!recieverEmail || typeof recieverEmail !== 'string') {
-            console.warn('Invalid input provided to getNotifications');
-            return null;
-        }
-        if (!RedisService.instance) {
-            throw new Error('Redis instance not initialized');
-        }
-        const norm = this.normalizeEmail(recieverEmail);
-        const key = `notifications:${norm}`;
-        try {
-            const data = await RedisService.instance.hgetall(key) || {};
-            const out: Record<string, number> = {};
-            for (const [field, val] of Object.entries(data)) {
-                out[field] = Number(val);
-            }
-            return out;
-        } catch (error) {
-            console.error('Error getNotifications:', error);
-            return null;
-        }
+    private static notificationKey(email: string) {
+        return `notifications:${this.normalizeEmail(email)}`;
     }
 
-    // clear one conversation notification for a user
-    static async clearNotification(recieverEmail: string, conversationId: string) {
-        if (!recieverEmail || typeof recieverEmail !== 'string' || !conversationId || typeof conversationId !== 'string') {
-            console.warn('Invalid input provided to incrNotification');
-            return null;
+    static async incrNotification(email: string, conversationId: string, by = 1) {
+        if (!email || !conversationId) return;
+        return await this.redis().hincrby(
+            this.notificationKey(email),
+            conversationId,
+            by
+        );
+    }
+
+    static async getNotifications(email: string): Promise<Record<string, number>> {
+        if (!email) return {};
+        const raw = await this.redis().hgetall(this.notificationKey(email));
+        const out: Record<string, number> = {};
+        for (const [k, v] of Object.entries(raw ?? {})) {
+            out[k] = Number(v);
         }
-        if (!RedisService.instance) {
-            throw new Error('Redis instance not initialized');
-        }
-        const norm = this.normalizeEmail(recieverEmail);
-        const key = `notifications:${norm}`;
-        try {
-            await RedisService.instance.hdel(key, conversationId);
-        } catch (error) {
-            console.error('Error clearNotification:', error);
-            return null;
-        }
+        return out;
+    }
+
+    static async clearNotification(email: string, conversationId: string) {
+        if (!email || !conversationId) return;
+        await this.redis().hdel(this.notificationKey(email), conversationId);
     }
 
 
     static async getOTPByEmail(email: string): Promise<OTP | null> {
-        if (!email || typeof email !== 'string') {
-            console.warn('Invalid email provided to getOTPByEmail');
-            return null;
-        }
-
-        if (!RedisService.instance) {
-            throw new Error('Redis instance not initialized');
-        }
-        const normalizedEmail = RedisService.normalizeEmail(email);
-        try {
-            const otp = await RedisService.instance.hget('otp', normalizedEmail!) as OTP;
-            return otp || null;
-        } catch (error) {
-            console.error(`Error getting OTP for email ${email}:`, error);
-            return null;
-        }
+        if (!email) return null;
+        return await this.redis().hget('otp', this.normalizeEmail(email)) as OTP;
     }
 
     static async addOTP(email: string, otp: OTP) {
-        if (!email || typeof email !== 'string' || !otp.OTP || typeof otp.OTP !== 'string'
-            || !otp.expiresAt || typeof otp.expiresAt !== 'number') {
-            console.warn('Invalid paramaeters provided to addOTP');
-            return null;
-        }
-        if (!RedisService.instance) {
-            throw new Error('Redis instance not initialized');
-        }
-        try {
-            const normalizedEmail: string = RedisService.normalizeEmail(email);
-            await RedisService.instance.hset("otp", { [normalizedEmail]: otp });
-        } catch (error) {
-            console.error('Error adding OTP:', error);
-            return null;
-        }
+        if (!email || !otp?.OTP || !otp?.expiresAt) return;
+        await this.redis().hset('otp', {
+            [this.normalizeEmail(email)]: otp
+        });
     }
 
     static async deleteOTP(email: string) {
-        if (!email || typeof email !== 'string') {
-            console.warn('Invalid email provided to deleteOTP');
-            return null;
-        }
-        if (!RedisService.instance) {
-            throw new Error('Redis instance not initialized');
-        }
-        try {
-            const normalizedEmail: string = RedisService.normalizeEmail(email);
-            await RedisService.instance.hdel("otp", normalizedEmail);
-        } catch (error) {
-            console.error('Error deleting OTP:', error);
-            return null;
-        }
+        if (!email) return;
+        await this.redis().hdel('otp', this.normalizeEmail(email));
     }
-
 }

@@ -20,11 +20,15 @@ jobs:
     - name: Install dependencies
       run: pnpm install --frozen-lockfile
     - name: Install Playwright Browsers
-      run: npx playwright install --with-deps
+      run: pnpm exec playwright install --with-deps
       working-directory: ./tests
     - name: Run Playwright tests
-      run: npx playwright test
+      run: pnpm test
       working-directory: ./tests
+      env:
+        SKIP_RATE_LIMIT: true
+        TEST_BYPASS_KEY: ${{ secrets.TEST_BYPASS_KEY }}
+        NODE_ENV: test
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:

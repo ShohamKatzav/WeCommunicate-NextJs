@@ -1,12 +1,12 @@
-import { Locator, Page } from "@playwright/test";
-import General from "./General";
+import { Browser, Locator, Page } from "@playwright/test";
+import POManager from "./POManager";
 
 interface LoginData {
     username: string;
     password: string;
 }
 
-export default class LoginPage extends General {
+export default class LoginPage {
 
     page: Page;
     emailInput: Locator;
@@ -15,9 +15,9 @@ export default class LoginPage extends General {
     passwordInputError: Locator;
     loginButton: Locator;
     generalError: Locator;
+    loginHeader: Locator;
 
     constructor(page: Page) {
-        super(page);
         this.page = page;
         this.emailInput = page.locator('#email');
         this.passwordInput = page.locator('#password');
@@ -25,6 +25,7 @@ export default class LoginPage extends General {
         this.passwordInputError = page.locator('#password-error');
         this.loginButton = page.getByRole('button', { name: 'Log in' });
         this.generalError = page.locator('div.border-red-200');
+        this.loginHeader = page.locator('h1:has-text("Login to WeCommunicate")');
     }
 
     async navigateToLoginPage(): Promise<void> {
@@ -34,15 +35,27 @@ export default class LoginPage extends General {
     async loginByData(data: LoginData): Promise<void> {
         await this.emailInput?.fill(data.username);
         await this.passwordInput?.fill(data.password);
-        await Promise.all([
-            this.page?.waitForURL('**/chat'),
-            this.loginButton?.click()
-        ]);
+        await this.loginButton?.click();
+        await this.page.waitForURL('**/chat');
     }
 
     async getEmailValidationError(): Promise<string> {
         return await this.emailInput?.evaluate((input: HTMLInputElement) => {
             return input.validationMessage;
         });
+    }
+
+    async getGreeting(shortUsername: string): Promise<Locator> {
+        return this.page.locator(`text=Welcome ${shortUsername}`)
+    }
+
+    async loginAnotherUser(browser: Browser, loginData: LoginData): Promise<POManager> {
+        const context = await browser.newContext();
+        await context.clearCookies();
+        const newPage = await context.newPage();
+        const pOManager = new POManager(newPage);
+        await pOManager.getLoginPage().navigateToLoginPage();
+        await pOManager.getLoginPage().loginByData(loginData);
+        return pOManager;
     }
 }

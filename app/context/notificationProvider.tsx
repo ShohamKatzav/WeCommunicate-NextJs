@@ -25,10 +25,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
         socket.on("notifications update", notificationsUpdate);
         socket.on("connect", FetchNotifications);
 
-        // initial fetch
-        if (socket.connected) {
-            FetchNotifications();
-        }
+        FetchNotifications();
 
         return () => {
             socket.off("connect", FetchNotifications);

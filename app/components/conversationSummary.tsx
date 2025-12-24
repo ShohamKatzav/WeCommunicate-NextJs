@@ -102,7 +102,9 @@ const ConversationSummary = ({ conversation, getLastMessages }: ConversationConv
                         </div>
                         <div className="col-span-1 justify-self-end">
                             {newMessageNotification[conversation._id!] > 0 && (
-                                <div className="w-5 h-5 flex items-center justify-center text-white bg-red-600 rounded-full">
+                                <div
+                                    id={`notificationCount-${conversation._id}`}
+                                    className="w-5 h-5 flex items-center justify-center text-white bg-red-600 rounded-full">
                                     {newMessageNotification[conversation._id!]}
                                 </div>
                             )}

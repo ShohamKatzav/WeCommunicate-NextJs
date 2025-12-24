@@ -1,5 +1,5 @@
 "use client";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import io, { Socket } from 'socket.io-client';
 import { useUser } from "../hooks/useUser";
 import SocketContext from "./socketContext";
@@ -15,6 +15,7 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
     const [socket, setSocket] = useState<Socket | null>(null);
     const [loadingSocket, setLoadingSocket] = useState(true);
     const router = useRouter();
+    const socketRef = useRef<Socket | null>(null);
 
     useEffect(() => {
         if (!loadingUser && user?.email) {
@@ -34,6 +35,7 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
                     }
                 }
                 const newSocket = io(baseAddress, socketConfig);
+                socketRef.current = newSocket;
                 newSocket.on('unauthorized', () => {
                     updateUser(null);
                     setSocket(null);
@@ -48,14 +50,15 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
         }
         return () => {
             if (socket?.active) {
-                socket.disconnect();
+                socketRef.current?.disconnect();
+                socketRef.current = null;
             }
         };
 
-    }, [user?.token]);
+    }, [user?.token, user?.email, loadingUser]);
 
     return (
-        <SocketContext.Provider value={{ socket, loadingSocket }}>
+        <SocketContext.Provider key={user?.token || 'guest'} value={{ socket, loadingSocket }}>
             {children}
         </SocketContext.Provider>
     );

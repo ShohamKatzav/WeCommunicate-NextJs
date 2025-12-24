@@ -92,6 +92,7 @@ const ChatDropdown = ({
     return (
         <div className="relative" ref={dropdownRef}>
             <button
+                id="dropdown-button"
                 onClick={() => setShowDropdown(!showDropdown)}
                 className="py-1 md:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg flex items-center justify-center"
             >
