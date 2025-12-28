@@ -9,7 +9,10 @@ customTest.describe('Offline mode - Edge cases', () => {
 
     customTest('@Offline mode - @Navigate to chat page', async ({ context, authPage }) => {
         await authPage.getLoginPage().navigateToLoginPage();
-        await authPage.getChatPage().navbar.aboutLink.click();
+        await Promise.all([
+            authPage.getChatPage().page.waitForURL('**/about'),
+            authPage.getChatPage().navbar.aboutLink.click()
+        ]);
         await expect(authPage.getAboutPage().aboutHeader).toBeVisible();
         await authPage.getOfflinePage().waitForServiceWorkerSign();
         await context.setOffline(true);
@@ -20,7 +23,10 @@ customTest.describe('Offline mode - Edge cases', () => {
 
     customTest('@Offline mode - @Navigate to locations page', async ({ context, authPage }) => {
         await authPage.getLoginPage().navigateToLoginPage();
-        await authPage.getChatPage().navbar.aboutLink.click();
+        await Promise.all([
+            authPage.getChatPage().page.waitForURL('**/about'),
+            authPage.getChatPage().navbar.aboutLink.click()
+        ]);
         await expect(authPage.getAboutPage().aboutHeader).toBeVisible();
         await authPage.getOfflinePage().waitForServiceWorkerSign();
         await context.setOffline(true);
