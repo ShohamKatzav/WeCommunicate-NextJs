@@ -16,6 +16,7 @@ dotenv.config({ path: path.resolve(__dirname, '..', '.env.local') });
 export default defineConfig({
   testDir: './',
   timeout: 30 * 1000,
+  retries: process.env.CI ? 3 : 0,
   expect: {
     timeout: 5000,
   },
