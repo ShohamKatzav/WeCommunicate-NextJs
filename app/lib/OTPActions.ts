@@ -78,10 +78,10 @@ export async function verifyOTP(email: string, otp: string) {
         if (!email || !otp) {
             return { message: 'Email and OTP are required', status: 400 }
         }
-        console.log(process.env.NODE_ENV);
+        console.log(process.env.E2E_TEST);
         console.log(process.env.TEST_BYPASS_KEY);
         console.log(e2eCookie);
-        if (process.env.NODE_ENV === 'test' && process.env.TEST_BYPASS_KEY && e2eCookie === process.env.TEST_BYPASS_KEY) {
+        if (process.env.E2E_TEST === 'true' && process.env.TEST_BYPASS_KEY && e2eCookie === process.env.TEST_BYPASS_KEY) {
             return { message: 'OTP verified successfully (Bypass)', status: 200 };
         }
 
