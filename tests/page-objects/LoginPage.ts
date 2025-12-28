@@ -16,6 +16,8 @@ export default class LoginPage {
     loginButton: Locator;
     generalError: Locator;
     loginHeader: Locator;
+    forgotPasswordLink: Locator;
+    signUpLink: Locator;
 
     constructor(page: Page) {
         this.page = page;
@@ -26,6 +28,8 @@ export default class LoginPage {
         this.loginButton = page.getByRole('button', { name: 'Log in' });
         this.generalError = page.locator('div.border-red-200');
         this.loginHeader = page.locator('h1:has-text("Login to WeCommunicate")');
+        this.forgotPasswordLink = page.getByRole('link', { name: 'Forgot password?' });
+        this.signUpLink = page.getByRole('link', { name: 'Sign up!' });
     }
 
     async navigateToLoginPage(): Promise<void> {
@@ -37,12 +41,6 @@ export default class LoginPage {
         await this.passwordInput?.fill(data.password);
         await this.loginButton?.click();
         await this.page.waitForURL('**/chat');
-    }
-
-    async getEmailValidationError(): Promise<string> {
-        return await this.emailInput?.evaluate((input: HTMLInputElement) => {
-            return input.validationMessage;
-        });
     }
 
     async getGreeting(shortUsername: string): Promise<Locator> {

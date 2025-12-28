@@ -2,7 +2,7 @@ const connectionAttempts = new Map();
 
 export default function rateLimitMiddleware(socket, next) {
 
-    if (process.env.NODE_ENV === 'test' || process.env.SKIP_RATE_LIMIT === 'true') {
+    if (process.env.NODE_ENV === 'test' || process.env.E2E_TEST === 'true') {
         return next();
     }
 

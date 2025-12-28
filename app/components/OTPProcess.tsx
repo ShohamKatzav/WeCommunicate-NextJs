@@ -211,11 +211,7 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
     }
 
     return (
-        <form onSubmit={
-            step === 'email' ? handleSendOTP :
-                step === 'otp' ? handleVerifyOTP :
-                    handleResetPassword
-        }>
+        <form onSubmit={(e) => e.preventDefault()}>
             <div className="mainContainer grid grid-rows-3 md:grid-rows-6 px-3 md:p-4">
                 <div className="titleContainer md:row-start-2">
                     <h1 className="md:mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-3xl lg:text-6xl text-center">
@@ -374,7 +370,12 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                     <div className="inputContainer justify-self-center">
                         <button
                             className="inputButton disabled:opacity-50 disabled:cursor-not-allowed w-3xs"
-                            type="submit"
+                            type="button"
+                            onClick={
+                                step === 'email' ? handleSendOTP :
+                                    step === 'otp' ? handleVerifyOTP :
+                                        handleResetPassword
+                            }
                             disabled={loading}
                         >
                             {loading ? 'Processing...' :

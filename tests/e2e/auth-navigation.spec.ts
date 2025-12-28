@@ -1,8 +1,6 @@
 import { expect } from '@playwright/test';
 import { customTest } from '../fixtures/test-base';
 
-customTest.describe.configure({ mode: 'serial' });
-
 customTest.describe('Navigation Functionality', () => {
 
     customTest('Navigation and Logout Flow', async ({ loginData, authPage }) => {

@@ -111,7 +111,6 @@ export const useMessageHandling = ({
                 participantID: messageToSend.participantID || [],
                 conversationID: messageToSend.conversationID || ""
             };
-
             setMessageToSend(prev => ({ ...prev, text: '', file: null }));
             setChat([...chatRef.current, newTempMessage as Message]);
 

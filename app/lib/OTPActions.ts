@@ -3,6 +3,7 @@ import { env } from '@/app/config/env';
 import Brevo from "@getbrevo/brevo";
 import { isExist, updatePassword, createUser } from './accountActions'
 import RedisService from '@/services/RedisService'
+import { cookies } from 'next/headers';
 
 const apiInstance = new Brevo.TransactionalEmailsApi();
 apiInstance.setApiKey(Brevo.TransactionalEmailsApiApiKeys.apiKey, env.BREVO_API_KEY!);
@@ -70,6 +71,11 @@ export async function requestOTP(email: string, mode: string = 'sign-up') {
 
 export async function verifyOTP(email: string, otp: string) {
     try {
+        const cookieStore = await cookies();
+        const e2eCookie = cookieStore.get('e2e')?.value;
+        if (process.env.E2E_TEST === 'true' && process.env.TEST_BYPASS_KEY && e2eCookie === process.env.TEST_BYPASS_KEY) {
+            return { message: 'OTP verified successfully (Bypass)', status: 200 };
+        }
 
         if (!email || !otp) {
             return { message: 'Email and OTP are required', status: 400 }

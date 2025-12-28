@@ -63,6 +63,7 @@ export default class MessageRepository {
 
             conversation.messages.push(newMessage._id);
             await conversation.save();
+            await newMessage.populate('file');
             return newMessage;
         } catch (err) {
             console.error('Failed to save message:', err);

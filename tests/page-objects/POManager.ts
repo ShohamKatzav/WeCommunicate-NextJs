@@ -1,9 +1,12 @@
-import { Page } from "@playwright/test";
+import { Locator, Page } from "@playwright/test";
 import LoginPage from "./LoginPage";
 import ChatPage from "./ChatPage";
 import AboutPage from "./AboutPage";
 import ContactPage from "./ContactPage";
 import LocationsPage from "./LocationsPage";
+import ForgotPasswordPage from "./ForgotPassword";
+import SignUpPage from "./SignUpPage";
+import OfflinePage from "./OfflinePage";
 
 
 export default class POManager {
@@ -14,6 +17,9 @@ export default class POManager {
     private aboutPage: AboutPage;
     private contactPage: ContactPage;
     private locationsPage: LocationsPage;
+    private forgotPasswordPage: ForgotPasswordPage;
+    private signUpPage: SignUpPage;
+    private offlinePage: OfflinePage;
 
 
     constructor(page: Page) {
@@ -23,6 +29,15 @@ export default class POManager {
         this.aboutPage = new AboutPage(page);
         this.contactPage = new ContactPage(page);
         this.locationsPage = new LocationsPage(page);
+        this.forgotPasswordPage = new ForgotPasswordPage(page);
+        this.signUpPage = new SignUpPage(page);
+        this.offlinePage = new OfflinePage(page);
+    }
+
+    async getEmailValidationError(emailInput: Locator): Promise<string> {
+        return await emailInput?.evaluate((input: HTMLInputElement) => {
+            return input.validationMessage;
+        });
     }
 
     getLoginPage() {
@@ -58,5 +73,26 @@ export default class POManager {
             this.locationsPage = new LocationsPage(this.page);
         }
         return this.locationsPage;
+    }
+
+    getForgotPasswordPage() {
+        if (!this.forgotPasswordPage) {
+            this.forgotPasswordPage = new ForgotPasswordPage(this.page);
+        }
+        return this.forgotPasswordPage;
+    }
+
+    getSignUpPage() {
+        if (!this.signUpPage) {
+            this.signUpPage = new SignUpPage(this.page);
+        }
+        return this.signUpPage;
+    }
+
+    getOfflinePage() {
+        if (!this.offlinePage) {
+            this.offlinePage = new OfflinePage(this.page);
+        }
+        return this.offlinePage;
     }
 }

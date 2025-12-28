@@ -7,9 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "cross-env SKIP_RATE_LIMIT=true playwright test -c tests/playwright.config.ts",
-    "test-ui": "cross-env SKIP_RATE_LIMIT=true playwright test --ui -c tests/playwright.config.ts",
-    "test-debug": "cross-env SKIP_RATE_LIMIT=true playwright test --debug -c tests/playwright.config.ts"
+    "test": "cross-env E2E_TEST=true playwright test -c tests/playwright.config.ts",
+    "test-ui": "cross-env E2E_TEST=true playwright test --ui -c tests/playwright.config.ts",
+    "test-debug": "cross-env E2E_TEST=true playwright test --debug -c tests/playwright.config.ts"
   },
   "type": "module",
   "dependencies": {
@@ -23,6 +23,7 @@
     "aws4": "^1.13.2",
     "bcryptjs": "^2.4.3",
     "core-js": "^3.47.0",
+    "dotenv": "^17.2.3",
     "eslint-config-next": "^16.0.7",
     "framer-motion": "^12.23.25",
     "glob": "^10.5.0",

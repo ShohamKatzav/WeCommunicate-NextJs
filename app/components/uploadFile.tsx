@@ -141,18 +141,6 @@ export default function UploadFile({ message, setMessage }: UploadFileProps) {
                 }
             });
 
-            // Debug: Log upload result and useful context for troubleshooting
-            console.log('upload debug', {
-                pathname: newBlob?.pathname,
-                contentType: newBlob?.contentType,
-                url: newBlob?.url,
-                downloadUrl: newBlob?.downloadUrl,
-                token: user.token,
-                fileName: file.name,
-                fileType: file.type,
-                fileSize: file.size
-            });
-
             setBlob(newBlob);
 
             if (inputFileRef.current) {
