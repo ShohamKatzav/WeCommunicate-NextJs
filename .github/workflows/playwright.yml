@@ -26,7 +26,7 @@ jobs:
       run: pnpm test
       working-directory: ./tests
       env:
-        E2E_TEST: true
+        E2E_TEST: "true"
         TEST_BYPASS_KEY: ${{ secrets.TEST_BYPASS_KEY }}
         NODE_ENV: test
     - uses: actions/upload-artifact@v4

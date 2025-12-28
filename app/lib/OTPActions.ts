@@ -73,12 +73,13 @@ export async function verifyOTP(email: string, otp: string) {
     try {
         const cookieStore = await cookies();
         const e2eCookie = cookieStore.get('e2e')?.value;
-        if (process.env.E2E_TEST === 'true' && process.env.TEST_BYPASS_KEY && e2eCookie === process.env.TEST_BYPASS_KEY) {
-            return { message: 'OTP verified successfully (Bypass)', status: 200 };
-        }
 
         if (!email || !otp) {
             return { message: 'Email and OTP are required', status: 400 }
+        }
+
+        if (process.env.E2E_TEST === 'true' && process.env.TEST_BYPASS_KEY && e2eCookie === process.env.TEST_BYPASS_KEY) {
+            return { message: 'OTP verified successfully (Bypass)', status: 200 };
         }
 
         const storedData = await RedisService.getOTPByEmail(email);
@@ -96,6 +97,7 @@ export async function verifyOTP(email: string, otp: string) {
             return { message: 'Invalid OTP', status: 400 }
         }
 
+        await RedisService.deleteOTP(email);
         return { message: 'OTP verified successfully', status: 200 }
     } catch (error) {
         console.error('Verify OTP error:', error);
