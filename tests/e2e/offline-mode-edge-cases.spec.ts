@@ -9,12 +9,9 @@ customTest.describe('Offline mode - Edge cases', () => {
 
     customTest('@Offline mode - @Navigate to chat page', async ({ context, authPage }) => {
         await authPage.getLoginPage().navigateToLoginPage();
-        await Promise.all([
-            authPage.getChatPage().page.waitForURL('**/about'),
-            authPage.getChatPage().navbar.aboutLink.click()
-        ]);
+        await authPage.getOfflinePage().waitForServiceWorkerReady(context);
+        await authPage.page.goto('/about');
         await expect(authPage.getAboutPage().aboutHeader).toBeVisible();
-        await authPage.getOfflinePage().waitForServiceWorkerSign();
         await context.setOffline(true);
         await authPage.getChatPage().navbar.chatLink.click();
         await expect(authPage.getOfflinePage().offlineHeader).toBeVisible();
@@ -23,12 +20,9 @@ customTest.describe('Offline mode - Edge cases', () => {
 
     customTest('@Offline mode - @Navigate to locations page', async ({ context, authPage }) => {
         await authPage.getLoginPage().navigateToLoginPage();
-        await Promise.all([
-            authPage.getChatPage().page.waitForURL('**/about'),
-            authPage.getChatPage().navbar.aboutLink.click()
-        ]);
+        await authPage.getOfflinePage().waitForServiceWorkerReady(context);
+        await authPage.page.goto('/about');
         await expect(authPage.getAboutPage().aboutHeader).toBeVisible();
-        await authPage.getOfflinePage().waitForServiceWorkerSign();
         await context.setOffline(true);
         await authPage.getChatPage().navbar.locationsLink.click();
         await expect(authPage.getOfflinePage().offlineHeader).toBeVisible();

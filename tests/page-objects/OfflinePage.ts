@@ -1,4 +1,4 @@
-import { Locator, Page } from "@playwright/test";
+import { BrowserContext, Locator, Page } from "@playwright/test";
 
 export default class OfflinePage {
 
@@ -11,13 +11,13 @@ export default class OfflinePage {
         this.offlineHeader = page.getByText("You're offline");
     }
 
-    async waitForServiceWorkerSign(): Promise<void> {
+    async waitForServiceWorkerReady(context: BrowserContext): Promise<void> {
+        const serviceWorkerPromise = context.waitForEvent('serviceworker');
+        await serviceWorkerPromise;
         await this.page.evaluate(async () => {
-            await navigator.serviceWorker.ready;
-            // Ensure the service worker is actually controlling the page
-            if (!navigator.serviceWorker.controller) {
-                window.location.reload();
-            }
-        })
+            const registration = await navigator.serviceWorker.ready;
+            return registration.active?.scriptURL;
+        });
     }
+
 }
