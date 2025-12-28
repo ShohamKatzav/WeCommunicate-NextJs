@@ -16,6 +16,8 @@ const envSchema = z.object({
     SMTP_USER: z.email(),
     NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string(),
     VAPID_PRIVATE_KEY: z.string(),
+    E2E_TEST: z.string().optional().default('false'),
+    TEST_BYPASS_KEY: z.string().optional(),
 
 });
 
