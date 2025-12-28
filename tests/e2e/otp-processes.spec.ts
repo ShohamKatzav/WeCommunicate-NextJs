@@ -84,7 +84,7 @@ customTest.describe('OTP processes - Forgot Password Functionality', () => {
             {
                 name: 'e2e',
                 value: process.env.TEST_BYPASS_KEY || 'development_secret',
-                domain: domain,
+                domain: domain === 'localhost' ? 'localhost' : domain,
                 path: '/',
                 httpOnly: true,
             },
