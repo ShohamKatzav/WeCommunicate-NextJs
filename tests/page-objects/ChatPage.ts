@@ -16,6 +16,7 @@ export default class ChatPage {
     leaveRoomButton: Locator;
     fileInputLabel: Locator;
     fileInput: Locator;
+    lastSentImage: Locator;
 
     constructor(page: Page) {
         this.page = page;
@@ -30,6 +31,7 @@ export default class ChatPage {
         this.leaveRoomButton = page.locator('button:has-text(" Leave Room")');
         this.fileInputLabel = page.locator('#uploaded-file').locator('..');
         this.fileInput = page.locator('#uploaded-file');
+        this.lastSentImage = page.getByAltText('Sent image').last();
     }
 
     async navigateToLocationsPage(): Promise<void> {
@@ -87,10 +89,6 @@ export default class ChatPage {
         const notificationsDiv = await this.getNotificationDiv(username);
         await notificationsDiv.waitFor({ timeout });
         await expect(notificationsDiv).toHaveText(expectedCount.toString(), { timeout });
-    }
-
-    getLastImageSent(): Locator {
-        return this.page.locator('.bg-green-500 img').last().locator('img');
     }
 
 }

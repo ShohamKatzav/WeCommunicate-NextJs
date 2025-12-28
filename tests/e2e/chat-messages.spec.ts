@@ -42,10 +42,10 @@ customTest.describe('Chat Messages Functionality', () => {
         await authPage.getChatPage().sendMessageButton.click();
         await expect(authPage.getChatPage().pendingMessageIndicator).toHaveCount(0);
         await authPage.getForgotPasswordPage().page.waitForLoadState('networkidle');
-        await expect(authPage.getChatPage().getLastImageSent()).toBeVisible();
+        await expect(authPage.getChatPage().lastSentImage).toBeVisible();
         const baseName = fileName.split('.')[0];
         const srcRegex = new RegExp(baseName);
-        await expect(authPage.getChatPage().getLastImageSent()).toHaveAttribute('src', srcRegex);
+        await expect(authPage.getChatPage().lastSentImage).toHaveAttribute('src', srcRegex);
     });
 
 });
