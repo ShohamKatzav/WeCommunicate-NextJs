@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.resolve(__dirname, '..', '.env.local') });
+dotenv.config({ path: path.resolve(__dirname, '..', '.env.local'), quiet: true });
 
 /**
  * @see https://playwright.dev/docs/test-configuration
@@ -37,7 +37,6 @@ export default defineConfig({
     },
     ignoreHTTPSErrors: true,
     baseURL: process.env.CI ? 'https://wecommunicate-nextjs.onrender.com/' : 'https://localhost:3000/',
-    //baseURL: 'https://wecommunicate-nextjs.onrender.com/',
     trace: 'on-first-retry',
     headless: process.env.CI ? true : false,
     screenshot: 'only-on-failure',

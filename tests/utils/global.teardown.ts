@@ -1,10 +1,13 @@
 import { request as pfRequest } from '@playwright/test';
 import dataSet from "../Data/usersTestData.json" with { type: "json" };
+import config from '../playwright.config';
 
 export default async function globalTeardown() {
 
+    const baseURL = config.use?.baseURL || 'https://localhost:3000';
+
     const context = await pfRequest.newContext({
-        baseURL: process.env.BASE_URL || 'https://localhost:3000',
+        baseURL: baseURL,
         ignoreHTTPSErrors: true
     });
     try {
