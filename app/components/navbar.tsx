@@ -28,7 +28,13 @@ const Navbar = () => {
   const handleLogOut = async () => {
     try {
       updateUser(null);
-      socket?.disconnect();
+      if (socket?.connected) {
+        await new Promise<void>((resolve) => {
+          socket.once('disconnect', () => resolve());
+          socket.disconnect();
+          setTimeout(resolve, 1000);
+        });
+      }
       await deleteUserCoockie();
 
       if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {

@@ -16,6 +16,34 @@ export default class ConversationRepository {
         }
     }
 
+    static async GetOrCreateConversationByMembers(members: Types.ObjectId[]) {
+        try {
+            const sortedMemberIDs = members
+                .map(id => id.toString())
+                .sort()
+                .map(id => new Types.ObjectId(id));
+
+            let conversation = await Conversation.findOneAndUpdate(
+                { members: sortedMemberIDs },
+                {
+                    $setOnInsert: {
+                        members: sortedMemberIDs,
+                        messages: []
+                    }
+                },
+                {
+                    upsert: true,
+                    new: true,
+                    setDefaultsOnInsert: true
+                }
+            );
+            return conversation;
+        } catch (error) {
+            console.error('Error in GetConversationByMembers:', error);
+            throw new Error('Unable to find or create conversation');
+        }
+    }
+
     static async GetConversationByMembers(members: Types.ObjectId[]) {
         try {
             const conversation = await Conversation.findOne({
@@ -47,6 +75,7 @@ export default class ConversationRepository {
 
             const conversations = await Conversation.find({
                 members: { $in: [user] },
+                deletedBy: { $nin: [user] }
             })
                 .populate('members', 'email')
                 .populate({
@@ -90,27 +119,15 @@ export default class ConversationRepository {
         }
     }
 
-    static async CreateConversation(members: Types.ObjectId[]) {
-        try {
-            return await Conversation.create({ members });
-        } catch (err) {
-            console.error('Failed to create conversation:', err);
-            throw err;
-        }
-    }
-
     static async DeleteConversation(member: string, conversationId: string) {
         try {
             const convo = await Conversation.findById(conversationId);
             if (!convo) {
                 throw new Error("Conversation not found");
             }
-            const members = convo.members || [];
-            const newMembers = members.filter((m: Types.ObjectId) => m.toString() !== member.toString());
-
             return await Conversation.updateOne(
                 { _id: conversationId },
-                { $set: { members: newMembers } }
+                { $addToSet: { deletedBy: new Types.ObjectId(member) } }
             );
 
         } catch (err) {

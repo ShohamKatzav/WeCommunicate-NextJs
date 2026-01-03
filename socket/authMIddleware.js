@@ -10,7 +10,7 @@ export default async function authMiddleware(socket, next) {
         token = socket.handshake.auth.token.toString();
     }
     else {
-        await RedisService.deleteUserSocket(email);
+        await RedisService.removeUserSocket(email, socket.id);
         socket.emit("unauthorized");
         socket.disconnect(true);
         next(new Error("No token found"));
@@ -19,7 +19,7 @@ export default async function authMiddleware(socket, next) {
     try {
         jwt.verify(token, env.JWT_SECRET_KEY);
     } catch (err) {
-        await RedisService.deleteUserSocket(email);
+        await RedisService.removeUserSocket(email, socket.id);
         socket.emit("unauthorized");
         socket.disconnect(true);
         next(new Error("Invalid token"));

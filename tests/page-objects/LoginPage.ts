@@ -1,4 +1,4 @@
-import { Browser, Locator, Page } from "@playwright/test";
+import { Browser, BrowserContext, Locator, Page } from "@playwright/test";
 import POManager from "./POManager";
 
 interface LoginData {
@@ -48,12 +48,18 @@ export default class LoginPage {
     }
 
     async loginAnotherUser(browser: Browser, loginData: LoginData): Promise<POManager> {
-        const context = await browser.newContext();
-        await context.clearCookies();
-        const newPage = await context.newPage();
-        const pOManager = new POManager(newPage);
-        await pOManager.getLoginPage().navigateToLoginPage();
-        await pOManager.getLoginPage().loginByData(loginData);
-        return pOManager;
+        let context: BrowserContext | undefined;
+        try {
+            context = await browser.newContext();
+            await context.clearCookies();
+            const newPage = await context.newPage();
+            const pOManager = new POManager(newPage);
+            await pOManager.getLoginPage().navigateToLoginPage();
+            await pOManager.getLoginPage().loginByData(loginData);
+            return pOManager;
+        } catch (error: any) {
+            await context?.close();
+            throw new Error(`Failed to login another user: ${error.message}`);
+        }
     }
 }

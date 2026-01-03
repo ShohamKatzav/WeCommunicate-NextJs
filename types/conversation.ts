@@ -5,4 +5,5 @@ export default interface Conversation {
     _id?: string | undefined;
     members: ChatUser[];
     messages?: Message[];
+    deletedBy?: string[];
 }

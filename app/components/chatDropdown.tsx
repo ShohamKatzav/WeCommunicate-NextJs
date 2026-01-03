@@ -83,7 +83,7 @@ const ChatDropdown = ({
         } finally {
             setShowDeleteModal(false);
             setIsDeleting(false);
-            await updateConversationsBar(null, "Delete");
+            await updateConversationsBar(null, "Delete", conversationId);
             handleLeaveRoom();
             setShowDropdown(false);
         }

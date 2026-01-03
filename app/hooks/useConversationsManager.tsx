@@ -35,11 +35,11 @@ export const useConversationsManager = ({
             return;
         }
 
-        if (mode === "Delete") {
+        if (mode === "Delete" && cleanId) {
             setConversationsForBar(prev => {
-                if (!currentConversationId?.current) return prev;
+                if (!cleanId) return prev;
                 return prev.filter(
-                    c => c._id?.toUpperCase() !== currentConversationId.current.toUpperCase()
+                    c => c._id?.toUpperCase() !== cleanId.toUpperCase()
                 );
             });
             return;

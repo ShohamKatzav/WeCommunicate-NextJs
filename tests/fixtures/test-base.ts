@@ -15,7 +15,6 @@ export const customTest = baseTest.extend<{
         username: "shoham@gmail.com",
         password: "12345678"
     },
-
     poManager: async ({ page }, use) => {
         await use(new POManager(page));
     },

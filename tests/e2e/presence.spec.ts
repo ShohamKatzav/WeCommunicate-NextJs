@@ -2,8 +2,6 @@ import { expect } from '@playwright/test';
 import { customTest } from '../fixtures/test-base';
 import dataSet from "../Data/usersTestData.json" with { type: "json" };
 
-customTest.describe.configure({ mode: 'serial' });
-
 customTest.describe('Presence Functionality', () => {
 
     customTest('Online users indicator test', async ({ authPage, browser, loginData }) => {

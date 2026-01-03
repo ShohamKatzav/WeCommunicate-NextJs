@@ -63,7 +63,7 @@ async function handlePublishMessage(io, socket, message) {
                     socket.to(memberSocketId).emit('publish message', message);
                     // push updated notifications map for that user:
                     const notifications = await RedisService.getNotifications(member.email);
-                    io.to(memberSocketId).emit('notifications update', notifications);
+                    socket.to(memberSocketId).emit('notifications update', notifications);
                 }
             }
         }

@@ -7,6 +7,7 @@ import LocationsPage from "./LocationsPage";
 import ForgotPasswordPage from "./ForgotPassword";
 import SignUpPage from "./SignUpPage";
 import OfflinePage from "./OfflinePage";
+import Page404 from "./404Page";
 
 
 export default class POManager {
@@ -20,6 +21,7 @@ export default class POManager {
     private forgotPasswordPage: ForgotPasswordPage;
     private signUpPage: SignUpPage;
     private offlinePage: OfflinePage;
+    private page404: Page404;
 
 
     constructor(page: Page) {
@@ -32,6 +34,7 @@ export default class POManager {
         this.forgotPasswordPage = new ForgotPasswordPage(page);
         this.signUpPage = new SignUpPage(page);
         this.offlinePage = new OfflinePage(page);
+        this.page404 = new Page404(page);
     }
 
     async getEmailValidationError(emailInput: Locator): Promise<string> {
@@ -94,5 +97,12 @@ export default class POManager {
             this.offlinePage = new OfflinePage(this.page);
         }
         return this.offlinePage;
+    }
+
+    get404Page() {
+        if (!this.page404) {
+            this.page404 = new Page404(this.page);
+        }
+        return this.page404;
     }
 }

@@ -26,8 +26,5 @@ export default class Navbar {
             this.page.waitForURL('**/login', { timeout: 10000 }),
             this.logOutLink.click()
         ]);
-
-        // Wait for socket cleanup
-        await this.page.waitForTimeout(500);
     }
 }

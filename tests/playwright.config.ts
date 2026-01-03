@@ -28,12 +28,16 @@ export default defineConfig({
     url: 'https://localhost:3000',
     cwd: path.resolve(__dirname, '..'),
     reuseExistingServer: !process.env.CI,
+    timeout: 120 * 1000,
     ignoreHTTPSErrors: true,
   },
   use: {
+    extraHTTPHeaders: {
+      'x-bypass-ratelimit': process.env.TEST_BYPASS_KEY || '',
+    },
     ignoreHTTPSErrors: true,
-    // baseURL: process.env.CI ? 'https://wecommunicate-nextjs.onrender.com/' : 'https://localhost:3000/',
-    baseURL: 'https://wecommunicate-nextjs.onrender.com/',
+    baseURL: process.env.CI ? 'https://wecommunicate-nextjs.onrender.com/' : 'https://localhost:3000/',
+    //baseURL: 'https://wecommunicate-nextjs.onrender.com/',
     trace: 'on-first-retry',
     headless: process.env.CI ? true : false,
     screenshot: 'only-on-failure',
@@ -46,10 +50,10 @@ export default defineConfig({
     },
     {
       name: 'parallel',
-      testIgnore: /(chat|presence)-.*\.spec\.ts/,
+      testIgnore: /(chat|presence|offline)-.*\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
-        storageState: 'tests/state.json',
+        storageState: 'tests/state1.json',
       },
       dependencies: ['setup'],
     },
@@ -58,20 +62,30 @@ export default defineConfig({
       testMatch: /(presence)-.*\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
-        storageState: 'tests/state.json',
+        storageState: 'tests/state1.json',
       },
       dependencies: ['setup', 'parallel'],
       workers: 1,
+    },
+    {
+      name: 'offline',
+      testMatch: /(offline)-.*\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/state1.json',
+      },
+      dependencies: ['setup', 'parallel', 'presence-serial'],
     },
     {
       name: 'chat-serial',
       testMatch: /(chat)-.*\.spec\.ts/,
       use: {
         ...devices['Desktop Chrome'],
-        storageState: 'tests/state.json',
+        storageState: 'tests/state1.json',
       },
-      dependencies: ['setup', 'parallel', 'presence-serial'],
+      dependencies: ['setup', 'parallel', 'presence-serial', 'offline'],
       workers: 1,
     },
   ],
+  globalTeardown: "utils/global.teardown.ts"
 });

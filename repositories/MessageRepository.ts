@@ -1,5 +1,6 @@
 import Message from "../models/Message";
 import FileModel from "../models/FileModel";
+import Conversation from "../models/Conversation";
 import ConversationRepository from "./ConversationRepository";
 import { Schema, Types } from 'mongoose';
 import MessageDTO from '@/types/messageDTO';
@@ -37,12 +38,8 @@ export default class MessageRepository {
                 ...participantIDArray.map(id => new Types.ObjectId(id))
             ];
 
-            let conversation = await ConversationRepository.GetConversationByMembers(memberIDs);
+            let conversation = await ConversationRepository.GetOrCreateConversationByMembers(memberIDs);
 
-            if (!conversation) {
-                conversation = await ConversationRepository.CreateConversation(
-                    memberIDs);
-            }
             let newFileId;
             if (file) {
                 const newFile = await FileModel.create({
@@ -60,7 +57,10 @@ export default class MessageRepository {
                 file: newFileId,
                 conversation: conversation._id
             });
-
+            await Conversation.updateOne(
+                { _id: conversation._id },
+                { $set: { deletedBy: [] } }
+            );
             conversation.messages.push(newMessage._id);
             await conversation.save();
             await newMessage.populate('file');

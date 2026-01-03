@@ -2,12 +2,8 @@ const connectionAttempts = new Map();
 
 export default function rateLimitMiddleware(socket, next) {
 
-    if (process.env.NODE_ENV === 'test' || process.env.E2E_TEST === 'true') {
-        return next();
-    }
-
     const bypassSecret = socket.handshake.headers['x-bypass-ratelimit'];
-    if (process.env.TEST_BYPASS_KEY && bypassSecret === process.env.TEST_BYPASS_KEY) {
+    if (process.env.NODE_ENV === 'test' || (process.env.E2E_TEST === 'true' && process.env.TEST_BYPASS_KEY && bypassSecret === process.env.TEST_BYPASS_KEY)) {
         return next();
     }
 

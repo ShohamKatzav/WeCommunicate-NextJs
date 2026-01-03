@@ -1,13 +1,7 @@
 import { expect } from '@playwright/test';
 import { customTest } from '../fixtures/test-base';
 
-customTest.use({
-    storageState: { cookies: [], origins: [] },
-    extraHTTPHeaders: {
-        'x-bypass-ratelimit': process.env.TEST_BYPASS_KEY || '',
-    },
-});
-
+customTest.use({ storageState: { cookies: [], origins: [] } });
 customTest.describe('OTP processes - Forgot Password Functionality', () => {
 
     customTest('Forgot My Password - Email Validations', async ({ authPage, loginData }) => {

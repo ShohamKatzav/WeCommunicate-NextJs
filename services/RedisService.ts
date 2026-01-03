@@ -84,6 +84,11 @@ export default class RedisService {
         await this.redis().hdel(this.notificationKey(email), conversationId);
     }
 
+    static async clearAllNotifications(email: string) {
+        if (!email) return;
+        await this.redis().del(this.notificationKey(email));
+    }
+
 
     static async getOTPByEmail(email: string): Promise<OTP | null> {
         if (!email) return null;

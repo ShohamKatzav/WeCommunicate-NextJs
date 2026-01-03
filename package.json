@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "cross-env E2E_TEST=true playwright test -c tests/playwright.config.ts",
     "test-ui": "cross-env E2E_TEST=true playwright test --ui -c tests/playwright.config.ts",
-    "test-debug": "cross-env E2E_TEST=true playwright test --debug -c tests/playwright.config.ts"
+    "test-debug": "cross-env E2E_TEST=true playwright test --debug -c tests/playwright.config.ts",
+    "test:cleanup": "tsx tests/scripts/cleanup.ts"
   },
   "type": "module",
   "dependencies": {
@@ -40,6 +41,7 @@
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "sonner": "^2.0.7",
+    "tsx": "^4.21.0",
     "util": "^0.12.5",
     "web-push": "^3.6.7",
     "zod": "^4.1.13"

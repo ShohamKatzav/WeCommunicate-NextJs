@@ -3,7 +3,6 @@ import { customTest } from '../fixtures/test-base';
 import dataSet from "../Data/usersTestData.json" with { type: "json" };
 
 customTest.use({ storageState: { cookies: [], origins: [] } });
-
 customTest.describe('Login Functionality', () => {
 
     customTest.beforeEach(async ({ authPage }) => {
@@ -49,6 +48,7 @@ customTest.describe('Login Functionality', () => {
         await authPage.getLoginPage().emailInput.fill(loginData.username);
         await authPage.getLoginPage().passwordInput.fill('wrongPassword123');
         await authPage.getLoginPage().loginButton.click();
+        await expect(authPage.getLoginPage().loginButton).toBeVisible({ timeout: 10000 });
         await expect(authPage.getLoginPage().generalError).toContainText('Wrong email or password');
     });
 
