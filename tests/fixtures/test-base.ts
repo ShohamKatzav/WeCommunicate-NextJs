@@ -1,10 +1,6 @@
 import { test as baseTest } from '@playwright/test';
 import POManager from '../page-objects/POManager';
-
-interface LoginData {
-    username: string;
-    password: string;
-}
+import LoginData from '../types/LoginData';
 
 export const customTest = baseTest.extend<{
     loginData: LoginData;

@@ -45,26 +45,28 @@ async function handleUpdateConnectedUsers(io) {
 }
 
 async function handlePublishMessage(io, socket, message) {
-
     const room = `chat_room_${message?.conversationID}`;
-    socket.to(room).emit('publish message', message);
     const conversation = await Conversation.findById(message?.conversationID).populate('members', 'email');
 
     if (conversation) {
         for (const member of conversation.members) {
             if (member.email.toUpperCase() === message.sender.toUpperCase()) continue;
-            const memberSocketId = await RedisService.getUserSocketsByEmail(member.email);
+
+            const memberSocketIds = await RedisService.getUserSocketsByEmail(member.email);
             const roomSockets = await io.in(room).allSockets();
-            const isInRoom = memberSocketId && roomSockets.has(memberSocketId);
-            if (!isInRoom) {
-                // increment Redis notification counter per user/conversation
+            const isAnySocketInRoom = memberSocketIds?.some(id => roomSockets.has(id));
+
+            if (isAnySocketInRoom) {
+                memberSocketIds.forEach(id => {
+                    socket.to(id).emit('publish message', message);
+                });
+            } else {
                 await RedisService.incrNotification(member.email, message.conversationID, 1);
-                if (memberSocketId) {
-                    socket.to(memberSocketId).emit('publish message', message);
-                    // push updated notifications map for that user:
-                    const notifications = await RedisService.getNotifications(member.email);
-                    socket.to(memberSocketId).emit('notifications update', notifications);
-                }
+                const notifications = await RedisService.getNotifications(member.email);
+                memberSocketIds.forEach(id => {
+                    socket.to(id).emit('publish message', message);
+                    socket.to(id).emit('notifications update', notifications);
+                });
             }
         }
     }

@@ -1,12 +1,13 @@
 import RedisService from '@/services/RedisService';
 import { NextResponse } from 'next/server';
 
+
 export async function POST(request: Request): Promise<NextResponse> {
     try {
         const body = await request.json();
-        const { email, bypassSecret } = body;
+        const { emails, bypassSecret } = body;
 
-        if (!email || !bypassSecret) {
+        if (!emails || !bypassSecret) {
             return NextResponse.json(
                 { error: 'Missing required fields: email and bypassSecret' },
                 { status: 400 }
@@ -18,19 +19,18 @@ export async function POST(request: Request): Promise<NextResponse> {
                 { status: 401 }
             );
         }
-
-        const sockets = await RedisService.getUserSocketsByEmail(email);
-        await Promise.all(
-            sockets.map(id => RedisService.removeUserSocket(email, id))
-        );
-
-        await RedisService.clearAllNotifications(email);
-
+        for (const email of emails) {
+            const sockets = await RedisService.getUserSocketsByEmail(email);
+            await Promise.all(
+                sockets.map(id => RedisService.removeUserSocket(email, id))
+            );
+            await RedisService.clearAllNotifications(email);
+            await RedisService.deleteOTP(email);
+        }
         return NextResponse.json({
             success: true,
-            email,
-            socketsCleared: sockets.length,
-            notificationsCleared: 'all'
+            users: emails,
+            message: 'Cleanup ended successfully'
         });
 
     } catch (error: any) {

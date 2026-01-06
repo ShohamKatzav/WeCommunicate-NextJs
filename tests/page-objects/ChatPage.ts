@@ -135,21 +135,8 @@ export default class ChatPage {
     async reconnectAndVerifySync(context: BrowserContext): Promise<void> {
         await context.setOffline(false);
         await this.page.evaluate(async () => {
-            if (navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage({ type: 'SYNC_QUEUE' });
-            }
-
             window.dispatchEvent(new Event('online'));
-            try {
-                const reg = await navigator.serviceWorker.ready;
-                if ('sync' in reg) {
-                    await (reg as any).sync.register('SYNC_QUEUE');
-                }
-            } catch (e) {
-                console.log('Background Sync not supported or failed, moving on...');
-            }
         });
-
     }
 
     async sendMessageAndWaitForSync(messageText: string, context: BrowserContext, offline: boolean = true): Promise<void> {
@@ -159,7 +146,8 @@ export default class ChatPage {
             await expect(this.messageSendingOfflineWarning).toBeVisible();
         const sentMessage = this.getMessageSentByText(messageText);
         await sentMessage.waitFor({ state: 'visible' });
-        await this.reconnectAndVerifySync(context);
+        if (offline)
+            await this.reconnectAndVerifySync(context);
         await this.pendingMessageIndicator.waitFor({ state: 'hidden', timeout: 10000 });
     }
 
