@@ -26,7 +26,10 @@ customTest.describe('Navigation Functionality', () => {
         customTest('Navigate back from non exist path by back to chat button', async ({ authPage, loginData }) => {
             await authPage.page.goto('/fakepath');
             await expect(authPage.get404Page().header404).toBeVisible();
-            await authPage.get404Page().backToChatButton.click();
+            await Promise.all([
+                authPage.get404Page().page?.waitForURL('**/chat'),
+                authPage.get404Page().backToChatButton.click()
+            ]);
             const shortUsername = loginData.username.split('@')[0];
             await expect(await authPage.getLoginPage().getGreeting(shortUsername)).toBeVisible();
         });

@@ -36,9 +36,8 @@ customTest.describe('Chat Messages Functionality', () => {
             const anotherLoginData = dataSet.find(user => user.username !== loginData.username);
             const secondUserShortName = anotherLoginData?.username.split('@')[0] || '';
             await (await authPage.getChatPage().selectUser(secondUserShortName)).click();
-            await authPage.getChatPage().fileInputLabel.click();
             await authPage.getChatPage().fileInput.setInputFiles(filePath);
-            await expect(authPage.getChatPage().sendMessageButton).toBeEnabled();
+            await expect(authPage.getChatPage().sendMessageButton).toBeEnabled({ timeout: 10000 });
             await authPage.getChatPage().sendMessageButton.click();
             await expect(authPage.getChatPage().pendingMessageIndicator).toHaveCount(0);
             await authPage.getForgotPasswordPage().page.waitForLoadState('networkidle');

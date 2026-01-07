@@ -5,10 +5,10 @@ export default class ChatActionsDropdown {
 
     page: Page;
     dropdownButton: Locator;
-    leaveRoomButton: Locator;
-    clearHistoryButton: Locator;
-    deleteConversationButton: Locator;
-    confirmDeletionButton: Locator;
+    private leaveRoomButton: Locator;
+    private clearHistoryButton: Locator;
+    private deleteConversationButton: Locator;
+    private confirmDeletionButton: Locator;
 
     constructor(page: Page) {
         this.page = page;
@@ -17,6 +17,20 @@ export default class ChatActionsDropdown {
         this.clearHistoryButton = page.getByText(' Clear Room History');
         this.deleteConversationButton = page.getByRole('button', { name: ' Delete Conversation' });
         this.confirmDeletionButton = page.getByRole('button', { name: 'Delete', exact: true });
+    }
+
+    async leaveRoom(): Promise<void> {
+        await this.dropdownButton.click();
+        await this.leaveRoomButton.click();
+    }
+    async clearHistory(): Promise<void> {
+        await this.dropdownButton.click();
+        await this.clearHistoryButton.click();
+    }
+    async deleteConversation(): Promise<void> {
+        await this.dropdownButton.click();
+        await this.deleteConversationButton.click();
+        await this.confirmDeletionButton.click();
     }
 
 }

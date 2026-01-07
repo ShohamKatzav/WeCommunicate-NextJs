@@ -15,27 +15,53 @@ customTest.describe('Checking conversation actions done by the dropdown', () => 
 
     customTest('Leaving room successfuly', async ({ authPage }) => {
         await expect(authPage.getChatPage().chatingWithDiv).toBeVisible();
-        await authPage.getChatPage().dropDown.dropdownButton.click();
-        await authPage.getChatPage().dropDown.leaveRoomButton.click();
+        await authPage.getChatPage().dropDown.leaveRoom();
         await expect(authPage.getChatPage().noConversationSelectedHeader).toBeVisible();
     });
 
-    customTest('Clean room history', async ({ authPage, context }) => {
-        await authPage.getChatPage().sendMessageAndWaitForSync('Clean history test', context, false);
+    customTest('Clean room history', async ({ authPage }) => {
+        await authPage.getChatPage().sendMessage('Clean history test');
         expect(await authPage.getChatPage().getSentMessagesCount()).toBeGreaterThan(0);
-        await authPage.getChatPage().dropDown.dropdownButton.click();
-        await authPage.getChatPage().dropDown.clearHistoryButton.click();
+        await authPage.getChatPage().dropDown.clearHistory();
         await authPage.page.waitForLoadState('networkidle');
         expect(await authPage.getChatPage().getSentMessagesCount()).toEqual(0);
     });
 
-    customTest('Delete conversation', async ({ authPage, context }) => {
-        await authPage.getChatPage().sendMessageAndWaitForSync('Delete conversation test', context, false);
+    customTest('Delete conversation', async ({ authPage }) => {
+        await authPage.getChatPage().sendMessage('Delete conversation test');
         const conversationRowByParticipantName = authPage.getChatPage().getSenderDivAtConversationsBar(secondUserShortName);
         await expect(conversationRowByParticipantName).toBeVisible();
-        await authPage.getChatPage().dropDown.dropdownButton.click();
-        await authPage.getChatPage().dropDown.deleteConversationButton.click();
-        await authPage.getChatPage().dropDown.confirmDeletionButton.click();
+        await authPage.getChatPage().dropDown.deleteConversation();
         await expect(conversationRowByParticipantName).not.toBeVisible();
     });
+});
+
+
+customTest.describe('Checking conversation actions done by conversation bar', () => {
+
+    customTest.beforeEach(async ({ authPage }) => {
+        await authPage.getLoginPage().navigateToLoginPage();
+    });
+
+    customTest('Start single participant chat', async ({ authPage }) => {
+        const chat = authPage.getChatPage();
+        await chat.newConversationButton.click();
+        const participantName = await chat.conversationForm.participantLabel.first().textContent() || '';
+        await chat.conversationForm.participantLabel.first().click();
+        await chat.conversationForm.startChattingButton.click();
+        await expect(chat.chatingWithDiv).toContainText(participantName);
+    });
+
+    customTest('Start a group chat', async ({ authPage }) => {
+        const chat = authPage.getChatPage();
+        await chat.groupChatButton.click();
+        const firstParticipantName = await chat.conversationForm.participantLabel.first().textContent() || '';
+        const secondParticipantName = await chat.conversationForm.participantLabel.nth(1).textContent() || '';
+        await chat.conversationForm.participantLabel.first().click();
+        await chat.conversationForm.participantLabel.nth(1).click();
+        await chat.conversationForm.createGroupButton.click();
+        await expect(chat.chatingWithDiv).toContainText(firstParticipantName);
+        await expect(chat.chatingWithDiv).toContainText(secondParticipantName);
+    });
+
 });

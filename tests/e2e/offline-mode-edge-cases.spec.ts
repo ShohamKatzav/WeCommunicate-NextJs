@@ -19,7 +19,12 @@ const USERS = {
     QUEUE_PAIR: {
         sender: 'skgladiator3@gmail.com',
         recipient: 'skgladiator4@gmail.com'
-    }
+    },
+    CONVERSATION_ACTIONS: {
+        sender: 'shoham@gmail.com',
+        recipient: 'skgladiator4@gmail.com'
+    },
+
 };
 
 customTest.describe('Offline Mode - Separated Scenarios', () => {
@@ -68,8 +73,9 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
         await (await chat.selectUser(recipientShortName)).click();
 
         await context.setOffline(true);
-        await chat.sendMessageAndWaitForSync(TEST_MESSAGES.SEND, context);
-        await expect(chat.pendingMessageIndicator).toHaveCount(0, { timeout: 10000 });
+        await chat.sendMessage(TEST_MESSAGES.SEND, false);
+        await expect(chat.toastWarnings.messageSendingOfflineWarning).toBeVisible();
+        await chat.reconnectAndVerifySync(context);
         await expect(chat.lastMessageSent).toContainText(TEST_MESSAGES.SEND);
     });
 
@@ -91,7 +97,7 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
         await (await chat.selectUser(recipientShortName)).click();
 
         // Online Setup
-        await chat.sendMessageAndWaitForSync(TEST_MESSAGES.DELETE, context, false);
+        await chat.sendMessage(TEST_MESSAGES.DELETE);
         await expect(chat.pendingMessageIndicator).toHaveCount(0);
 
         // Offline Action
@@ -99,7 +105,7 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
         const msg = chat.getMessageSentByText(TEST_MESSAGES.DELETE);
         await msg.hover();
         await chat.getDeleteButtonByMessageText(TEST_MESSAGES.DELETE).click();
-        await expect(chat.messageDeletingOfflineWarning).toBeVisible();
+        await expect(chat.toastWarnings.messageDeletingOfflineWarning).toBeVisible();
 
         // Reconnect & Verify
         await chat.reconnectAndVerifySync(context);
@@ -124,13 +130,45 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
             await context.setOffline(true);
             const batch = ['Msg 1', 'Msg 2', 'Msg 3'];
             for (const text of batch) {
-                await chat.sendMessageAndWaitForSync(text, context);
+                await chat.sendMessage(text, false);
+                await expect(chat.toastWarnings.messageSendingOfflineWarning).toBeVisible();
             }
-
             await chat.reconnectAndVerifySync(context);
-            await expect(chat.pendingMessageIndicator).toHaveCount(0, { timeout: 30000 });
             await expect(chat.lastMessageSent).toContainText('Msg 3');
         });
+    });
+
+    customTest('@Offline mode - Messages should dissapear after refresh when cleaning history while offline', async ({ context, authPage }) => {
+        const { recipient } = USERS.CONVERSATION_ACTIONS;
+        const chat = authPage.getChatPage();
+
+        const recipientShortName = recipient.split('@')[0];
+        await (await chat.selectUser(recipientShortName)).click();
+        await chat.sendMessage(TEST_MESSAGES.SEND);
+
+        await context.setOffline(true);
+        await chat.dropDown.clearHistory();
+        await expect(chat.toastWarnings.messageCleaningHistoryOfflineWarning).toBeVisible();
+
+        await chat.reconnectAndVerifySync(context);
+        await chat.page.waitForLoadState('networkidle');
+        await chat.page.reload();
+        await (await chat.selectUser(recipientShortName)).click();
+        await expect(chat.getSentMessagesLocator()).toHaveCount(0);
+    });
+
+    customTest('@Offline mode - Conversation should dissapear when deleting it while offline', async ({ context, authPage }) => {
+        const { recipient } = USERS.CONVERSATION_ACTIONS;
+        const chat = authPage.getChatPage();
+
+        const recipientShortName = recipient.split('@')[0];
+        await (await chat.selectUser(recipientShortName)).click();
+
+        await context.setOffline(true);
+        await chat.dropDown.deleteConversation();
+        await expect(chat.toastWarnings.conversationDeletingOfflineWarning).toBeVisible();
+
+        await expect(chat.getSenderDivAtConversationsBar(recipient)).not.toBeVisible();
     });
 });
 

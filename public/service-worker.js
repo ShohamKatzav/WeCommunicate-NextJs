@@ -2,6 +2,7 @@ import { removeFromQueue, addToQueue, getDeleteQueue, mapQueuedId } from '/index
 
 const CACHE_NAME = 'my-pwa-cache-v6';
 const STATIC_ASSET_CACHE = 'next-static-assets-v6';
+let isSyncing = false;
 
 const OFFLINE_ASSETS = [
     '/offline.html',
@@ -74,13 +75,14 @@ self.addEventListener('notificationclick', function (event) {
 })
 
 async function processQueue() {
-    let queue = await getDeleteQueue();
-    let i = 0;
+    if (isSyncing) return;
+    isSyncing = true;
+    try {
+        let queue = await getDeleteQueue();
+        let i = 0;
+        while (i < queue.length) {
+            const item = queue[i];
 
-    while (i < queue.length) {
-        const item = queue[i];
-
-        try {
             const endpoint = item.operation === "deleteConversation" ? "conversation" :
                 item.operation === "cleanHistory" ? "cleanhistory" : "chat";
             const method = (item.operation === "saveMessage" || item.operation === "cleanHistory") ? "POST" : "DELETE";
@@ -126,10 +128,14 @@ async function processQueue() {
                 console.error(`Sync failed for ${item.operation} with status ${response.status}:`, item.id);
                 i++;
             }
-        } catch (error) {
-            console.log('Sync failed, will retry later:', error);
-            break;
+
         }
+    }
+    catch (error) {
+        console.log('Sync failed, will retry later:', error);
+    }
+    finally {
+        isSyncing = false;
     }
 }
 

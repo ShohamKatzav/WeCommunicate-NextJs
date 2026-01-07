@@ -1,6 +1,8 @@
 import { BrowserContext, expect, Locator, Page } from "@playwright/test";
 import Navbar from "../components/Navbar";
 import ChatActionsDropdown from "../components/ChatActionsDropdown";
+import ToastWarnings from "../components/ToastWarnings";
+import ConversationForm from "../components/ConversationForm";
 
 
 export default class ChatPage {
@@ -8,6 +10,8 @@ export default class ChatPage {
     page: Page;
     navbar: Navbar;
     dropDown: ChatActionsDropdown;
+    toastWarnings: ToastWarnings;
+    conversationForm: ConversationForm;
     onlineUsersCount: Locator;
     messageInput: Locator;
     sendMessageButton: Locator;
@@ -17,15 +21,17 @@ export default class ChatPage {
     fileInputLabel: Locator;
     fileInput: Locator;
     lastSentImage: Locator;
-    messageSendingOfflineWarning: Locator;
-    messageDeletingOfflineWarning: Locator;
     chatingWithDiv: Locator;
     noConversationSelectedHeader: Locator;
+    newConversationButton: Locator;
+    groupChatButton: Locator;
 
     constructor(page: Page) {
         this.page = page;
         this.navbar = new Navbar(page);
         this.dropDown = new ChatActionsDropdown(page);
+        this.toastWarnings = new ToastWarnings(page);
+        this.conversationForm = new ConversationForm(page);
         this.onlineUsersCount = page.locator('div.text-green-600:has-text("Online")');
         this.messageInput = page.getByRole('textbox', { name: 'Message input' });
         this.sendMessageButton = page.getByRole('button', { name: 'Send message' });
@@ -35,10 +41,12 @@ export default class ChatPage {
         this.fileInputLabel = page.locator('#uploaded-file').locator('..');
         this.fileInput = page.locator('#uploaded-file');
         this.lastSentImage = page.getByAltText('Sent image').last();
-        this.messageSendingOfflineWarning = page.getByText('I’ll send this message when you’re back online');
-        this.messageDeletingOfflineWarning = page.getByText('The message will be deleted when the connection is restored');
         this.chatingWithDiv = page.getByText('Chatting with:');
         this.noConversationSelectedHeader = page.getByRole('heading', { name: 'No conversation selected' });
+        this.newConversationButton = page.getByRole('button', { name: 'New conversation' });
+        this.groupChatButton = page.locator('.flex').getByRole('button', { name: 'Create Group' });
+
+
 
     }
 
@@ -92,8 +100,7 @@ export default class ChatPage {
     async leaveChatRoom(): Promise<void> {
         const isInDropdownButtonVisible = await this.dropDown.dropdownButton.isVisible();
         if (isInDropdownButtonVisible) {
-            await this.dropDown.dropdownButton.click();
-            await this.dropDown.leaveRoomButton.click();
+            await this.dropDown.leaveRoom();
             await expect(this.page.locator('h4:has-text("No conversation selected")')).toBeVisible();
         }
     }
@@ -135,23 +142,30 @@ export default class ChatPage {
     async reconnectAndVerifySync(context: BrowserContext): Promise<void> {
         await context.setOffline(false);
         await this.page.evaluate(async () => {
+            if (navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({ type: 'SYNC_QUEUE' });
+                window.dispatchEvent(new Event('online'));
+                return;
+            }
             window.dispatchEvent(new Event('online'));
         });
     }
 
-    async sendMessageAndWaitForSync(messageText: string, context: BrowserContext, offline: boolean = true): Promise<void> {
+    async sendMessage(messageText: string, expectSync: boolean = true): Promise<void> {
         await this.messageInput.fill(messageText);
         await this.sendMessageButton.click();
-        if (offline)
-            await expect(this.messageSendingOfflineWarning).toBeVisible();
-        const sentMessage = this.getMessageSentByText(messageText);
-        await sentMessage.waitFor({ state: 'visible' });
-        if (offline)
-            await this.reconnectAndVerifySync(context);
-        await this.pendingMessageIndicator.waitFor({ state: 'hidden', timeout: 10000 });
+        await expect(this.getMessageSentByText(messageText)).toBeVisible();
+        if (expectSync) {
+            await expect(this.pendingMessageIndicator).toHaveCount(0, { timeout: 10000 });
+        } else {
+            await expect(this.pendingMessageIndicator.first()).toBeVisible();
+        }
     }
 
 
+    getSentMessagesLocator(): Locator {
+        return this.page.locator('.overflow-y-scroll div.bg-green-500');
+    }
     async getSentMessagesCount(): Promise<number> {
         return await this.page.locator('.overflow-y-scroll div.bg-green-500').count();
     }

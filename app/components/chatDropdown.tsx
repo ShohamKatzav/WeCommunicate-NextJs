@@ -62,8 +62,11 @@ const ChatDropdown = ({
                 updateConversationsBar(null, "Clean", conversationId);
             }
         } catch (error: any) {
-            toast.info("Offline right now - I’ll clear your chat history when you’re back online.");
-
+            if (!navigator.onLine || error.name === 'TypeError') {
+                toast.info("Offline right now - I’ll clear your chat history when you’re back online.");
+            } else {
+                toast.error("Failed to clear history");
+            }
         }
         finally {
             setShowDropdown(false);
