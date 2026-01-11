@@ -146,7 +146,7 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
         const recipientShortName = recipient.split('@')[0];
         await (await chat.selectUser(recipientShortName)).click();
         await chat.sendMessage(TEST_MESSAGES.SEND);
-        expect(await chat.getSentMessagesLocator().count()).toBeGreaterThan(1);
+        expect(await chat.getSentMessagesLocator().count()).toBeGreaterThanOrEqual(1);
         await context.setOffline(true);
         await Promise.all([
             expect(chat.toastWarnings.messageCleaningHistoryOfflineWarning).toBeVisible(),

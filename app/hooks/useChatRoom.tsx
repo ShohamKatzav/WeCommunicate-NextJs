@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Socket } from 'socket.io-client';
 import Message from '@/types/message';
 import ChatUser from '@/types/chatUser';
@@ -8,7 +8,7 @@ interface UseChatRoomProps {
     socket: Socket | null;
     userEmail?: string;
     initialConversations: Conversation[];
-    conversationsForBar: Conversation[]; // Add this
+    conversationsForBar: Conversation[];
     setMobileChatsSidebarOpen: (value: boolean) => void;
     setMobileUsersSidebarOpen: (value: boolean) => void;
 }
@@ -17,7 +17,7 @@ export const useChatRoom = ({
     socket,
     userEmail,
     initialConversations,
-    conversationsForBar, // Add this
+    conversationsForBar,
     setMobileChatsSidebarOpen,
     setMobileUsersSidebarOpen
 }: UseChatRoomProps) => {
