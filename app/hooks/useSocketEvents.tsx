@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Socket } from 'socket.io-client';
 import { usePathname } from 'next/navigation';
 import ChatUser from '@/types/chatUser';
@@ -17,7 +17,6 @@ interface UseSocketEventsProps {
 export const useSocketEvents = ({
     socket,
     loadingSocket,
-    userEmail,
     handleIncomingMessage,
     setChat,
     chatRef
@@ -93,7 +92,6 @@ export const useSocketEvents = ({
             socket.off("delete message", handleMessageDeleted);
         };
     }, [socket, loadingSocket, setChat, chatRef]);
-
     return {
         chatListActiveUsers
     };

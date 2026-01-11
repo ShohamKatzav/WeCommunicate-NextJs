@@ -2,6 +2,7 @@
 import { env } from '@/app/config/env';
 import connectDB from "@/app/lib/MongoDb";
 import mongoose, { Types } from "mongoose";
+import ModerationService from '@/services/ModerationService';
 import AccountRepository from "@/repositories/AccountRepository";
 import MessageRepository from "@/repositories/MessageRepository";
 import ConversationRepository from "@/repositories/ConversationRepository";
@@ -106,6 +107,44 @@ export const saveMessage = async (message: MessageDTO) => {
         if (typeof userID !== 'string') {
             throw new Error('Unauthorized');
         }
+        const banStatus = await ModerationService.isUserBanned(userID);
+        if (banStatus.isBanned) {
+            return JSON.parse(JSON.stringify({
+                success: false,
+                blocked: true,
+                banned: true,
+                reason: banStatus.reason,
+                bannedUntil: banStatus.bannedUntil,
+                message: banStatus.bannedUntil
+                    ? `You are banned until ${banStatus.bannedUntil.toLocaleString()}`
+                    : 'You are permanently banned from sending messages'
+            }));
+        }
+        if (message.text) {
+            const moderation = await ModerationService.moderateMessage(message.text);
+
+            if (!moderation.isAllowed) {
+                // Record violation and apply punishment
+                const punishment = await ModerationService.recordViolation(
+                    userID,
+                    message.text,
+                    moderation.reason || 'Inappropriate content',
+                    moderation.categories || [],
+                    moderation.severity || 'medium'
+                );
+
+                return JSON.parse(JSON.stringify({
+                    success: false,
+                    blocked: true,
+                    punishment: punishment.action,
+                    warningCount: punishment.warningCount,
+                    bannedUntil: punishment.bannedUntil,
+                    reason: moderation.reason,
+                    message: punishment.message
+                }));
+            }
+        }
+
         const messageDoc = await MessageRepository.SaveMessage(message, userID);
         const result = JSON.parse(JSON.stringify({ success: true, messageDoc }));
         if (result) {

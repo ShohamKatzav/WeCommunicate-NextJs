@@ -12,7 +12,7 @@ const DYNAMIC_OFFLINE_LINKS = ['chat', 'locations'];
 
 const Navbar = () => {
   const [nav, setNav] = useState(false);
-  const { user, updateUser } = useUser();
+  const { user, updateUser, loadingUser } = useUser();
   const { socket } = useSocket();
   const router = useRouter();
 
@@ -27,41 +27,45 @@ const Navbar = () => {
 
   const handleLogOut = async () => {
     try {
+      // First update user state to null
       updateUser(null);
+
+      // Disconnect socket if connected
       if (socket?.connected) {
-        await new Promise<void>((resolve) => {
-          socket.once('disconnect', () => resolve());
-          socket.disconnect();
-          setTimeout(resolve, 1000);
-        });
+        socket.disconnect();
       }
+
+      // Delete cookie
       await deleteUserCoockie();
 
+      // Clear service worker cache
       if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-
-        await new Promise<void>((resolve, reject) => {
+        try {
           const messageChannel = new MessageChannel();
           const timeout = setTimeout(() => {
-            console.log('⚠️ TIMEOUT: No response from service worker');
             messageChannel.port1.close();
-            resolve();
-          }, 3000);
+          }, 1000); // Reduced timeout
 
-          messageChannel.port1.onmessage = (event) => {
+          messageChannel.port1.onmessage = () => {
             clearTimeout(timeout);
             messageChannel.port1.close();
-            resolve();
           };
 
-          navigator.serviceWorker.controller!.postMessage(
+          navigator.serviceWorker.controller.postMessage(
             { type: 'CLEAR_CACHE' },
             [messageChannel.port2]
           );
-        });
+        } catch (error) {
+          console.error('Service worker clear cache error:', error);
+        }
       }
-      await router.push('/login');
+
+      // Navigate to login
+      router.push('/login');
     } catch (error) {
       console.error('Logout error:', error);
+      // Force navigation even if there's an error
+      router.push('/login');
     }
   };
 
@@ -69,17 +73,20 @@ const Navbar = () => {
     { id: 1, text: "login", link: "login", auth: false, action: () => { } },
     { id: 2, text: "chat", link: "chat", auth: true, action: () => { } },
     { id: 3, text: "locations", link: "locations", auth: true, action: () => { } },
-    { id: 4, text: "about", link: "about", auth: null, action: () => { } },
-    { id: 5, text: "contact", link: "contact", auth: null, action: () => { } },
-    { id: 6, text: "log out", link: "/", auth: true, action: () => handleLogOut() },
+    { id: 4, text: "moderator", link: "moderator", auth: true, moderatorOnly: true, action: () => { } },
+    { id: 5, text: "about", link: "about", auth: null, action: () => { } },
+    { id: 6, text: "contact", link: "contact", auth: null, action: () => { } },
+    { id: 7, text: "log out", link: "/", auth: true, action: () => handleLogOut() },
   ];
 
   const isUserConnected = () => {
     return user != null && Object.keys(user).length > 0;
   }
 
-  const shouldDisplayLink = ({ auth }: typeof links[0]) => {
+  const shouldDisplayLink = ({ auth, moderatorOnly }: typeof links[0]) => {
     const connected = isUserConnected();
+
+    if (moderatorOnly && !user?.isModerator) return false;
 
     if (auth === true) return connected;
     if (auth === false) return !connected;

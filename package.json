@@ -33,6 +33,7 @@
     "lucide-react": "^0.454.0",
     "mongoose": "^8.20.2",
     "next": "16.0.10",
+    "openai": "^6.15.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-icons": "^4.12.0",

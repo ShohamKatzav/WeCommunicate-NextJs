@@ -25,6 +25,8 @@ export default async function handleSocketConnection(io, socket) {
         socket.on('get locations', () => handleGetLocation(io, socket));
         socket.on('save location', (location) => handleSaveLocation(io, socket, location));
         socket.on('leave room', (body) => handleLeaveRoom(body, socket));
+        socket.on('ban user', (data) => handleBanUser(io, data));
+        socket.on('unban user', (data) => handleUnbanUser(io, data));
         socket.on('disconnect', () => handleDisconnect(io, email, socket.id));
 
     }
@@ -108,6 +110,32 @@ async function handleSaveLocation(io, socket, location) {
     await SaveLocations(location);
     await handleGetLocation(io, socket);
 }
+async function handleBanUser(io, data) {
+    const { userEmail, message } = data;
+
+    const socketIds = await RedisService.getUserSocketsByEmail(userEmail);
+    console.log("banning: " + userEmail);
+    console.log(socketIds);
+
+    socketIds.forEach(socketId => {
+        const targetSocket = io.sockets.sockets.get(socketId);
+        if (targetSocket) {
+            targetSocket.emit('banned', { message: message || 'Your account has been banned' });
+            targetSocket.disconnect(true);
+        }
+    });
+
+    await RedisService.clearAllNotifications(userEmail);
+    for (const socketId of socketIds) {
+        await RedisService.removeUserSocket(userEmail, socketId);
+    }
+}
+
+async function handleUnbanUser(io, data) {
+    const { userEmail } = data;
+    console.log(`User ${userEmail} has been unbanned`);
+}
+
 
 async function handleLeaveRoom(body, socket) {
     const room = `chat_room_${body.conversationId}`;

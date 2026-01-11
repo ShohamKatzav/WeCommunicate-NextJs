@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { useUser } from '../hooks/useUser';
 import { useSocket } from '../hooks/useSocket';
-import { useNotification } from '../hooks/useNotification';
 import useIsMobile from '../hooks/useIsMobile';
 import Message from '@/types/message';
 import ChatUser from '@/types/chatUser';
@@ -29,7 +28,6 @@ interface ChatClientProps {
 const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClientProps) => {
     const { socket, loadingSocket } = useSocket();
     const { user, loadingUser } = useUser();
-    const { increaseNotifications } = useNotification();
     const isMobile = useIsMobile();
 
     // UI State
@@ -74,7 +72,6 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
         setChat,
         messageToSend,
         setMessageToSend,
-        increaseNotifications,
         setLastReceivedMessage,
         setMessageToPush,
         updateConversationsBar

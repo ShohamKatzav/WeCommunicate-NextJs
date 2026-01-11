@@ -28,7 +28,12 @@ export const createUser = async (email: string, password: string) => {
         if (user === null) {
             const hash = await bcrypt.hash(password, 10);
             const user = await AccountRepository.addUser(email, hash);
-            const loginData = { _id: user._id, email, signInTime: Date.now() };
+            const loginData = {
+                _id: user._id,
+                email,
+                isModerator: false,
+                signInTime: Date.now()
+            };
             const token = jwt.sign(loginData, env.JWT_SECRET_KEY!);
             return JSON.parse(JSON.stringify({ success: true, token, status: 201 }));
         }
@@ -47,11 +52,22 @@ export const authenticateUser = async (email: string, password: string) => {
         await connectDB();
         const user = await AccountRepository.getUserByEmail(email);
         if (user !== null) {
+            if (user.isBanned) {
+                return JSON.parse(JSON.stringify({
+                    message: "Your account has been banned. Please contact support: shohamkatzav95@gmail.com",
+                    status: 403
+                }));
+            }
             const passwordMatch = await bcrypt.compare(password, user.password);
             if (passwordMatch) {
-                const loginData = { _id: user._id, email, signInTime: Date.now() };
+                const loginData = {
+                    _id: user._id,
+                    email,
+                    isModerator: user.isModerator || false,
+                    signInTime: Date.now()
+                };
                 const token = jwt.sign(loginData, env.JWT_SECRET_KEY!);
-                return JSON.parse(JSON.stringify({ success: true, token, status: 200 }));
+                return JSON.parse(JSON.stringify({ success: true, token, isModerator: loginData.isModerator, status: 200 }));
             }
             else
                 return JSON.parse(JSON.stringify({ message: "Invalid password", status: 401 }));
@@ -77,7 +93,7 @@ export const updatePassword = async (email: string, newPassword: string) => {
     try {
         await connectDB();
         const hash = await bcrypt.hash(newPassword, 10);
-        await AccountRepository.updatePssword(email, hash);
+        await AccountRepository.updatePassword(email, hash);
         return JSON.parse(JSON.stringify({ success: true, status: 201 }));
     } catch (err) {
         console.error('Failed to update password:', err);

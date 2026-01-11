@@ -1,4 +1,5 @@
 export default interface User {
     email?: string,
-    token?: string
+    token?: string,
+    isModerator?: boolean
 }

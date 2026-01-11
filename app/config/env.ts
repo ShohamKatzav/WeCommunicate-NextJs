@@ -18,6 +18,7 @@ const envSchema = z.object({
     VAPID_PRIVATE_KEY: z.string(),
     E2E_TEST: z.string().optional().default('false'),
     TEST_BYPASS_KEY: z.string().optional(),
+    OPENAI_API_KEY: z.string().min(1),
 
 });
 

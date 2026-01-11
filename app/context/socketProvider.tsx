@@ -4,6 +4,8 @@ import io, { Socket } from 'socket.io-client';
 import { useUser } from "../hooks/useUser";
 import SocketContext from "./socketContext";
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { deleteUserCoockie } from "../lib/cookieActions";
 
 type SocketProviderProps = {
     children: ReactNode;
@@ -37,10 +39,22 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
                 const newSocket = io(baseAddress, socketConfig);
                 socketRef.current = newSocket;
                 newSocket.on('unauthorized', () => {
+                    router.push('/');
                     updateUser(null);
                     setSocket(null);
-                    router.push('/');
                     setLoadingSocket(false);
+                });
+                newSocket.on("banned", async (data) => {
+                    updateUser(null);
+                    setSocket(null);
+                    newSocket.disconnect();
+                    await deleteUserCoockie();
+                    router.push('/login');
+                    setLoadingSocket(false);
+                    toast.error(
+                        data.message || "Your account has been banned",
+                        { duration: 10000 }
+                    );
                 });
                 newSocket.connect();
                 setSocket(newSocket);
@@ -49,10 +63,8 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
             setUp();
         }
         return () => {
-            if (socket?.active) {
-                socketRef.current?.disconnect();
-                socketRef.current = null;
-            }
+            socketRef.current?.disconnect();
+            socketRef.current = null;
         };
 
     }, [user?.token, user?.email, loadingUser]);

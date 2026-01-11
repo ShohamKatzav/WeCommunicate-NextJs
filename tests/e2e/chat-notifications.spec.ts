@@ -1,6 +1,7 @@
 import { expect } from '@playwright/test';
 import { customTest } from '../fixtures/test-base';
 import dataSet from "../Data/usersTestData.json" with { type: "json" };
+import globalTeardown from '../utils/global.teardown'
 
 const USERS = {
     OFFLINE_PAIR: {
@@ -10,6 +11,10 @@ const USERS = {
 };
 
 customTest.describe('Chat Notifications Functionality', () => {
+
+    customTest.beforeEach(async () => {
+        await globalTeardown();
+    });
 
     customTest('@Notifications received while not in chat room', async ({ authPage, browser, loginData }) => {
         const firstTextToSend = 'First message from user 1';
@@ -23,9 +28,6 @@ customTest.describe('Chat Notifications Functionality', () => {
 
         // Login as user 2 and clean notifications by entering chat room
         const pOManager2 = await authPage.getLoginPage().loginAnotherUser(browser, anotherLoginData!);
-        await (await pOManager2.getChatPage().selectUser(firstUserShortName)).click();
-        await pOManager2.page.waitForTimeout(1000);
-        await pOManager2.getChatPage().leaveChatRoom();
 
         await authPage.getChatPage().messageInput.fill(firstTextToSend);
         await authPage.getChatPage().sendMessageButton.click();
@@ -50,16 +52,6 @@ customTest.describe('Chat Notifications Functionality', () => {
             const secondUserShortName = anotherLoginData?.username.split('@')[0] || '';
             await (await authPage.getChatPage().selectUser(secondUserShortName)).click();
 
-            // Login as user 2 and clean notifications by entering chat room
-            let pOManager2 = await authPage.getLoginPage().loginAnotherUser(browser, anotherLoginData!);
-            await (await pOManager2.getChatPage().selectUser(firstUserShortName)).click();
-            await pOManager2.page.waitForTimeout(1000);
-
-            // Logout
-            await pOManager2.getChatPage().leaveChatRoom();
-            await pOManager2.getChatPage().navbar.logout();
-            await expect(pOManager2.getLoginPage().loginHeader).toBeVisible();
-
             // Send messages while user 2 is offline
             await authPage.getChatPage().messageInput.fill(firstTextToSend);
             await authPage.getChatPage().sendMessageButton.click();
@@ -67,7 +59,7 @@ customTest.describe('Chat Notifications Functionality', () => {
             await authPage.getChatPage().sendMessageButton.click();
             await expect(authPage.getChatPage().pendingMessageIndicator).toHaveCount(0);
 
-            await pOManager2.getLoginPage().loginByData(anotherLoginData!);
+            let pOManager2 = await authPage.getLoginPage().loginAnotherUser(browser, anotherLoginData!);
             await pOManager2.getChatPage().waitForNotificationCount(firstUserShortName, 2);
 
         });

@@ -24,7 +24,7 @@ export default async function ChatPage() {
 
 export async function getConversations(numOfMessages: number) {
     const cookieStore = await cookies();
-    const userCookie = await cookieStore.get("user");
+    const userCookie = cookieStore.get("user");
 
     if (!userCookie) throw new Error("Missing user cookie");
 

@@ -1,3 +1,4 @@
+import { env } from '@/app/config/env';
 import RedisService from '@/services/RedisService';
 import { NextResponse } from 'next/server';
 
@@ -13,7 +14,7 @@ export async function POST(request: Request): Promise<NextResponse> {
                 { status: 400 }
             );
         }
-        if (bypassSecret !== process.env.TEST_BYPASS_KEY) {
+        if (bypassSecret !== env.TEST_BYPASS_KEY) {
             return NextResponse.json(
                 { error: 'Unauthorized' },
                 { status: 401 }

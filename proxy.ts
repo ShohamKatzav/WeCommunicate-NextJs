@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import jwt from 'jsonwebtoken'
 
-const protectedRoutes = ['/chat', '/locations']
+const protectedRoutes = ['/chat', '/locations', '/moderator']
 const publicRoutes = ['/about', '/contact']
 const publiclLoginRoutes = ['/', '/login', '/sign-up']
 
@@ -45,6 +45,7 @@ export const config = {
         '/sign-up',
         '/chat',
         '/locations',
+        '/moderator',
         '/api/send-file',
     ],
 }

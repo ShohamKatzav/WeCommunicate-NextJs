@@ -69,12 +69,14 @@ const Login = () => {
       // Authenticate user
       const authResponse = await authenticateUser(email, password);
       if (await authResponse.success) {
-        await updateUser({ email, token: authResponse.token });
+        await updateUser({ email, token: authResponse.token, isModerator: authResponse.isModerator, });
         router.push("/chat");
         return true;
       } else if (authResponse.status === 401) {
         setGeneralError("Wrong email or password. Please try again.");
         return false;
+      } else if (authResponse.status === 403) {
+        setGeneralError(authResponse.message);
       } else {
         setGeneralError("An unexpected error occurred. Please try again.");
         return false;

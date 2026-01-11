@@ -22,14 +22,12 @@ const USERS = {
     },
     CONVERSATION_ACTIONS: {
         sender: 'shoham@gmail.com',
-        recipient: 'skgladiator4@gmail.com'
+        recipient: 'skgladiator5@gmail.com'
     },
 
 };
 
 customTest.describe('Offline Mode - Separated Scenarios', () => {
-    customTest.use({ storageState: 'tests/state1.json' });
-
     customTest.beforeEach(async ({ context, authPage }) => {
         await authPage.getChatPage().navigateToChatPageAndWaitForServiceWorker(context);
     });
@@ -104,8 +102,11 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
         await context.setOffline(true);
         const msg = chat.getMessageSentByText(TEST_MESSAGES.DELETE);
         await msg.hover();
-        await chat.getDeleteButtonByMessageText(TEST_MESSAGES.DELETE).click();
-        await expect(chat.toastWarnings.messageDeletingOfflineWarning).toBeVisible();
+        const delButton = chat.getDeleteButtonByMessageText(TEST_MESSAGES.DELETE);
+        await Promise.all([
+            expect(chat.toastWarnings.messageDeletingOfflineWarning).toBeVisible(),
+            delButton.click()
+        ]);
 
         // Reconnect & Verify
         await chat.reconnectAndVerifySync(context);
@@ -145,13 +146,13 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
         const recipientShortName = recipient.split('@')[0];
         await (await chat.selectUser(recipientShortName)).click();
         await chat.sendMessage(TEST_MESSAGES.SEND);
-
+        expect(await chat.getSentMessagesLocator().count()).toBeGreaterThan(1);
         await context.setOffline(true);
-        await chat.dropDown.clearHistory();
-        await expect(chat.toastWarnings.messageCleaningHistoryOfflineWarning).toBeVisible();
-
+        await Promise.all([
+            expect(chat.toastWarnings.messageCleaningHistoryOfflineWarning).toBeVisible(),
+            chat.dropDown.clearHistory()
+        ]);
         await chat.reconnectAndVerifySync(context);
-        await chat.page.waitForLoadState('networkidle');
         await chat.page.reload();
         await (await chat.selectUser(recipientShortName)).click();
         await expect(chat.getSentMessagesLocator()).toHaveCount(0);

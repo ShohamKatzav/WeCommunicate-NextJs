@@ -68,7 +68,7 @@ export default class AccountRepository {
         }
     }
 
-    static async updatePssword(email: string, newPassword: string) {
+    static async updatePassword(email: string, newPassword: string) {
         try {
             return await Account.updateOne(
                 { email: email },
@@ -77,6 +77,43 @@ export default class AccountRepository {
         } catch (err) {
             console.error('Could not get usernames:', err instanceof Error ? err.stack || err.message : err);
             // rethrow the original error for clearer diagnostics upstream
+            throw err;
+        }
+    }
+
+    static async getAllUsersWithStatus() {
+        try {
+            const users = await Account.find()
+                .select('_id email isModerator isBanned')
+                .lean()
+                .exec();
+            return users;
+        } catch (err) {
+            console.error('Failed to get users with status:', err);
+            throw err;
+        }
+    }
+
+    static async updateBanStatus(email: string, isBanned: boolean) {
+        try {
+            return await Account.updateOne(
+                { email: { $regex: new RegExp("^" + email + "$", "i") } },
+                { $set: { isBanned } }
+            );
+        } catch (err) {
+            console.error('Failed to update ban status:', err);
+            throw err;
+        }
+    }
+
+    static async updateModeratorStatus(email: string, isModerator: boolean) {
+        try {
+            return await Account.updateOne(
+                { email: { $regex: new RegExp("^" + email + "$", "i") } },
+                { $set: { isModerator } }
+            );
+        } catch (err) {
+            console.error('Failed to update moderator status:', err);
             throw err;
         }
     }
