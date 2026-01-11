@@ -81,24 +81,26 @@ export default class AccountRepository {
         }
     }
 
-    static async getAllUsersWithStatus() {
-        try {
-            const users = await Account.find()
-                .select('_id email isModerator isBanned')
-                .lean()
-                .exec();
-            return users;
-        } catch (err) {
-            console.error('Failed to get users with status:', err);
-            throw err;
-        }
-    }
-
     static async updateBanStatus(email: string, isBanned: boolean) {
         try {
             return await Account.updateOne(
                 { email: { $regex: new RegExp("^" + email + "$", "i") } },
-                { $set: { isBanned } }
+                isBanned
+                    ? {
+                        $set: {
+                            isBanned: true,
+                            lastWarningDate: Date.now(),
+                            banReason: "Banned by moderator"
+                        }
+                    }
+                    : {
+                        $set: { isBanned: false },
+                        $unset: {
+                            lastWarningDate: "",
+                            warningCount: "",
+                            banReason: ""
+                        }
+                    }
             );
         } catch (err) {
             console.error('Failed to update ban status:', err);
@@ -114,6 +116,54 @@ export default class AccountRepository {
             );
         } catch (err) {
             console.error('Failed to update moderator status:', err);
+            throw err;
+        }
+    }
+
+    static async updateExpiredBans(now: Date) {
+        try {
+            const result = await Account.updateMany(
+                {
+                    isBanned: true,
+                    bannedUntil: { $lte: now, $ne: null }
+                },
+                {
+                    $set: {
+                        isBanned: false,
+                        bannedUntil: null,
+                        banReason: null
+                    }
+                }
+            );
+
+            return result.modifiedCount;
+        } catch (err) {
+            console.error('Failed to update expired bans:', err);
+            throw err;
+        }
+    }
+
+    static async getExpiredBans(now: Date) {
+        try {
+            return await Account.find({
+                isBanned: true,
+                bannedUntil: { $lte: now, $ne: null }
+            }).select('email').lean();
+        } catch (err) {
+            console.error('Failed to get expired bans:', err);
+            throw err;
+        }
+    }
+
+    static async getAllUsersWithStatus() {
+        try {
+            const users = await Account.find()
+                .select('_id email isModerator isBanned banReason bannedUntil')
+                .lean()
+                .exec();
+            return users;
+        } catch (err) {
+            console.error('Failed to get users with status:', err);
             throw err;
         }
     }

@@ -28,6 +28,10 @@ export async function getAllUsers() {
             return { success: false, message: "Unauthorized", users: [] };
         }
         await connectDB();
+
+        const now = new Date();
+        await AccountRepository.updateExpiredBans(now);
+
         const users = await AccountRepository.getAllUsersWithStatus();
         return JSON.parse(JSON.stringify({ success: true, users }));
     } catch (err) {

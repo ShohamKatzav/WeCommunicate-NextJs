@@ -4,6 +4,7 @@ import connectDB from "@/app/lib/MongoDb";
 import AccountRepository from "@/repositories/AccountRepository"
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import ModerationService from '@/services/ModerationService';
 
 export const isExist = async (email: string) => {
     try {
@@ -51,27 +52,34 @@ export const authenticateUser = async (email: string, password: string) => {
     try {
         await connectDB();
         const user = await AccountRepository.getUserByEmail(email);
-        if (user !== null) {
-            if (user.isBanned) {
-                return JSON.parse(JSON.stringify({
-                    message: "Your account has been banned. Please contact support: shohamkatzav95@gmail.com",
-                    status: 403
-                }));
-            }
-            const passwordMatch = await bcrypt.compare(password, user.password);
-            if (passwordMatch) {
-                const loginData = {
-                    _id: user._id,
-                    email,
-                    isModerator: user.isModerator || false,
-                    signInTime: Date.now()
-                };
-                const token = jwt.sign(loginData, env.JWT_SECRET_KEY!);
-                return JSON.parse(JSON.stringify({ success: true, token, isModerator: loginData.isModerator, status: 200 }));
-            }
-            else
-                return JSON.parse(JSON.stringify({ message: "Invalid password", status: 401 }));
+        if (!user) {
+            return { message: "User not found", status: 404 };
         }
+        const banStatus = await ModerationService.isUserBanned(user._id.toString());
+        if (banStatus.isBanned) {
+            const untilText = banStatus.bannedUntil
+                ? ` until ${banStatus.bannedUntil.toLocaleString()}`
+                : "";
+
+            return {
+                message: `Your account has been banned${untilText}. Reason: ${banStatus.reason ?? "Policy violation"}`,
+                status: 403
+            };
+        }
+        const passwordMatch = await bcrypt.compare(password, user.password);
+        if (passwordMatch) {
+            const loginData = {
+                _id: user._id,
+                email,
+                isModerator: user.isModerator || false,
+                signInTime: Date.now()
+            };
+            const token = jwt.sign(loginData, env.JWT_SECRET_KEY!);
+            return JSON.parse(JSON.stringify({ success: true, token, isModerator: loginData.isModerator, status: 200 }));
+        }
+        else
+            return JSON.parse(JSON.stringify({ message: "Invalid password", status: 401 }));
+
     } catch (err) {
         console.error('Failed to create user:', err);
         return JSON.parse(JSON.stringify({ error: "Internal Server Error", status: 500 }));

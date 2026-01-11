@@ -27,15 +27,10 @@ const Navbar = () => {
 
   const handleLogOut = async () => {
     try {
-      // First update user state to null
       updateUser(null);
-
-      // Disconnect socket if connected
       if (socket?.connected) {
         socket.disconnect();
       }
-
-      // Delete cookie
       await deleteUserCoockie();
 
       // Clear service worker cache
@@ -44,7 +39,7 @@ const Navbar = () => {
           const messageChannel = new MessageChannel();
           const timeout = setTimeout(() => {
             messageChannel.port1.close();
-          }, 1000); // Reduced timeout
+          }, 1000);
 
           messageChannel.port1.onmessage = () => {
             clearTimeout(timeout);
@@ -59,12 +54,9 @@ const Navbar = () => {
           console.error('Service worker clear cache error:', error);
         }
       }
-
-      // Navigate to login
       router.push('/login');
     } catch (error) {
       console.error('Logout error:', error);
-      // Force navigation even if there's an error
       router.push('/login');
     }
   };

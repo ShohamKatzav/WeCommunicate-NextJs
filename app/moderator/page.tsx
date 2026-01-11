@@ -13,6 +13,7 @@ interface UserStatus {
     email: string;
     isModerator: boolean;
     isBanned: boolean;
+    banReason: string;
 }
 
 export default function ModeratorPanel() {
@@ -35,11 +36,38 @@ export default function ModeratorPanel() {
         }
     }, [user]);
 
+    const handleUserBanned = (data: { userEmail: string, message: string }, isBannedUpdate: boolean) => {
+        const { userEmail, message } = data;
+        const newBanReason = message?.split("Content flagged for: ")[1] || "Banned by moderator";
+        updateUserRow(userEmail, { isBanned: isBannedUpdate, banReason: newBanReason });
+    }
+
+    const handleBanExpired = (userEmails: string[]) => {
+        for (const email of userEmails)
+            updateUserRow(email, { isBanned: false });
+    }
+
+    useEffect(() => {
+        if (!socket || !user?.isModerator) return;
+        socket.on("moderator_update_banned_user", (data) => handleUserBanned(data, true));
+        socket.on("moderator_update_unbanned_user", (email) => handleUserBanned(email, false));
+        socket.on("update_ban_expire", (emails) => handleBanExpired(emails));
+        return () => {
+            socket.off("moderator_update_banned_user", handleUserBanned);
+            socket.off("moderator_update_unbanned_user", handleUserBanned);
+            socket.off("update_ban_expire", handleBanExpired);
+        };
+    }, [socket, socket?.connected]);
+
     const fetchUsers = async () => {
         setLoading(true);
         const result = await getAllUsers();
         if (result.success) {
-            setUsers(result.users);
+            const usersWithCleanReasons = result.users.map((user: UserStatus) => ({
+                ...user,
+                banReason: user.banReason?.split("Content flagged for: ")[1] || user.banReason
+            }));
+            setUsers(usersWithCleanReasons);
         } else {
             toast.error(result.message);
         }
@@ -99,7 +127,7 @@ export default function ModeratorPanel() {
     const updateUserRow = (email: string, patch: Partial<UserStatus>) => {
         setUsers(prev =>
             prev.map(u =>
-                u.email === email ? { ...u, ...patch } : u
+                u.email.toLowerCase() === email?.toLowerCase() ? { ...u, ...patch } : u
             )
         );
     };
@@ -152,6 +180,9 @@ export default function ModeratorPanel() {
                                     Status
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    Ban Reason
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                     Role
                                 </th>
                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -177,6 +208,16 @@ export default function ModeratorPanel() {
                                                 Active
                                             </span>
                                         )}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        {userItem.isBanned && userItem.banReason && (
+                                            <span className="inline-block px-2.5 py-1 rounded-md text-xs font-medium 
+                                                            bg-amber-100 text-amber-800 
+                                                            dark:bg-amber-900 dark:text-amber-200 inline-block max-w-sm truncate" title={userItem.banReason}>
+                                                {userItem.banReason}
+                                            </span>
+                                        )
+                                        }
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         {userItem.isModerator && (

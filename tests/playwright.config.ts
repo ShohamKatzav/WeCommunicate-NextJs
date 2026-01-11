@@ -74,7 +74,6 @@ export default defineConfig({
         storageState: 'tests/state1.json',
       },
       dependencies: ['setup', 'parallel', 'presence-serial'],
-      workers: 1,
     },
     {
       name: 'chat-serial',

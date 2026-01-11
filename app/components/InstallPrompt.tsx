@@ -6,6 +6,7 @@ import useIsMobile from "../hooks/useIsMobile";
 export default function InstallPrompt() {
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [showInstallButton, setShowInstallButton] = useState(false);
+    const [dismissed, setDismissed] = useState(false);
     const isMobile = useIsMobile();
 
     useEffect(() => {
@@ -43,9 +44,7 @@ export default function InstallPrompt() {
         setShowInstallButton(false);
     };
 
-    if (!showInstallButton) {
-        return null;
-    }
+    if (!showInstallButton || dismissed) return null;
 
     return (
         <>
@@ -58,6 +57,23 @@ export default function InstallPrompt() {
                     border: "3px solid yellow"
                 }}
             >
+                <button
+                    onClick={() => setDismissed(true)}
+                    style={{
+                        position: "absolute",
+                        top: "-8px",
+                        right: "-8px",
+                        background: "red",
+                        color: "white",
+                        borderRadius: "50%",
+                        width: "24px",
+                        height: "24px",
+                        border: "none",
+                        cursor: "pointer"
+                    }}
+                >
+                    ×
+                </button>
                 <button
                     onClick={handleInstallClick}
                     style={{

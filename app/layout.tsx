@@ -17,6 +17,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   manifest: "/manifest.json",
+  title: "WeCommunicate",
+  description: "WeCommunicate is a chat app",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

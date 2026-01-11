@@ -20,6 +20,7 @@ const NEVER_CACHE = [
     '/forgot-password',
     '/locations',
     '/login',
+    '/moderator',
     '/sign-up',
 ];
 
@@ -41,6 +42,12 @@ self.addEventListener('install', event => {
             .catch(err => console.error('Failed to cache files during install:', err))
     );
     self.skipWaiting();
+});
+
+self.addEventListener('sync', async (event) => {
+    if (event.tag === 'sync-queue') {
+        event.waitUntil(processQueue());
+    }
 });
 
 // Activate
@@ -133,6 +140,13 @@ async function processQueue() {
     }
     catch (error) {
         console.log('Sync failed, will retry later:', error);
+        if ('sync' in self.registration) {
+            try {
+                await self.registration.sync.register('sync-queue');
+            } catch (error) {
+                console.error('Failed to register sync:', error);
+            }
+        }
     }
     finally {
         isSyncing = false;
@@ -246,7 +260,7 @@ self.addEventListener('fetch', async event => {
                             offline: true,
                             data: body[0]
                         }), {
-                            status: 202,
+                            status: 503,
                             headers: { 'Content-Type': 'application/json' }
                         });
 
@@ -300,6 +314,13 @@ self.addEventListener('fetch', async event => {
 self.addEventListener('message', async event => {
     if (event.data.type === 'SYNC_QUEUE') {
         await processQueue();
+        if ('sync' in self.registration) {
+            try {
+                await self.registration.sync.register('sync-queue');
+            } catch (error) {
+                console.error('Background sync registration failed:', error);
+            }
+        }
     }
 
     if (event.data?.type === 'CLEAR_CACHE') {

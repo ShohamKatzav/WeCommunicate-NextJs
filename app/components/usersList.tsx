@@ -67,7 +67,7 @@ export default function UsersListClient({
                     Active now
                 </div>
                 {onlineUsers.length > 0 ?
-                    onlineUsers.map((chatUser: ChatUser) => (
+                    onlineUsers.sort((a, b) => (a.email ?? "").localeCompare(b.email ?? "")).map((chatUser: ChatUser) => (
                         <UserRow key={`on-${chatUser.email}`} chatUser={chatUser} getLastMessages={getLastMessages} active={true} />
                     ))
                     :
@@ -82,7 +82,7 @@ export default function UsersListClient({
                     Others
                 </div>
                 {offlineUsers.length > 0 ?
-                    offlineUsers.map((chatUser: ChatUser) => (
+                    offlineUsers.sort((a, b) => (a.email ?? "").localeCompare(b.email ?? "")).map((chatUser: ChatUser) => (
                         <UserRow key={`off-${chatUser.email}`} chatUser={chatUser} getLastMessages={getLastMessages} active={false} />
                     ))
                     :

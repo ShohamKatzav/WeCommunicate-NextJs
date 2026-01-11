@@ -112,11 +112,8 @@ async function handleSaveLocation(io, socket, location) {
 }
 async function handleBanUser(io, data) {
     const { userEmail, message } = data;
-
+    io.emit('moderator_update_banned_user', { userEmail, message });
     const socketIds = await RedisService.getUserSocketsByEmail(userEmail);
-    console.log("banning: " + userEmail);
-    console.log(socketIds);
-
     socketIds.forEach(socketId => {
         const targetSocket = io.sockets.sockets.get(socketId);
         if (targetSocket) {
@@ -133,7 +130,7 @@ async function handleBanUser(io, data) {
 
 async function handleUnbanUser(io, data) {
     const { userEmail } = data;
-    console.log(`User ${userEmail} has been unbanned`);
+    io.emit('moderator_update_unbanned_user', userEmail);
 }
 
 

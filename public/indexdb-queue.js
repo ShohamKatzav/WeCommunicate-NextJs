@@ -35,6 +35,14 @@ export async function addToQueue(operation, data) {
             request.onsuccess = () => resolve(request.result);
             request.onerror = () => reject(request.error);
         });
+        if ('serviceWorker' in navigator && 'sync' in ServiceWorkerRegistration.prototype) {
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                await registration.sync.register('sync-queue');
+            } catch (error) {
+                console.error('Background sync registration failed:', error);
+            }
+        }
         return true;
     } catch (error) {
         console.error('Failed to add to queue:', error);

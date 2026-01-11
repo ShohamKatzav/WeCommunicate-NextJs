@@ -139,37 +139,41 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
         });
     });
 
-    customTest('@Offline mode - Messages should dissapear after refresh when cleaning history while offline', async ({ context, authPage }) => {
-        const { recipient } = USERS.CONVERSATION_ACTIONS;
-        const chat = authPage.getChatPage();
+    customTest.describe('Conversation serial tests', () => {
+        customTest.describe.configure({ mode: "serial" });
+        customTest('@Offline mode - Messages should dissapear after refresh when cleaning history while offline', async ({ context, authPage }) => {
+            const { recipient } = USERS.CONVERSATION_ACTIONS;
+            const chat = authPage.getChatPage();
 
-        const recipientShortName = recipient.split('@')[0];
-        await (await chat.selectUser(recipientShortName)).click();
-        await chat.sendMessage(TEST_MESSAGES.SEND);
-        expect(await chat.getSentMessagesLocator().count()).toBeGreaterThanOrEqual(1);
-        await context.setOffline(true);
-        await Promise.all([
-            expect(chat.toastWarnings.messageCleaningHistoryOfflineWarning).toBeVisible(),
-            chat.dropDown.clearHistory()
-        ]);
-        await chat.reconnectAndVerifySync(context);
-        await chat.page.reload();
-        await (await chat.selectUser(recipientShortName)).click();
-        await expect(chat.getSentMessagesLocator()).toHaveCount(0);
-    });
+            const recipientShortName = recipient.split('@')[0];
+            await (await chat.selectUser(recipientShortName)).click();
+            await chat.sendMessage(TEST_MESSAGES.SEND);
+            expect(await chat.getSentMessagesLocator().count()).toBeGreaterThanOrEqual(1);
+            await context.setOffline(true);
+            await Promise.all([
+                expect(chat.toastWarnings.messageCleaningHistoryOfflineWarning).toBeVisible(),
+                chat.dropDown.clearHistory()
+            ]);
+            await chat.reconnectAndVerifySync(context);
+            await chat.page.reload();
+            await chat.page.waitForLoadState("networkidle");
+            await (await chat.selectUser(recipientShortName)).click();
+            await expect(chat.getSentMessagesLocator()).toHaveCount(0);
+        });
 
-    customTest('@Offline mode - Conversation should dissapear when deleting it while offline', async ({ context, authPage }) => {
-        const { recipient } = USERS.CONVERSATION_ACTIONS;
-        const chat = authPage.getChatPage();
+        customTest('@Offline mode - Conversation should dissapear when deleting it while offline', async ({ context, authPage }) => {
+            const { recipient } = USERS.CONVERSATION_ACTIONS;
+            const chat = authPage.getChatPage();
 
-        const recipientShortName = recipient.split('@')[0];
-        await (await chat.selectUser(recipientShortName)).click();
+            const recipientShortName = recipient.split('@')[0];
+            await (await chat.selectUser(recipientShortName)).click();
 
-        await context.setOffline(true);
-        await chat.dropDown.deleteConversation();
-        await expect(chat.toastWarnings.conversationDeletingOfflineWarning).toBeVisible();
+            await context.setOffline(true);
+            await chat.dropDown.deleteConversation();
+            await expect(chat.toastWarnings.conversationDeletingOfflineWarning).toBeVisible();
 
-        await expect(chat.getSenderDivAtConversationsBar(recipient)).not.toBeVisible();
+            await expect(chat.getSenderDivAtConversationsBar(recipient)).not.toBeVisible();
+        });
     });
 });
 
