@@ -31,7 +31,7 @@ const About = () => {
                     </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {[
                         {
                             title: "Next.js",
@@ -52,6 +52,10 @@ const About = () => {
                         {
                             title: "Upstash Redis",
                             description: "Real-time notifications and online status tracking, ensuring instant updates without heavy backend load."
+                        },
+                        {
+                            title: "OpenAI API",
+                            description: "Advanced content moderation system to maintain community safety and ensure appropriate communication."
                         }
                     ].map((tech, index) => (
                         <div key={index} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transform hover:scale-105 transition-transform duration-200">

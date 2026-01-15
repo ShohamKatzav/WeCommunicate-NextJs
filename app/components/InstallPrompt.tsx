@@ -51,7 +51,7 @@ export default function InstallPrompt() {
             <div
                 style={{
                     position: "fixed",
-                    bottom: isMobile ? "85px" : "10px",
+                    bottom: isMobile ? "10vh" : "5px",
                     right: isMobile ? "5px" : "15%",
                     zIndex: isMobile ? 10 : 100,
                     border: "3px solid yellow"
@@ -76,17 +76,8 @@ export default function InstallPrompt() {
                 </button>
                 <button
                     onClick={handleInstallClick}
-                    style={{
-                        padding: "12px 24px",
-                        backgroundColor: "#000",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: "8px",
-                        cursor: "pointer",
-                        fontSize: "16px",
-                        boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-                    }}
-                >
+                    className={`${isMobile ? "px-6 py-3" : "px-[2dvw] py-[1dvh] text-sm sm:text-base md:text-xl"} 
+                                bg-black text-white rounded-lg text-base shadow-md cursor-pointer border-none`}>
                     Install App
                 </button>
             </div>

@@ -136,7 +136,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
     }
 
     return (
-        <div className="h-[85dvh] md:h-[calc(100dvh-80px)] md:mb-20 flex bg-linear-to-br bg-white dark:from-gray-900 dark:to-gray-800">
+        <div className="h-[80dvh] md:h-[calc(100dvh-80px)] md:mb-20 flex bg-linear-to-br bg-white dark:from-gray-900 dark:to-gray-800">
             <PushNotificationManager
                 message={messageToPush}
                 activeSocketUsers={chatListActiveUsers}

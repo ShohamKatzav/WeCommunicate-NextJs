@@ -2,7 +2,7 @@
 import '../login/login.css'
 import { JSX, useState } from "react";
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Mail, Shield, Lock, KeyRound } from 'lucide-react';
 import { requestOTP, verifyOTP, resetPassword, createAccount } from '@/app/lib/OTPActions'
 
 interface OTPProcessProps {
@@ -210,193 +210,251 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
         }
     }
 
+    const StepIndicator = () => {
+        const steps = ['email', 'otp', 'password'];
+        const currentStepIndex = steps.indexOf(step);
+
+        return (
+            <div className="flex justify-center gap-2">
+                {steps.map((_, index) => (
+                    <div
+                        key={index}
+                        className={`h-1 rounded-full transition-all duration-300 ${index === currentStepIndex
+                            ? 'w-8 bg-gradient-to-r from-pink-400 to-indigo-700'
+                            : index < currentStepIndex
+                                ? 'w-1 bg-indigo-400'
+                                : 'w-1 bg-gray-300 dark:bg-gray-600'
+                            }`}
+                    />
+                ))}
+            </div>
+        );
+    };
+
     return (
         <form onSubmit={(e) => e.preventDefault()}>
-            <div className="mainContainer grid grid-rows-3 md:grid-rows-6 px-3 md:p-4">
-                <div className="titleContainer md:row-start-2">
-                    <h1 className="md:mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-3xl lg:text-6xl text-center">
-                        <span className="text-transparent bg-clip-text bg-linear-to-r to-indigo-700 from-pink-400">
-                            {step === 'email' && mode === 'forgot' ? 'Reset Your Password' :
-                                step === 'email' && mode === 'sign-up' ? 'Create Your Account on WeCommunicate' :
-                                    step === 'otp' ? 'Verify OTP' :
-                                        step === 'password' && mode === 'forgot' ? 'Set New Password' :
-                                            'Set Your Password'}
-                        </span>
-                    </h1>
-                    <p className="text-center text-gray-600 dark:text-gray-400 mt-4 md:text-2xl text-wrap">
-                        {step === 'email' ? 'Enter your email to receive a verification code' :
-                            step === 'otp' ? 'Enter the 6-digit code sent to your email' :
-                                'Create a new password for your account'}
-                    </p>
-                </div>
-
-                {(generalError || successMessage) && (
-                    <div className="row-start-2 md:row-start-3 md:grid grid-cols-5">
-                        <div className={`md:col-start-2 md:col-span-3 px-4 py-3 rounded mb-4 ${successMessage
-                            ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-200 whitespace-pre-line'
-                            : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200'
-                            }`}>
-                            {successMessage || generalError}
-                        </div>
-                    </div>
-                )}
-
-                <div className="inputContainer row-start-3 md:row-start-4 row-span-1 space-y-4 md:grid grid-cols-5">
-                    {step === 'email' && (
-                        <div className="md:col-start-2 md:col-span-3">
-                            <label htmlFor="email" className="sr-only">Email</label>
-                            <input
-                                id="email"
-                                type="email"
-                                value={email}
-                                placeholder="Enter your email"
-                                onChange={ev => setEmail(ev.target.value)}
-                                className="inputBox w-full"
-                                autoComplete="email"
-                                disabled={loading}
-                                aria-invalid={!!emailError}
-                                aria-describedby={emailError ? "email-error" : undefined}
-                            />
-                            {emailError && (
-                                <label id="email-error" className="errorLabel block mt-1">
-                                    {emailError}
-                                </label>
-                            )}
-                        </div>
-                    )}
-                    {step === 'otp' && (
-                        <div className="md:col-start-2 md:col-span-3">
-                            <label htmlFor="otp" className="sr-only">OTP Code</label>
-                            <input
-                                id="otp"
-                                type="text"
-                                value={otp}
-                                placeholder="Enter 6-digit code"
-                                onChange={ev => setOtp(ev.target.value.replace(/\D/g, '').slice(0, 6))}
-                                className="inputBox w-full text-center text-2xl tracking-widest"
-                                maxLength={6}
-                                disabled={loading}
-                                aria-invalid={!!otpError}
-                                aria-describedby={otpError ? "otp-error" : undefined}
-                            />
-                            {otpError && (
-                                <label id="otp-error" className="errorLabel block mt-1">
-                                    {otpError}
-                                </label>
-                            )}
-                            <div className="text-center mt-4">
-                                <button
-                                    type="button"
-                                    onClick={handleResendOTP}
-                                    disabled={resendTimer > 0 || loading}
-                                    className="text-sm text-blue-600 dark:text-blue-500 hover:underline disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
-                                >
-                                    {resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : 'Resend OTP'}
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {step === 'password' && (
-                        <>
-                            <div className="md:col-start-2 md:col-span-3">
-                                <label htmlFor="new-password" className="sr-only">New Password</label>
-                                <div className="relative">
-                                    <input
-                                        id="new-password"
-                                        type={showNewPassword ? "text" : "password"}
-                                        value={newPassword}
-                                        placeholder={mode === 'forgot' ? "Enter new password" : "Enter password"}
-                                        onChange={ev => setNewPassword(ev.target.value)}
-                                        className="inputBox w-full pr-10"
-                                        autoComplete="new-password"
-                                        disabled={loading}
-                                        aria-invalid={!!passwordError}
-                                        aria-describedby={passwordError ? "password-error" : undefined}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowNewPassword(!showNewPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                                        aria-label={showNewPassword ? "Hide password" : "Show password"}
-                                        disabled={loading}
-                                    >
-                                        {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                                    </button>
+            <div className="mainContainer px-3 md:p-4 grid md:grid-cols-3">
+                <div className='md:col-start-2 grid grid-rows-2'>
+                    <div className={`titleContainer ${generalError || successMessage ? 'row-span-2' : 'row-span-1'} md:row-span-1 md:mb-6`}>
+                        <h1 className="md:mb-2 text-3xl font-extrabold text-gray-900 dark:text-white md:text-3xl lg:text-6xl text-center">
+                            <span className="text-transparent bg-clip-text bg-linear-to-r to-indigo-700 from-pink-400">
+                                {step === 'email' && mode === 'forgot' ? 'Reset Your Password' :
+                                    step === 'email' && mode === 'sign-up' ? 'Create Your Account on WeCommunicate' :
+                                        step === 'otp' ? 'Verify OTP' :
+                                            step === 'password' && mode === 'forgot' ? 'Set New Password' :
+                                                'Set Your Password'}
+                            </span>
+                        </h1>
+                        {(generalError || successMessage) && (
+                            <div className="mt-2 md:mt-8 font-normal">
+                                <div className={`md:col-start-2 md:col-span-3 px-4 py-3 rounded mb-2 ${successMessage
+                                    ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-200 whitespace-pre-line'
+                                    : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200'
+                                    }`}>
+                                    {successMessage || generalError}
                                 </div>
-                                {passwordError && (
-                                    <label id="password-error" className="errorLabel block mt-1">
-                                        {passwordError}
+                            </div>
+                        )}
+                        <p className="text-center text-gray-600 dark:text-gray-400 mt-2 md:mt-8 md:text-3xl text-wrap">
+                            {step === 'email' ? 'Enter your email to receive a verification code' :
+                                step === 'otp' ? 'Enter the 6-digit code sent to your email' :
+                                    'Create a new password for your account'}
+                        </p>
+                    </div>
+
+                    <div className={`inputContainer row-span-1 ${generalError || successMessage ? 'row-start-4' : 'row-start-3'} md:row-start-3 space-y-4 md:grid grid-cols-5 p-4`}>
+                        {step === 'email' && (
+                            <div className="md:col-start-2 md:col-span-3">
+                                <div className="hidden md:flex justify-center mb-3">
+                                    <div className="w-12 h-12 bg-gradient-to-r from-pink-400 to-indigo-700 rounded-full flex items-center justify-center">
+                                        <Mail size={24} className="text-white" />
+                                    </div>
+                                </div>
+
+                                <label htmlFor="email" className="sr-only">Email</label>
+                                <input
+                                    id="email"
+                                    type="email"
+                                    value={email}
+                                    placeholder="Enter your email"
+                                    onChange={ev => setEmail(ev.target.value)}
+                                    className="inputBox w-full"
+                                    autoComplete="email"
+                                    disabled={loading}
+                                    aria-invalid={!!emailError}
+                                    aria-describedby={emailError ? "email-error" : undefined}
+                                />
+                                {emailError && (
+                                    <label id="email-error" className="errorLabel block mt-1">
+                                        {emailError}
                                     </label>
                                 )}
-                            </div>
 
-                            <div className="md:col-start-2 md:col-span-3">
-                                <label htmlFor="confirm-password" className="sr-only">Confirm Password</label>
-                                <div className="relative">
-                                    <input
-                                        id="confirm-password"
-                                        type={showConfirmPassword ? "text" : "password"}
-                                        value={confirmPassword}
-                                        placeholder={mode === 'forgot' ? "Confirm new password" : "Confirm password"}
-                                        onChange={ev => setConfirmPassword(ev.target.value)}
-                                        className="inputBox w-full pr-10"
-                                        autoComplete="new-password"
-                                        disabled={loading}
-                                        aria-invalid={!!confirmPasswordError}
-                                        aria-describedby={confirmPasswordError ? "confirm-password-error" : undefined}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                                        aria-label={showConfirmPassword ? "Hide password" : "Show password"}
-                                        disabled={loading}
-                                    >
-                                        {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                                    </button>
+                                <div className="hidden md:flex items-center justify-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                    <Shield size={14} />
+                                    <span>Secure & private</span>
                                 </div>
-                                {confirmPasswordError && (
-                                    <label id="confirm-password-error" className="errorLabel block mt-1">
-                                        {confirmPasswordError}
+
+                                <div className="hidden md:block mt-3">
+                                    <StepIndicator />
+                                </div>
+                            </div>
+                        )}
+
+                        {step === 'otp' && (
+                            <div className="md:col-start-2 md:col-span-3">
+                                <div className="hidden md:flex justify-center mb-3">
+                                    <div className="w-12 h-12 bg-gradient-to-r from-pink-400 to-indigo-700 rounded-full flex items-center justify-center">
+                                        <KeyRound size={24} className="text-white" />
+                                    </div>
+                                </div>
+
+                                <label htmlFor="otp" className="sr-only">OTP Code</label>
+                                <input
+                                    id="otp"
+                                    type="text"
+                                    value={otp}
+                                    placeholder="Enter 6-digit code"
+                                    onChange={ev => setOtp(ev.target.value.replace(/\D/g, '').slice(0, 6))}
+                                    className="inputBox w-full text-center text-2xl tracking-widest"
+                                    maxLength={6}
+                                    disabled={loading}
+                                    aria-invalid={!!otpError}
+                                    aria-describedby={otpError ? "otp-error" : undefined}
+                                />
+                                {otpError && (
+                                    <label id="otp-error" className="errorLabel block mt-1">
+                                        {otpError}
                                     </label>
                                 )}
-                            </div>
-                        </>
-                    )}
-                </div>
+                                <div className="text-center mt-4">
+                                    <button
+                                        type="button"
+                                        onClick={handleResendOTP}
+                                        disabled={resendTimer > 0 || loading}
+                                        className="text-sm text-blue-600 dark:text-blue-500 hover:underline disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
+                                    >
+                                        {resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : 'Resend OTP'}
+                                    </button>
+                                </div>
 
-                <div className="row-start-4 md:row-start-7 grid">
-                    <div className="inputContainer justify-self-center">
-                        <button
-                            className="inputButton disabled:opacity-50 disabled:cursor-not-allowed w-3xs"
-                            type="button"
-                            onClick={
-                                step === 'email' ? handleSendOTP :
-                                    step === 'otp' ? handleVerifyOTP :
-                                        handleResetPassword
-                            }
-                            disabled={loading}
-                        >
-                            {loading ? 'Processing...' :
-                                step === 'email' ? 'Send Code' :
-                                    step === 'otp' ? 'Verify Code' :
-                                        step === 'password' && mode === 'forgot' ? 'Reset Password' :
-                                            'Create Account'}
-                        </button>
+                                <div className="hidden md:block mt-3">
+                                    <StepIndicator />
+                                </div>
+                            </div>
+                        )}
+
+                        {step === 'password' && (
+                            <>
+                                <div className="hidden md:flex md:col-start-2 md:col-span-3 justify-center mb-3">
+                                    <div className="w-12 h-12 bg-gradient-to-r from-pink-400 to-indigo-700 rounded-full flex items-center justify-center">
+                                        <Lock size={24} className="text-white" />
+                                    </div>
+                                </div>
+
+                                <div className="md:col-start-2 md:col-span-3">
+                                    <label htmlFor="new-password" className="sr-only">New Password</label>
+                                    <div className="relative">
+                                        <input
+                                            id="new-password"
+                                            type={showNewPassword ? "text" : "password"}
+                                            value={newPassword}
+                                            placeholder={mode === 'forgot' ? "Enter new password" : "Enter password"}
+                                            onChange={ev => setNewPassword(ev.target.value)}
+                                            className="inputBox w-full pr-10"
+                                            autoComplete="new-password"
+                                            disabled={loading}
+                                            aria-invalid={!!passwordError}
+                                            aria-describedby={passwordError ? "password-error" : undefined}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowNewPassword(!showNewPassword)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                            aria-label={showNewPassword ? "Hide password" : "Show password"}
+                                            disabled={loading}
+                                        >
+                                            {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                        </button>
+                                    </div>
+                                    {passwordError && (
+                                        <label id="password-error" className="errorLabel block mt-1">
+                                            {passwordError}
+                                        </label>
+                                    )}
+                                </div>
+
+                                <div className="md:col-start-2 md:col-span-3">
+                                    <label htmlFor="confirm-password" className="sr-only">Confirm Password</label>
+                                    <div className="relative">
+                                        <input
+                                            id="confirm-password"
+                                            type={showConfirmPassword ? "text" : "password"}
+                                            value={confirmPassword}
+                                            placeholder={mode === 'forgot' ? "Confirm new password" : "Confirm password"}
+                                            onChange={ev => setConfirmPassword(ev.target.value)}
+                                            className="inputBox w-full pr-10"
+                                            autoComplete="new-password"
+                                            disabled={loading}
+                                            aria-invalid={!!confirmPasswordError}
+                                            aria-describedby={confirmPasswordError ? "confirm-password-error" : undefined}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                            aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                                            disabled={loading}
+                                        >
+                                            {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                        </button>
+                                    </div>
+                                    {confirmPasswordError && (
+                                        <label id="confirm-password-error" className="errorLabel block mt-1">
+                                            {confirmPasswordError}
+                                        </label>
+                                    )}
+                                </div>
+
+                                <div className="hidden md:block md:col-start-2 md:col-span-3 mt-3">
+                                    <StepIndicator />
+                                </div>
+                            </>
+                        )}
                     </div>
-                    {mode === 'forgot' &&
-                        <p className="text-gray-500 dark:text-gray-400 justify-self-center mt-4">
-                            Remember your password? <a href="/login"
-                                className="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Back to Login</a>
-                        </p>
-                    }
-                    {mode === 'sign-up' &&
-                        <p className="text-gray-500 dark:text-gray-400 justify-self-center mt-4">
-                            Already have an account? <a href="/login"
-                                className="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Sign in</a>
-                        </p>
-                    }
+
+                    <div className={`${generalError || successMessage ? 'row-start-5' : 'row-start-4'} row-span-1 md:row-start-4 grid`}>
+                        <div className="inputContainer justify-self-center">
+                            <button
+                                className="inputButton disabled:opacity-50 disabled:cursor-not-allowed md:w-3xs"
+                                type="button"
+                                onClick={
+                                    step === 'email' ? handleSendOTP :
+                                        step === 'otp' ? handleVerifyOTP :
+                                            handleResetPassword
+                                }
+                                disabled={loading}
+                            >
+                                {loading ? 'Processing...' :
+                                    step === 'email' ? 'Send Code' :
+                                        step === 'otp' ? 'Verify Code' :
+                                            step === 'password' && mode === 'forgot' ? 'Reset Password' :
+                                                'Create Account'}
+                            </button>
+                        </div>
+                        {mode === 'forgot' &&
+                            <p className="text-gray-500 dark:text-gray-400 justify-self-center mt-4">
+                                Remember your password? <a href="/login"
+                                    className="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Back to Login</a>
+                            </p>
+                        }
+                        {mode === 'sign-up' &&
+                            <p className="text-gray-500 dark:text-gray-400 justify-self-center mt-4">
+                                Already have an account? <a href="/login"
+                                    className="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Sign in</a>
+                            </p>
+                        }
+                    </div>
                 </div>
             </div>
         </form >
