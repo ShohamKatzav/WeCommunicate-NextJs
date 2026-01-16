@@ -5,6 +5,7 @@ const users = [
     { index: 1, username: 'shoham@gmail.com', password: '12345678' },
     { index: 2, username: 'skgladiator3@gmail.com', password: '12345678' },
     { index: 3, username: 'skgladiator4@gmail.com', password: '12345678' },
+    { index: 4, username: 'skgladiator5@gmail.com', password: '12345678' },
 ];
 
 test.describe('Login Functionality', () => {

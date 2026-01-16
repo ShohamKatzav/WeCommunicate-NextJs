@@ -149,6 +149,9 @@ export default class ChatPage {
             }
             window.dispatchEvent(new Event('online'));
         });
+        // When running in parallel usually the sync is fast, but sometimes it takes a bit longer
+        // Therefore, we give a bit more time here to avoid flakiness, time for the sw to send the fetch requests
+        await this.page.waitForTimeout(500);
     }
 
     async sendMessage(messageText: string, expectSync: boolean = true): Promise<void> {

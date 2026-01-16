@@ -20,9 +20,13 @@ const USERS = {
         sender: 'skgladiator3@gmail.com',
         recipient: 'skgladiator4@gmail.com'
     },
-    CONVERSATION_ACTIONS: {
-        sender: 'shoham@gmail.com',
+    CONVERSATION_CLEAN_HISTORY: {
+        sender: 'skgladiator4@gmail.com',
         recipient: 'skgladiator5@gmail.com'
+    },
+    CONVERSATION_DELETE: {
+        sender: 'skgladiator5@gmail.com',
+        recipient: 'skgladiator3@gmail.com'
     },
 
 };
@@ -30,6 +34,7 @@ const USERS = {
 customTest.describe('Offline Mode - Separated Scenarios', () => {
     customTest.beforeEach(async ({ context, authPage }) => {
         await authPage.getChatPage().navigateToChatPageAndWaitForServiceWorker(context);
+        await authPage.page.waitForLoadState('networkidle');
     });
 
     customTest.afterEach(async ({ context }) => {
@@ -124,10 +129,9 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
         customTest('@Offline mode - Multiple messages should queue in order', async ({ context, authPage }) => {
             const pair = USERS.QUEUE_PAIR;
             const chat = authPage.getChatPage();
-
             const recipientShortName = pair.recipient.split('@')[0];
-            await (await chat.selectUser(recipientShortName)).click();
 
+            await (await chat.selectUser(recipientShortName)).click();
             await context.setOffline(true);
             const batch = ['Msg 1', 'Msg 2', 'Msg 3'];
             for (const text of batch) {
@@ -135,20 +139,30 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
                 await expect(chat.toastWarnings.messageSendingOfflineWarning).toBeVisible();
             }
             await chat.reconnectAndVerifySync(context);
+            await expect(chat.pendingMessageIndicator).toHaveCount(0, { timeout: 10000 });
             await expect(chat.lastMessageSent).toContainText('Msg 3');
         });
     });
 
-    customTest.describe('Conversation serial tests', () => {
-        customTest.describe.configure({ mode: "serial" });
+    /**
+    * Test: Messages should dissapear after refresh when cleaning history while offline
+    *
+    * Tests that the offline queue can handle clean history request
+    * and processes it when reconnected
+    * Theres no optimistic update here, so after reconnection and reload
+    * the messages should be gone
+    */
+    customTest.describe('Conversation clean history', () => {
+        customTest.use({ storageState: 'tests/state3.json' });
         customTest('@Offline mode - Messages should dissapear after refresh when cleaning history while offline', async ({ context, authPage }) => {
-            const { recipient } = USERS.CONVERSATION_ACTIONS;
+            const { recipient } = USERS.CONVERSATION_CLEAN_HISTORY;
             const chat = authPage.getChatPage();
-
             const recipientShortName = recipient.split('@')[0];
+
             await (await chat.selectUser(recipientShortName)).click();
             await chat.sendMessage(TEST_MESSAGES.SEND);
             expect(await chat.getSentMessagesLocator().count()).toBeGreaterThanOrEqual(1);
+
             await context.setOffline(true);
             await Promise.all([
                 expect(chat.toastWarnings.messageCleaningHistoryOfflineWarning).toBeVisible(),
@@ -156,22 +170,31 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
             ]);
             await chat.reconnectAndVerifySync(context);
             await chat.page.reload();
-            await chat.page.waitForLoadState("networkidle");
             await (await chat.selectUser(recipientShortName)).click();
             await expect(chat.getSentMessagesLocator()).toHaveCount(0);
         });
+    });
 
+    /**
+    * Test: Conversation should dissapear when deleting it while offline
+    *
+    * Tests that the offline queue can handle delete conversation request
+    * and processes it
+    */
+    customTest.describe('Conversation delete', () => {
+        customTest.use({ storageState: 'tests/state4.json' });
         customTest('@Offline mode - Conversation should dissapear when deleting it while offline', async ({ context, authPage }) => {
-            const { recipient } = USERS.CONVERSATION_ACTIONS;
+            const { recipient } = USERS.CONVERSATION_DELETE;
             const chat = authPage.getChatPage();
-
             const recipientShortName = recipient.split('@')[0];
             await (await chat.selectUser(recipientShortName)).click();
+            await chat.sendMessage(TEST_MESSAGES.SEND);
 
             await context.setOffline(true);
-            await chat.dropDown.deleteConversation();
-            await expect(chat.toastWarnings.conversationDeletingOfflineWarning).toBeVisible();
-
+            await Promise.all([
+                expect(chat.toastWarnings.conversationDeletingOfflineWarning).toBeVisible(),
+                chat.dropDown.deleteConversation()
+            ]);
             await expect(chat.getSenderDivAtConversationsBar(recipient)).not.toBeVisible();
         });
     });

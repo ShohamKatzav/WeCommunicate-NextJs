@@ -32,6 +32,7 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
   },
   use: {
+    permissions: ['background-sync'],
     extraHTTPHeaders: {
       'x-bypass-ratelimit': process.env.TEST_BYPASS_KEY || '',
     },
