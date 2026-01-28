@@ -76,7 +76,7 @@ jobs:
     - name: Add Allure link to Job Summary
       if: always()
       run: |
-        echo "### 📊 [View Allure Report](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/last-history/index.html)" >> $GITHUB_STEP_SUMMARY
+        echo "### 📊 [View Allure Report](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.html)" >> $GITHUB_STEP_SUMMARY
 
     - name: Post Allure Report link
       if: always() && github.event_name == 'pull_request'
@@ -84,7 +84,7 @@ jobs:
       with:
         message: |
           ### 📊 Test Report Generated
-          🔍 [View Allure Report](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/last-history/index.html)
+          🔍 [View Allure Report](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.html)
         comment_tag: allure_report_link
 
     - uses: actions/upload-artifact@v4
