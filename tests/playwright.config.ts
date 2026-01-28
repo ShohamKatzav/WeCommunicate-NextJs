@@ -24,7 +24,8 @@ export default defineConfig({
   workers: process.env.CI ? 1 : 6,
   reporter: [
     ['list'],
-    ['allure-playwright', { resultsDir: 'playwright-report/allure-results' }]
+    ['allure-playwright',
+      { resultsDir: path.resolve(__dirname, 'playwright-report/allure-results') }]
   ],
   webServer: process.env.CI ? undefined : {
     command: 'pnpm dev',
