@@ -22,7 +22,10 @@ export default defineConfig({
   },
   fullyParallel: true,
   workers: process.env.CI ? 1 : 6,
-  reporter: [['html', { outputFolder: 'playwright-report' }]],
+  reporter: [
+    ['list'],
+    ['allure-playwright', { resultsDir: 'playwright-report/allure-results' }]
+  ],
   webServer: process.env.CI ? undefined : {
     command: 'pnpm dev',
     url: 'https://localhost:3000',

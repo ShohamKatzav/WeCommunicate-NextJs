@@ -130,7 +130,7 @@ export default class ChatPage {
 
         if (isReady) return; // Skip waiting if already active!
 
-        // If not, wait for the event BUT race it against a much shorter timeout
+        // If not, wait for the event.
         await Promise.race([
             context.waitForEvent('serviceworker'),
             new Promise(resolve => setTimeout(resolve, 3000))
@@ -141,17 +141,46 @@ export default class ChatPage {
 
     async reconnectAndVerifySync(context: BrowserContext): Promise<void> {
         await context.setOffline(false);
-        await this.page.evaluate(async () => {
-            if (navigator.serviceWorker.controller) {
+
+        const swSyncPromise = this.page.evaluate(() =>
+            new Promise<boolean>((resolve) => {
+                const handler = (event: MessageEvent) => {
+                    if (event.data?.type === 'MESSAGE_SYNCED') {
+                        navigator.serviceWorker?.removeEventListener('message', handler);
+                        clearTimeout(timeoutId);
+                        resolve(true);
+                    }
+                };
+                navigator.serviceWorker?.addEventListener('message', handler);
+                const timeoutId = setTimeout(() => {
+                    navigator.serviceWorker?.removeEventListener('message', handler);
+                    resolve(false);
+                }, 10000);
+            })
+        );
+
+        // Trigger sync and dispatch online once
+        await this.page.evaluate(() => {
+            if (navigator.serviceWorker?.controller) {
                 navigator.serviceWorker.controller.postMessage({ type: 'SYNC_QUEUE' });
-                window.dispatchEvent(new Event('online'));
-                return;
             }
             window.dispatchEvent(new Event('online'));
         });
-        // When running in parallel usually the sync is fast, but sometimes it takes a bit longer
-        // Therefore, we give a bit more time here to avoid flakiness, time for the sw to send the fetch requests
-        await this.page.waitForTimeout(500);
+
+        const apiResponsePromise = this.page.waitForResponse(
+            (response) =>
+                (response.url().includes('/api/chat') ||
+                    response.url().includes('/api/conversation') ||
+                    response.url().includes('/api/cleanhistory')) &&
+                response.status() === 200,
+            { timeout: 10000 }
+        );
+
+        // If race resolves with falsy (no SW message) or rejects -> run fallback wait
+        const result = await Promise.race([swSyncPromise, apiResponsePromise]).catch(() => false);
+        if (!result) {
+            await expect(this.pendingMessageIndicator).toHaveCount(0, { timeout: 5000 }).catch(() => { });
+        }
     }
 
     async sendMessage(messageText: string, expectSync: boolean = true): Promise<void> {

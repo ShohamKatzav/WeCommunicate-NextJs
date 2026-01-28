@@ -1,0 +1,41 @@
+{
+    "SEND_TEST": {
+        "sender": "shoham@gmail.com",
+        "recipient": "skgladiator3@gmail.com",
+        "test_message": "Sending message while offline"
+    },
+    "DELETE_TEST": {
+        "sender": "shoham@gmail.com",
+        "recipient": "skgladiator4@gmail.com",
+        "test_message": "Delete this message offline",
+        "confirm_message": "You deleted this message"
+    },
+    "QUEUE_TEST": {
+        "sender": "skgladiator3@gmail.com",
+        "recipient": "skgladiator4@gmail.com",
+        "test_messages": [
+            "Msg 1",
+            "Msg 2",
+            "Msg 3"
+        ]
+    },
+    "CONVERSATION_CLEAN_HISTORY_TEST": {
+        "sender": "skgladiator4@gmail.com",
+        "recipient": "skgladiator5@gmail.com"
+    },
+    "CONVERSATION_DELETE_TEST": {
+        "sender": "skgladiator5@gmail.com",
+        "recipient": "skgladiator3@gmail.com"
+    },
+    "OFFLINE_NOTIFICATIONS_TEST": {
+        "sender": "skgladiator4@gmail.com",
+        "recipient": "shoham@gmail.com",
+        "test_messages": [
+            "Offline Msg 1",
+            "Offline Msg 2"
+        ]
+    },
+    "FAKE_TOKEN_COOKIE": {
+        "invalid_token": "%7B%22email%22%3A%22Shoham%40gmail.com%22%2C%22token%22%3A%22eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaXQiOiI2NTdlODI0ZGUzZDBhNWU1NjMzMDY5ZjUiLCJlbWFpbCI6InNob2hhbUBnbWFpbC5jb20iLCJzaWduSW5UaW1lIjoxNzY3MzgxNTA1MzU5LCJpYXQiOjE3NjczODE1MDV9.fLMVtoKg82J6FW-4RJqqVNUnJrf8RqJbRU8bHSDc2c8%22%7D"
+    }
+}

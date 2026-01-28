@@ -1,35 +1,6 @@
 import { expect } from '@playwright/test';
 import { customTest } from '../fixtures/test-base';
-
-const TEST_MESSAGES = {
-    SEND: 'Sending message while offline',
-    DELETE: 'Delete this message offline',
-    CONFIRM: 'You deleted this message',
-} as const;
-
-const USERS = {
-    SEND_PAIR: {
-        sender: 'shoham@gmail.com',
-        recipient: 'skgladiator3@gmail.com'
-    },
-    DELETE_PAIR: {
-        sender: 'shoham@gmail.com',
-        recipient: 'skgladiator4@gmail.com'
-    },
-    QUEUE_PAIR: {
-        sender: 'skgladiator3@gmail.com',
-        recipient: 'skgladiator4@gmail.com'
-    },
-    CONVERSATION_CLEAN_HISTORY: {
-        sender: 'skgladiator4@gmail.com',
-        recipient: 'skgladiator5@gmail.com'
-    },
-    CONVERSATION_DELETE: {
-        sender: 'skgladiator5@gmail.com',
-        recipient: 'skgladiator3@gmail.com'
-    },
-
-};
+import OFFLINE_TESTS_DATA from "../Data/scenariosData.json" with { type: "json" };
 
 customTest.describe('Offline Mode - Separated Scenarios', () => {
     customTest.beforeEach(async ({ context, authPage }) => {
@@ -69,17 +40,17 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
     * 5. Verify message appears in chat
     **/
     customTest('@Offline mode - Message should queue and send when back online', async ({ context, authPage }) => {
-        const { recipient } = USERS.SEND_PAIR;
+        const { recipient } = OFFLINE_TESTS_DATA.SEND_TEST;
         const chat = authPage.getChatPage();
 
         const recipientShortName = recipient.split('@')[0];
         await (await chat.selectUser(recipientShortName)).click();
 
         await context.setOffline(true);
-        await chat.sendMessage(TEST_MESSAGES.SEND, false);
+        await chat.sendMessage(OFFLINE_TESTS_DATA.SEND_TEST.test_message, false);
         await expect(chat.toastWarnings.messageSendingOfflineWarning).toBeVisible();
         await chat.reconnectAndVerifySync(context);
-        await expect(chat.lastMessageSent).toContainText(TEST_MESSAGES.SEND);
+        await expect(chat.lastMessageSent).toContainText(OFFLINE_TESTS_DATA.SEND_TEST.test_message);
     });
 
     /**
@@ -93,21 +64,21 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
     * 5. Verify deletion confirmation appears
     **/
     customTest('@Offline mode - Existing message should queue for deletion while offline', async ({ context, authPage }) => {
-        const { recipient } = USERS.DELETE_PAIR;
+        const { recipient } = OFFLINE_TESTS_DATA.DELETE_TEST;
         const chat = authPage.getChatPage();
 
         const recipientShortName = recipient.split('@')[0];
         await (await chat.selectUser(recipientShortName)).click();
 
         // Online Setup
-        await chat.sendMessage(TEST_MESSAGES.DELETE);
+        await chat.sendMessage(OFFLINE_TESTS_DATA.DELETE_TEST.test_message);
         await expect(chat.pendingMessageIndicator).toHaveCount(0);
 
         // Offline Action
         await context.setOffline(true);
-        const msg = chat.getMessageSentByText(TEST_MESSAGES.DELETE);
+        const msg = chat.getMessageSentByText(OFFLINE_TESTS_DATA.DELETE_TEST.test_message);
         await msg.hover();
-        const delButton = chat.getDeleteButtonByMessageText(TEST_MESSAGES.DELETE);
+        const delButton = chat.getDeleteButtonByMessageText(OFFLINE_TESTS_DATA.DELETE_TEST.test_message);
         await Promise.all([
             expect(chat.toastWarnings.messageDeletingOfflineWarning).toBeVisible(),
             delButton.click()
@@ -115,7 +86,7 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
 
         // Reconnect & Verify
         await chat.reconnectAndVerifySync(context);
-        await expect(chat.lastMessageSent).toContainText(TEST_MESSAGES.CONFIRM);
+        await expect(chat.lastMessageSent).toContainText(OFFLINE_TESTS_DATA.DELETE_TEST.confirm_message);
     });
 
     /**
@@ -127,14 +98,13 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
     customTest.describe('Queue Depth Scenario', () => {
         customTest.use({ storageState: 'tests/state2.json' });
         customTest('@Offline mode - Multiple messages should queue in order', async ({ context, authPage }) => {
-            const pair = USERS.QUEUE_PAIR;
+            const { recipient } = OFFLINE_TESTS_DATA.QUEUE_TEST;
             const chat = authPage.getChatPage();
-            const recipientShortName = pair.recipient.split('@')[0];
+            const recipientShortName = recipient.split('@')[0];
 
             await (await chat.selectUser(recipientShortName)).click();
             await context.setOffline(true);
-            const batch = ['Msg 1', 'Msg 2', 'Msg 3'];
-            for (const text of batch) {
+            for (const text of OFFLINE_TESTS_DATA.QUEUE_TEST.test_messages) {
                 await chat.sendMessage(text, false);
                 await expect(chat.toastWarnings.messageSendingOfflineWarning).toBeVisible();
             }
@@ -155,12 +125,12 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
     customTest.describe('Conversation clean history', () => {
         customTest.use({ storageState: 'tests/state3.json' });
         customTest('@Offline mode - Messages should dissapear after refresh when cleaning history while offline', async ({ context, authPage }) => {
-            const { recipient } = USERS.CONVERSATION_CLEAN_HISTORY;
+            const { recipient } = OFFLINE_TESTS_DATA.CONVERSATION_CLEAN_HISTORY_TEST;
             const chat = authPage.getChatPage();
             const recipientShortName = recipient.split('@')[0];
 
             await (await chat.selectUser(recipientShortName)).click();
-            await chat.sendMessage(TEST_MESSAGES.SEND);
+            await chat.sendMessage(OFFLINE_TESTS_DATA.SEND_TEST.test_message);
             expect(await chat.getSentMessagesLocator().count()).toBeGreaterThanOrEqual(1);
 
             await context.setOffline(true);
@@ -184,17 +154,16 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
     customTest.describe('Conversation delete', () => {
         customTest.use({ storageState: 'tests/state4.json' });
         customTest('@Offline mode - Conversation should dissapear when deleting it while offline', async ({ context, authPage }) => {
-            const { recipient } = USERS.CONVERSATION_DELETE;
+            const { recipient } = OFFLINE_TESTS_DATA.CONVERSATION_DELETE_TEST;
             const chat = authPage.getChatPage();
             const recipientShortName = recipient.split('@')[0];
             await (await chat.selectUser(recipientShortName)).click();
-            await chat.sendMessage(TEST_MESSAGES.SEND);
+            await chat.sendMessage(OFFLINE_TESTS_DATA.SEND_TEST.test_message);
 
             await context.setOffline(true);
-            await Promise.all([
-                expect(chat.toastWarnings.conversationDeletingOfflineWarning).toBeVisible(),
-                chat.dropDown.deleteConversation()
-            ]);
+            await chat.dropDown.deleteConversation();
+            await expect(chat.dropDown.deletionModalClosed()).resolves.toBe(true);
+            chat.toastWarnings.conversationDeletingOfflineWarning.waitFor({ state: 'visible', timeout: 5000 });
             await expect(chat.getSenderDivAtConversationsBar(recipient)).not.toBeVisible();
         });
     });

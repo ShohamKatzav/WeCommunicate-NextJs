@@ -1,7 +1,6 @@
 import { expect } from '@playwright/test';
 import { customTest } from '../fixtures/test-base';
-
-const FAKE_TOKEN_VALUE = '%7B%22email%22%3A%22Shoham%40gmail.com%22%2C%22token%22%3A%22eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaXQiOiI2NTdlODI0ZGUzZDBhNWU1NjMzMDY5ZjUiLCJlbWFpbCI6InNob2hhbUBnbWFpbC5jb20iLCJzaWduSW5UaW1lIjoxNzY3MzgxNTA1MzU5LCJpYXQiOjE3NjczODE1MDV9.fLMVtoKg82J6FW-4RJqqVNUnJrf8RqJbRU8bHSDc2c8%22%7D';
+import TESTS_DATA from "../Data/scenariosData.json" with { type: "json" };
 
 customTest.use({ storageState: { cookies: [], origins: [] } });
 customTest.describe('Navigation Functionality', () => {
@@ -61,7 +60,7 @@ customTest.describe('Navigation Functionality', () => {
         await context.addCookies([
             {
                 name: 'user',
-                value: FAKE_TOKEN_VALUE,
+                value: TESTS_DATA.FAKE_TOKEN_COOKIE.invalid_token,
                 domain: domain === 'localhost' ? 'localhost' : domain,
                 path: '/',
                 expires: 1767986305.408707,

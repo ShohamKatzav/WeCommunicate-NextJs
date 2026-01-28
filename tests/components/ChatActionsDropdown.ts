@@ -33,4 +33,8 @@ export default class ChatActionsDropdown {
         await this.confirmDeletionButton.click();
     }
 
+    async deletionModalClosed(): Promise<boolean> {
+        return await this.deleteConversationButton.isHidden();
+    }
+
 }

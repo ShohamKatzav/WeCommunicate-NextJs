@@ -1,14 +1,9 @@
 import { expect } from '@playwright/test';
 import { customTest } from '../fixtures/test-base';
 import dataSet from "../Data/usersTestData.json" with { type: "json" };
+import TESTS_DATA from "../Data/scenariosData.json" with { type: "json" };
 import globalTeardown from '../utils/global.teardown'
 
-const USERS = {
-    OFFLINE_PAIR: {
-        sender: 'skgladiator4@gmail.com',
-        recipient: 'shoham@gmail.com'
-    },
-};
 
 customTest.describe('Chat Notifications Functionality', () => {
 
@@ -43,19 +38,18 @@ customTest.describe('Chat Notifications Functionality', () => {
     customTest.describe('Offline notification test', () => {
         customTest.use({ storageState: 'tests/state3.json' });
         customTest('@Notifications received while not online', async ({ authPage, browser }) => {
-            const firstTextToSend = 'First message from user 1';
-            const secondTextToSend = 'Second message from user 1';
+            const ExtractedTestData = TESTS_DATA.OFFLINE_NOTIFICATIONS_TEST;
 
             await authPage.getLoginPage().navigateToLoginPage();
-            const anotherLoginData = { username: USERS.OFFLINE_PAIR.recipient, password: '12345678' };
-            const firstUserShortName = USERS.OFFLINE_PAIR.sender.split('@')[0];
+            const anotherLoginData = { username: ExtractedTestData.recipient, password: '12345678' };
+            const firstUserShortName = ExtractedTestData.sender.split('@')[0];
             const secondUserShortName = anotherLoginData?.username.split('@')[0] || '';
             await (await authPage.getChatPage().selectUser(secondUserShortName)).click();
 
             // Send messages while user 2 is offline
-            await authPage.getChatPage().messageInput.fill(firstTextToSend);
+            await authPage.getChatPage().messageInput.fill(ExtractedTestData.test_messages[0]);
             await authPage.getChatPage().sendMessageButton.click();
-            await authPage.getChatPage().messageInput.fill(secondTextToSend);
+            await authPage.getChatPage().messageInput.fill(ExtractedTestData.test_messages[1]);
             await authPage.getChatPage().sendMessageButton.click();
             await expect(authPage.getChatPage().pendingMessageIndicator).toHaveCount(0);
 
