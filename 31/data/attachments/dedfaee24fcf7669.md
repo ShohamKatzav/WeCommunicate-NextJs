@@ -1,0 +1,166 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - heading "We Communicate" [level=1] [ref=e4]:
+      - link "We Communicate" [ref=e5] [cursor=pointer]:
+        - /url: /
+    - list [ref=e6]:
+      - listitem [ref=e7] [cursor=pointer]:
+        - link "chat" [ref=e8]:
+          - /url: chat
+      - listitem [ref=e9] [cursor=pointer]:
+        - link "locations" [ref=e10]:
+          - /url: locations
+      - listitem [ref=e11] [cursor=pointer]:
+        - link "moderator" [ref=e12]:
+          - /url: moderator
+      - listitem [ref=e13] [cursor=pointer]:
+        - link "about" [ref=e14]:
+          - /url: about
+      - listitem [ref=e15] [cursor=pointer]:
+        - link "contact" [ref=e16]:
+          - /url: contact
+      - listitem [ref=e17] [cursor=pointer]:
+        - link "log out" [ref=e18]:
+          - /url: /
+  - region "Notifications alt+T"
+  - generic [ref=e20]:
+    - alert [ref=e21]:
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - img [ref=e24]
+          - paragraph [ref=e27]: Get instant alerts for new messages.
+        - button "Permanently dismiss notification prompt" [ref=e28]:
+          - img [ref=e29]
+      - generic [ref=e32]:
+        - button "Enable" [ref=e33]
+        - button "Later" [ref=e34]
+    - complementary [ref=e36]:
+      - generic [ref=e37]:
+        - heading "Chats" [level=3] [ref=e38]
+        - button "New conversation" [ref=e39]:
+          - img [ref=e40]
+      - generic [ref=e42]:
+        - textbox "Search conversations" [ref=e43]:
+          - /placeholder: Search...
+        - img [ref=e45]
+      - button "Create Group" [ref=e49]:
+        - img [ref=e50]
+        - generic [ref=e52]: Create Group
+      - generic [ref=e54]:
+        - listitem [ref=e55]:
+          - generic [ref=e56]:
+            - generic [ref=e58]: S
+            - generic [ref=e59]:
+              - generic [ref=e61]: Skgladiator4
+              - generic [ref=e62]:
+                - generic [ref=e63]: Shoham
+                - generic [ref=e64]: 22:21
+                - generic [ref=e65]: Delete this message offline
+        - listitem [ref=e66]:
+          - generic [ref=e67]:
+            - generic [ref=e69]: S
+            - generic [ref=e70]:
+              - generic [ref=e72]: Skgladiator3
+              - generic [ref=e73]:
+                - generic [ref=e74]: Shoham
+                - generic [ref=e75]: 22:21
+                - generic [ref=e76]: Sending message while offline
+    - generic [ref=e77]:
+      - generic [ref=e79]:
+        - generic [ref=e80]:
+          - heading "Welcome Shoham" [level=1] [ref=e82]
+          - generic [ref=e83]:
+            - img [ref=e84]
+            - generic [ref=e86]: "Chatting with: Skgladiator4"
+        - button [ref=e89]:
+          - img [ref=e90]
+      - generic [ref=e96]:
+        - generic [ref=e97]:
+          - img [ref=e98]
+          - text: You deleted this message
+        - generic [ref=e101]:
+          - generic [ref=e102]:
+            - generic [ref=e103]: Skgladiator4
+            - generic [ref=e104]: Offline Msg 1
+            - generic [ref=e105]: 1/28/2026, 9:59:11 PM
+          - button
+        - generic [ref=e106]:
+          - generic [ref=e107]:
+            - generic [ref=e108]: Skgladiator4
+            - generic [ref=e109]: Offline Msg 2
+            - generic [ref=e110]: 1/28/2026, 9:59:11 PM
+          - button
+        - generic [ref=e111]:
+          - generic [ref=e112]:
+            - generic [ref=e113]: Skgladiator4
+            - generic [ref=e114]: Offline Msg 1
+            - generic [ref=e115]: 1/28/2026, 9:59:35 PM
+          - button
+        - generic [ref=e116]:
+          - generic [ref=e117]:
+            - generic [ref=e118]: Skgladiator4
+            - generic [ref=e119]: Offline Msg 2
+            - generic [ref=e120]: 1/28/2026, 9:59:35 PM
+          - button
+        - generic [ref=e121]:
+          - img [ref=e122]
+          - text: You deleted this message
+      - generic [ref=e127]:
+        - generic [ref=e129] [cursor=pointer]:
+          - img [ref=e131]
+          - button "Remove file" [disabled] [ref=e133]:
+            - img [ref=e134]
+        - generic [ref=e137]:
+          - textbox "Message input" [ref=e138]:
+            - /placeholder: Message...
+          - button "Send message" [disabled] [ref=e139]:
+            - img [ref=e140]
+    - complementary [ref=e144]:
+      - generic [ref=e145]:
+        - generic [ref=e146]: Active now
+        - generic [ref=e147]:
+          - img [ref=e148]
+          - paragraph [ref=e153]: No active users
+        - generic [ref=e154]: Others
+        - generic [ref=e156] [cursor=pointer]:
+          - generic [ref=e158]: A
+          - generic [ref=e160]:
+            - generic [ref=e161]: Avivkatzav1
+            - generic [ref=e162]: Offline
+        - generic [ref=e164] [cursor=pointer]:
+          - generic [ref=e166]: E
+          - generic [ref=e168]:
+            - generic [ref=e169]: Eva
+            - generic [ref=e170]: Offline
+        - generic [ref=e172] [cursor=pointer]:
+          - generic [ref=e174]: P
+          - generic [ref=e176]:
+            - generic [ref=e177]: Phuclaits03
+            - generic [ref=e178]: Offline
+        - generic [ref=e180] [cursor=pointer]:
+          - generic [ref=e182]: S
+          - generic [ref=e184]:
+            - generic [ref=e185]: Shenhavkatzav
+            - generic [ref=e186]: Offline
+        - generic [ref=e188] [cursor=pointer]:
+          - generic [ref=e190]: S
+          - generic [ref=e192]:
+            - generic [ref=e193]: Skgladiator3
+            - generic [ref=e194]: Offline
+        - generic [ref=e196] [cursor=pointer]:
+          - generic [ref=e198]: S
+          - generic [ref=e200]:
+            - generic [ref=e201]: Skgladiator4
+            - generic [ref=e202]: Offline
+        - generic [ref=e204] [cursor=pointer]:
+          - generic [ref=e206]: S
+          - generic [ref=e208]:
+            - generic [ref=e209]: Skgladiator5
+            - generic [ref=e210]: Offline
+  - contentinfo [ref=e211]:
+    - paragraph [ref=e212]: © 2026 WeCommunicate
+  - alert [ref=e213]
+```
