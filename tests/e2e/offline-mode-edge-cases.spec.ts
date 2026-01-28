@@ -163,7 +163,7 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
             await context.setOffline(true);
             await chat.dropDown.deleteConversation();
             await expect(chat.dropDown.deletionModalClosed()).resolves.toBe(true);
-            chat.toastWarnings.conversationDeletingOfflineWarning.waitFor({ state: 'visible', timeout: 5000 });
+            await chat.toastWarnings.conversationDeletingOfflineWarning.waitFor({ state: 'visible', timeout: 5000 });
             await expect(chat.getSenderDivAtConversationsBar(recipient)).not.toBeVisible();
         });
     });
