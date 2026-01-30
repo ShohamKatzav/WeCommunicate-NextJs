@@ -24,6 +24,9 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "WeCommunicate",
   },
+  verification: {
+    google: "DznpoaFMof5Nx5Ok_dgC9iQp-rk2lyb7jIv-ZFAb9Kk",
+  },
 };
 
 export const viewport: Viewport = {
