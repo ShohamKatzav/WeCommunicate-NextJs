@@ -21,7 +21,7 @@ export default class ChatPage {
     fileInputLabel: Locator;
     fileInput: Locator;
     lastSentImage: Locator;
-    chatingWithDiv: Locator;
+    conversationInfoDiv: Locator;
     noConversationSelectedHeader: Locator;
     newConversationButton: Locator;
     groupChatButton: Locator;
@@ -41,7 +41,7 @@ export default class ChatPage {
         this.fileInputLabel = page.locator('#uploaded-file').locator('..');
         this.fileInput = page.locator('#uploaded-file');
         this.lastSentImage = page.getByAltText('Sent image').last();
-        this.chatingWithDiv = page.getByText('Chatting with:');
+        this.conversationInfoDiv = page.locator('#ConversationInfo');
         this.noConversationSelectedHeader = page.getByRole('heading', { name: 'No conversation selected' });
         this.newConversationButton = page.getByRole('button', { name: 'New conversation' });
         this.groupChatButton = page.locator('.flex').getByRole('button', { name: 'Create Group' });

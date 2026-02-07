@@ -1,5 +1,5 @@
 import { RefObject, useState, useRef, useEffect } from "react";
-import { HiOutlineEllipsisHorizontalCircle } from "react-icons/hi2";
+import { HiOutlineEllipsisHorizontalCircle, HiOutlineUsers } from "react-icons/hi2";
 import { RiHistoryLine, RiLogoutBoxRLine } from "react-icons/ri";
 import { MdDeleteForever } from "react-icons/md";
 import useIsMobile from "../hooks/useIsMobile";
@@ -8,6 +8,7 @@ import ChatUser from "@/types/chatUser";
 import { cleanHistory, deleteConversation } from "../lib/conversationActions";
 import DeleteConversationModal from "./deleteConversationModal";
 import { toast } from "sonner";
+import ConversationDetailsModal from "./conversationDetailsModal";
 
 interface ChatDropdownProps {
     handleLeaveRoom: () => void;
@@ -32,6 +33,7 @@ const ChatDropdown = ({
     const [showDropdown, setShowDropdown] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showParticipantsModal, setShowParticipantsModal] = useState(false);
 
     // Close dropdown when delete modal open/close
     useEffect(() => {
@@ -109,20 +111,30 @@ const ChatDropdown = ({
                 <div className="absolute right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 w-48">
 
                     <button
+                        onClick={() => {
+                            setShowParticipantsModal(true);
+                            setShowDropdown(false);
+                        }}
+                        className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                        <HiOutlineUsers size={18} /> Conversation Details
+                    </button>
+                    <hr className="my-0 border-stone-200 dark:border-gray-700" />
+                    <button
                         onClick={handleLeaveRoom}
                         className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
                         disabled={!participants.current}
                     >
                         <RiLogoutBoxRLine size={18} /> Leave Room
                     </button>
-                    <hr className="my-1 -mx-1 border-stone-300" />
+                    <hr className="my-0 border-stone-200 dark:border-gray-700" />
                     <button
                         onClick={handleCleanHistory}
                         className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
                         <RiHistoryLine size={18} /> Clear Room History
                     </button>
-                    <hr className="my-1 -mx-1 border-stone-300" />
+                    <hr className="my-0 border-stone-200 dark:border-gray-700" />
                     <button
                         onClick={() => setShowDeleteModal(true)}
                         className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-100 dark:hover:bg-gray-700"
@@ -137,6 +149,12 @@ const ChatDropdown = ({
                     isDeleting={isDeleting}
                     onClose={() => setShowDeleteModal(false)}
                     onConfirm={handleDeleteConversation}
+                />
+            )}
+            {showParticipantsModal && (
+                <ConversationDetailsModal
+                    participants={participants}
+                    setShowParticipantsModal={setShowParticipantsModal}
                 />
             )}
         </div>

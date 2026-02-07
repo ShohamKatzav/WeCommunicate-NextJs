@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import ChatUser from '@/types/chatUser';
 import Message from '@/types/message';
 import { revalidateChatRoute } from '@/app/lib/chatActions';
+import { useUser } from './useUser';
 
 interface UseSocketEventsProps {
     socket: Socket | null;
@@ -12,17 +13,60 @@ interface UseSocketEventsProps {
     handleIncomingMessage: (data: Message) => void;
     setChat: (messages: Message[]) => void;
     chatRef: React.RefObject<Message[]>;
+    isLocalTypingRef: React.RefObject<boolean>;
+    currentConversationId: React.RefObject<string>;
 }
 
 export const useSocketEvents = ({
     socket,
     loadingSocket,
+    userEmail,
     handleIncomingMessage,
     setChat,
-    chatRef
+    chatRef,
+    isLocalTypingRef,
+    currentConversationId
 }: UseSocketEventsProps) => {
+
     const [chatListActiveUsers, setChatListActiveUsers] = useState<ChatUser[]>([]);
+    const [typingUsers, setTypingUsers] = useState<Record<string, boolean>>({});
     const pathname = usePathname();
+
+    useEffect(() => {
+        if (!socket || loadingSocket) return;
+
+        const onStartTyping = (data: { email: string }) => {
+            setTypingUsers(prev => ({ ...prev, [data.email]: true }));
+        };
+
+        const onStopTyping = (data: { email: string }) => {
+            setTypingUsers(prev => {
+                const newState = { ...prev };
+                delete newState[data.email];
+                return newState;
+            });
+        };
+
+        const onSyncRequest = () => {
+            // Check the Ref from useChatRoom
+            if (isLocalTypingRef.current && currentConversationId.current) {
+                socket.emit('start typing', {
+                    email: userEmail,
+                    conversationId: currentConversationId.current
+                });
+            }
+        };
+
+        socket.on("start typing", onStartTyping);
+        socket.on("stop typing", onStopTyping);
+        socket.on("request typing status", onSyncRequest);
+
+        return () => {
+            socket.off("start typing", onStartTyping);
+            socket.off("stop typing", onStopTyping);
+            socket.off("request typing status", onSyncRequest);
+        };
+    }, [socket, loadingSocket, userEmail]);
 
     // Connected users
     useEffect(() => {
@@ -93,6 +137,7 @@ export const useSocketEvents = ({
         };
     }, [socket, loadingSocket, setChat, chatRef]);
     return {
-        chatListActiveUsers
+        chatListActiveUsers,
+        typingUsers
     };
 };

@@ -51,7 +51,9 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
         currentConversationId,
         participants,
         getLastMessages,
-        handleLeaveRoom
+        handleLeaveRoom,
+        handleTyping,
+        isLocalTypingRef
     } = useChatRoom({
         socket,
         userEmail: user?.email,
@@ -78,13 +80,15 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
     });
 
     // Socket events
-    const { chatListActiveUsers } = useSocketEvents({
+    const { chatListActiveUsers, typingUsers } = useSocketEvents({
         socket,
         loadingSocket,
         userEmail: user?.email,
         handleIncomingMessage,
         setChat,
-        chatRef
+        chatRef,
+        isLocalTypingRef,
+        currentConversationId,
     });
 
 
@@ -161,6 +165,8 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
                     setChat={setChat}
                     conversationId={currentConversationId.current}
                     updateConversationsBar={updateConversationsBar}
+                    typingUsers={typingUsers}
+                    activeSocketUsers={chatListActiveUsers}
                 />
 
                 <ChatWindow
@@ -176,6 +182,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
                             setMessage={setMessageToSend}
                             participants={participants}
                             handleSendMessage={handleSendMessage}
+                            handleTyping={handleTyping}
                         />
                     </div>
                 )}

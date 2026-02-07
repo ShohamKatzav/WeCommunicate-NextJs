@@ -10,9 +10,10 @@ interface MessageInputProps {
     setMessage: Dispatch<SetStateAction<Message>>;
     participants: RefObject<ChatUser[] | null | undefined>;
     handleSendMessage: () => Promise<void>;
+    handleTyping: () => void;
 }
 
-const ChatInputBar = ({ message, setMessage, participants, handleSendMessage }: MessageInputProps) => {
+const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, handleTyping }: MessageInputProps) => {
     const isMobile = useIsMobile();
     const canSend = (message.text?.trim() || message.file) && participants.current;
 
@@ -24,6 +25,7 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage }: 
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setMessage(prev => ({ ...prev, text: e.target.value }));
+        handleTyping();
     };
 
     return (

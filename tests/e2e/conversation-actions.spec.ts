@@ -14,7 +14,7 @@ customTest.describe('Checking conversation actions done by the dropdown', () => 
     });
 
     customTest('Leaving room successfuly', async ({ authPage }) => {
-        await expect(authPage.getChatPage().chatingWithDiv).toBeVisible();
+        await expect(authPage.getChatPage().conversationInfoDiv).toBeVisible();
         await authPage.getChatPage().dropDown.leaveRoom();
         await expect(authPage.getChatPage().noConversationSelectedHeader).toBeVisible();
     });
@@ -49,7 +49,7 @@ customTest.describe('Checking conversation actions done by conversation bar', ()
         const participantName = await chat.conversationForm.participantLabel.first().textContent() || '';
         await chat.conversationForm.participantLabel.first().click();
         await chat.conversationForm.startChattingButton.click();
-        await expect(chat.chatingWithDiv).toContainText(participantName);
+        await expect(chat.conversationInfoDiv).toContainText(participantName);
     });
 
     customTest('Start a group chat', async ({ authPage }) => {
@@ -60,8 +60,10 @@ customTest.describe('Checking conversation actions done by conversation bar', ()
         await chat.conversationForm.participantLabel.first().click();
         await chat.conversationForm.participantLabel.nth(1).click();
         await chat.conversationForm.createGroupButton.click();
-        await expect(chat.chatingWithDiv).toContainText(firstParticipantName);
-        await expect(chat.chatingWithDiv).toContainText(secondParticipantName);
+        await expect(chat.conversationInfoDiv).toContainText('2');
+        await chat.dropDown.openConversationDetails();
+        await expect(chat.dropDown.conversationDetailsModal).toContainText(firstParticipantName);
+        await expect(chat.dropDown.conversationDetailsModal).toContainText(secondParticipantName);
     });
 
 });

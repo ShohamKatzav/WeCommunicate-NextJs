@@ -1,6 +1,6 @@
 import ChatUser from "@/types/chatUser";
-import { Dispatch, SetStateAction } from "react";
-import { HiChatBubbleLeftRight, HiOutlineChatBubbleOvalLeft, HiUsers } from "react-icons/hi2";
+import { SetStateAction, useEffect, useState } from "react";
+import { HiChatBubbleLeftRight, HiUsers } from "react-icons/hi2";
 import { AsShortName } from "../utils/stringFormat";
 import { useUser } from "../hooks/useUser";
 import ChatDropdown from "./chatDropdown";
@@ -15,11 +15,37 @@ interface ChatHeaderProps {
     setChat: (newChat: Message[]) => void;
     conversationId: string;
     updateConversationsBar: (message: Message | null, mode?: string, cleanId?: string) => Promise<void>;
+    typingUsers: Record<string, boolean>;
+    activeSocketUsers: ChatUser[];
 }
 
-const ChatHeader = ({ setMobileChatsSidebarOpen, setMobileUsersSidebarOpen, participants, handleLeaveRoom, chat, setChat, conversationId, updateConversationsBar }: ChatHeaderProps) => {
+const ChatHeader = ({
+    setMobileChatsSidebarOpen,
+    setMobileUsersSidebarOpen,
+    participants,
+    handleLeaveRoom,
+    chat,
+    setChat,
+    conversationId,
+    updateConversationsBar,
+    typingUsers,
+    activeSocketUsers }: ChatHeaderProps) => {
 
     const { user } = useUser();
+
+    const [onlineCount, setOnlineCount] = useState(0);
+
+    useEffect(() => {
+        getOnlineParticipantsInRoom();
+    }, [participants.current, activeSocketUsers, conversationId]);
+
+    const getOnlineParticipantsInRoom = () => {
+        if (!participants.current) return [];
+        const count = participants.current.filter(p =>
+            activeSocketUsers.some(active => active.email === p.email)
+        ).length;
+        setOnlineCount(count);
+    };
 
     return (
         < div className="grid-cols-12 md:flex md:items-center gap-3 p-3 border-b dark:border-gray-700" >
@@ -41,21 +67,38 @@ const ChatHeader = ({ setMobileChatsSidebarOpen, setMobileUsersSidebarOpen, part
                         </h1>
                     </div>
 
-                    {!participants.current &&
-                        <div className="text-sm md:text-md text-green-500">{'Select a chat to start'}</div>
-                    }
+                    <div className="flex items-center gap-2 h-5 mt-0.5" id="ConversationInfo">
+                        {Object.keys(typingUsers).length > 0 ? (
+                            <div className="flex items-center gap-1.5 transition-all duration-300">
+                                <div className="flex gap-0.5">
+                                    <span className="w-1 h-1 bg-purple-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                    <span className="w-1 h-1 bg-purple-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                    <span className="w-1 h-1 bg-purple-500 rounded-full animate-bounce"></span>
+                                </div>
+                                <span className="text-xs text-purple-600 dark:text-purple-400 font-medium italic">
+                                    {Object.keys(typingUsers).length === 1
+                                        ? `${AsShortName(Object.keys(typingUsers)[0])} is typing...`
+                                        : "Multiple people are typing..."
+                                    }
+                                </span>
+                            </div>
+                        ) : (
 
-                    {participants.current?.length! > 0 &&
-                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                            <HiOutlineChatBubbleOvalLeft size={22} />
-                            <span className="text-wrap">
-                                Chatting with:{" "}
-                                {participants.current?.map((p, i) => (
-                                    <span key={i}>{AsShortName(p.email!)}{i < participants.current?.length! - 1 ? ", " : ""}</span>
-                                ))}
-                            </span>
-                        </div>
-                    }
+                            participants.current && (
+                                <div className="flex items-center gap-1 text-xs text-gray-500">
+                                    <span className={`w-1.5 h-1.5 bg-${onlineCount > 0 ? 'green' : 'gray'}-500 rounded-full`}></span>
+                                    {participants.current.length > 1 ? `${onlineCount} of ${participants.current.length} members online` :
+                                        `${onlineCount > 0 ? `${AsShortName(participants.current[0]?.email as string)} online` :
+                                            `${AsShortName(participants.current[0]?.email as string)} isn't here right now`}`
+                                    }
+                                </div>
+                            )
+                        )}
+
+                        {!participants.current && (
+                            <div className="text-xs text-green-500 font-medium">Select a chat to start</div>
+                        )}
+                    </div>
                 </div>
 
                 <div className="grid">

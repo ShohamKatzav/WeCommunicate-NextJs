@@ -28,6 +28,8 @@ export default async function handleSocketConnection(io, socket) {
         socket.on('ban user', (data) => handleBanUser(io, data));
         socket.on('unban user', (data) => handleUnbanUser(io, data));
         socket.on('disconnect', () => handleDisconnect(io, email, socket.id));
+        socket.on('start typing', (data) => handleStartTyping(socket, data));
+        socket.on('stop typing', (data) => handleStopTyping(socket, data));
 
     }
     catch (error) {
@@ -39,6 +41,10 @@ export default async function handleSocketConnection(io, socket) {
 async function handleJoinRoom(body, socket) {
     const room = `chat_room_${body.conversationId}`;
     socket.join(room);
+
+    socket.to(room).emit('request typing status', {
+        requestedBy: socket.id
+    });
 }
 
 async function handleUpdateConnectedUsers(io) {
@@ -90,6 +96,16 @@ async function handleDeleteMessage(io, message) {
             }
         }
     }
+}
+
+async function handleStartTyping(socket, data) {
+    const room = `chat_room_${data.conversationId}`;
+    socket.to(room).emit("start typing", { email: data.email });
+}
+
+async function handleStopTyping(socket, data) {
+    const room = `chat_room_${data.conversationId}`;
+    socket.to(room).emit("stop typing", { email: data.email });
 }
 
 async function handleNotificationsUpdate(socket, email) {
