@@ -1,6 +1,6 @@
 "use client"
 import './login.css'
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from 'next/navigation';
 import { useUser } from '../hooks/useUser';
 import Loading from '../components/loading';
@@ -9,7 +9,7 @@ import { Eye, EyeOff } from 'lucide-react';
 
 const Login = () => {
   const router = useRouter();
-  const { loadingUser, updateUser } = useUser();
+  const { user, loadingUser, updateUser } = useUser();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,6 +26,12 @@ const Login = () => {
   const validatePassword = (password: string): boolean => {
     return password.length >= 8;
   }
+
+  useEffect(() => {
+    if (!loadingUser && user?.email) {
+      router.replace("/chat");
+    }
+  }, [loadingUser, router, user?.email]);
 
   const clearErrors = () => {
     setEmailError("");
@@ -70,7 +76,7 @@ const Login = () => {
       const authResponse = await authenticateUser(email, password);
       if (await authResponse.success) {
         await updateUser({ email, token: authResponse.token, isModerator: authResponse.isModerator, });
-        router.push("/chat");
+        router.replace("/chat");
         return true;
       } else if (authResponse.status === 401) {
         setGeneralError("Wrong email or password. Please try again.");
@@ -105,12 +111,13 @@ const Login = () => {
     }
 
     setLoading(true);
-    await handleLogin();
-    setLoading(false);
+    const loginSucceeded = await handleLogin();
+    if (!loginSucceeded) {
+      setLoading(false);
+    }
   }
 
-  // Show loading screen only for initial user check
-  if (loadingUser) {
+  if (loadingUser || loading || user?.email) {
     return <Loading />;
   }
 
