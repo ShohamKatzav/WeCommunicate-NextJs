@@ -11,9 +11,9 @@
     "test-ui": "cross-env E2E_TEST=true playwright test --ui -c tests/playwright.config.ts",
     "test-debug": "cross-env E2E_TEST=true playwright test --debug -c tests/playwright.config.ts",
     "test:cleanup": "tsx tests/scripts/cleanup.ts",
-    "allure:clear": "rimraf tests/playwright-report/allure-results tests/playwright-report/allure-report",
+    "allure:clear": "rimraf tests/playwright-report/allure-report",
     "allure:restore": "mkdir -p tests/playwright-report/allure-results/history && (cp -r gh-pages-dir/history/. tests/playwright-report/allure-results/history/ 2>/dev/null || echo 'No history found')",
-    "allure:generate": "pnpm exec allure generate tests/playwright-report/allure-results -o tests/playwright-report/allure-report --clean",
+    "allure:generate": "pnpm exec allure generate tests/playwright-report/allure-results -o tests/playwright-report/allure-report",
     "allure:report": "pnpm run allure:clear && pnpm run allure:restore && pnpm run allure:generate"
   },
   "type": "module",
