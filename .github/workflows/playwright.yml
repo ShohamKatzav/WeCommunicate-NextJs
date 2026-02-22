@@ -46,7 +46,7 @@ jobs:
         E2E_TEST: true
         TEST_BYPASS_KEY: ${{ secrets.TEST_BYPASS_KEY }}
 
-    - name: Get Allure history
+    - name: Get previous Allure report history
       uses: actions/checkout@v4
       if: always()
       continue-on-error: true
@@ -54,16 +54,17 @@ jobs:
         ref: gh-pages
         path: gh-pages
 
-    - name: Allure Report action
-      uses: simple-elf/allure-report-action@master
+    - name: Restore Allure history into results
       if: always()
-      id: allure-report
-      with:
-        allure_results: tests/playwright-report/allure-results
-        gh_pages: gh-pages
-        allure_report: allure-report
-        allure_history: allure-history
-        keep_reports: 20
+      run: |
+        if [ -d "gh-pages/history" ]; then
+          mkdir -p tests/playwright-report/allure-results/history
+          cp -R gh-pages/history/. tests/playwright-report/allure-results/history/
+        fi
+
+    - name: Generate Allure Report (v3)
+      if: always()
+      run: pnpm allure:generate
 
     - name: Deploy report to Github Pages
       if: always()
@@ -71,20 +72,20 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_branch: gh-pages
-        publish_dir: allure-history
+        publish_dir: tests/playwright-report/allure-report
 
     - name: Add Allure link to Job Summary
       if: always()
       run: |
-        echo "### 📊 [View Allure Report](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.html)" >> $GITHUB_STEP_SUMMARY
+        echo "### [View Allure Report](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.html)" >> $GITHUB_STEP_SUMMARY
 
     - name: Post Allure Report link
       if: always() && github.event_name == 'pull_request'
       uses: thollander/actions-comment-pull-request@v2
       with:
         message: |
-          ### 📊 Test Report Generated
-          🔍 [View Allure Report](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.html)
+          ### Test Report Generated
+          [View Allure Report](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.html)
         comment_tag: allure_report_link
 
     - uses: actions/upload-artifact@v4

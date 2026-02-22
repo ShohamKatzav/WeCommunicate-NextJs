@@ -10,7 +10,10 @@
     "test": "cross-env E2E_TEST=true playwright test -c tests/playwright.config.ts",
     "test-ui": "cross-env E2E_TEST=true playwright test --ui -c tests/playwright.config.ts",
     "test-debug": "cross-env E2E_TEST=true playwright test --debug -c tests/playwright.config.ts",
-    "test:cleanup": "tsx tests/scripts/cleanup.ts"
+    "test:cleanup": "tsx tests/scripts/cleanup.ts",
+    "allure:generate": "allure generate tests/playwright-report/allure-results -o tests/playwright-report/allure-report --clean",
+    "allure:open": "allure open tests/playwright-report/allure-report",
+    "allure:serve": "allure serve tests/playwright-report/allure-results"
   },
   "type": "module",
   "dependencies": {
@@ -56,7 +59,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/web-push": "^3.6.4",
     "@types/ws": "^8.18.1",
-    "allure-commandline": "^2.36.0",
+    "allure": "^3.0.0-beta.18",
     "allure-playwright": "^3.4.5",
     "autoprefixer": "^10.4.22",
     "baseline-browser-mapping": "^2.9.19",
