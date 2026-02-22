@@ -12,8 +12,8 @@
     "test-debug": "cross-env E2E_TEST=true playwright test --debug -c tests/playwright.config.ts",
     "test:cleanup": "tsx tests/scripts/cleanup.ts",
     "allure:clear": "rimraf tests/playwright-report/allure-results tests/playwright-report/allure-report",
-    "allure:restore": "mkdir -p tests/playwright-report/allure-results/history && (cp -r gh-pages-dir/history/* tests/playwright-report/allure-results/history/ || echo 'No history found')",
-    "allure:generate": "allure generate tests/playwright-report/allure-results -o tests/playwright-report/allure-report --clean",
+    "allure:restore": "mkdir -p tests/playwright-report/allure-results/history && (cp -r gh-pages-dir/history/. tests/playwright-report/allure-results/history/ 2>/dev/null || echo 'No history found')",
+    "allure:generate": "pnpm exec allure generate tests/playwright-report/allure-results -o tests/playwright-report/allure-report --clean",
     "allure:report": "pnpm run allure:clear && pnpm run allure:restore && pnpm run allure:generate"
   },
   "type": "module",
@@ -42,7 +42,6 @@
     "react-dom": "^19.2.1",
     "react-icons": "^4.12.0",
     "react-intersection-observer": "^9.16.0",
-    "rimraf": "^5.0.10",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "sonner": "^2.0.7",
@@ -61,6 +60,7 @@
     "@types/web-push": "^3.6.4",
     "@types/ws": "^8.18.1",
     "allure": "^3.0.0-beta.18",
+    "allure-commandline": "^2.36.0",
     "allure-playwright": "^3.4.5",
     "autoprefixer": "^10.4.22",
     "baseline-browser-mapping": "^2.9.19",
@@ -68,6 +68,7 @@
     "eslint": "^9.39.1",
     "eslint-config-next": "16.0.0",
     "postcss": "^8.5.6",
+    "rimraf": "^5.0.10",
     "tailwindcss": "^4.1.17",
     "typescript": "^5.9.3"
   }

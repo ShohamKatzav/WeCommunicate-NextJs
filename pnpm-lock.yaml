@@ -80,9 +80,6 @@ importers:
       react-intersection-observer:
         specifier: ^9.16.0
         version: 9.16.0(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      rimraf:
-        specifier: ^5.0.10
-        version: 5.0.10
       socket.io:
         specifier: ^4.8.1
         version: 4.8.1
@@ -129,6 +126,9 @@ importers:
       allure:
         specifier: ^3.0.0-beta.18
         version: 3.2.0(preact@10.28.4)(typescript@5.9.3)
+      allure-commandline:
+        specifier: ^2.36.0
+        version: 2.36.0
       allure-playwright:
         specifier: ^3.4.5
         version: 3.4.5(@playwright/test@1.57.0)
@@ -147,6 +147,9 @@ importers:
       postcss:
         specifier: ^8.5.6
         version: 8.5.6
+      rimraf:
+        specifier: ^5.0.10
+        version: 5.0.10
       tailwindcss:
         specifier: ^4.1.17
         version: 4.1.17
@@ -1353,6 +1356,10 @@ packages:
 
   ajv@6.12.6:
     resolution: {integrity: sha512-j3fVLgvTo527anyYyJOGTYJbG+vnnQYvE0m5mmkc1TK+nxAppkCLMIL0aZ4dblVCNoGShhm+kzE4ZUykBoMg4g==}
+
+  allure-commandline@2.36.0:
+    resolution: {integrity: sha512-ls/4fk2Psv2Tu2PbWFrQPmUnm3gmmO9MBan4MuPWwqdkJPEmln2KRwtvtWYr9Av+e5AnFK1fGXWVyxqJIPiPwA==}
+    hasBin: true
 
   allure-js-commons@3.4.5:
     resolution: {integrity: sha512-mzAppLFva9PJqWvdI/aXn8jqr+5Am67JITdthMfEk8En6AhsrvRWZAjHZ1yUMDGEbxmivCni3lppvitJGStxFQ==}
@@ -5146,6 +5153,8 @@ snapshots:
       fast-json-stable-stringify: 2.1.0
       json-schema-traverse: 0.4.1
       uri-js: 4.4.1
+
+  allure-commandline@2.36.0: {}
 
   allure-js-commons@3.4.5(allure-playwright@3.4.5(@playwright/test@1.57.0)):
     dependencies:
