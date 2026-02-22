@@ -46,7 +46,7 @@ jobs:
         E2E_TEST: true
         TEST_BYPASS_KEY: ${{ secrets.TEST_BYPASS_KEY }}
 
-    - name: Get Allure history
+    - name: Get Allure history from gh-pages
       uses: actions/checkout@v4
       if: always()
       continue-on-error: true
@@ -54,23 +54,9 @@ jobs:
         ref: gh-pages
         path: gh-pages-dir
 
-    - name: Restore Allure history into results
+    - name: Generate Allure Report (Clear -> Restore -> Generate)
       if: always()
-      run: |
-        mkdir -p tests/playwright-report/allure-results/history
-        if [ -d "gh-pages-dir/history" ]; then
-          cp -R gh-pages-dir/history/. tests/playwright-report/allure-results/history/
-        fi
-
-    - name: Generate Allure Report (v3)
-      if: always()
-      run: pnpm allure:generate
-
-    - name: Prepare allure-history folder
-      if: always()
-      run: |
-        mkdir -p allure-history-deploy
-        cp -R tests/playwright-report/allure-report/. allure-history-deploy/
+      run: pnpm run allure:report
 
     - name: Deploy report to Github Pages
       if: always()
@@ -78,8 +64,7 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_branch: gh-pages
-        publish_dir: allure-history-deploy
-        keep_files: false
+        publish_dir: tests/playwright-report/allure-report
 
     - name: Add Allure link to Job Summary
       if: always()
