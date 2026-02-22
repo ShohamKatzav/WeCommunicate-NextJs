@@ -57,8 +57,10 @@ jobs:
     - name: Restore Allure history into results
       if: always()
       run: |
+        # Ensure the destination directory exists
+        mkdir -p tests/playwright-report/allure-results/history
+        # Check if history exists in the checked-out gh-pages branch
         if [ -d "gh-pages/history" ]; then
-          mkdir -p tests/playwright-report/allure-results/history
           cp -R gh-pages/history/. tests/playwright-report/allure-results/history/
         fi
 
@@ -71,10 +73,12 @@ jobs:
       run: |
         rm -rf allure-history
         mkdir -p allure-history
+        # Copy the newly generated report
         if [ -d "tests/playwright-report/allure-report" ]; then
           cp -R tests/playwright-report/allure-report/. allure-history/
-        else
-          echo "Allure report directory not found; skipping copy."
+        fi
+        if [ -d "tests/playwright-report/allure-results/history" ]; then
+           cp -R tests/playwright-report/allure-results/history/. allure-history/history/
         fi
 
     - name: Deploy report to Github Pages
@@ -84,19 +88,20 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_branch: gh-pages
         publish_dir: allure-history
+        keep_files: true
 
     - name: Add Allure link to Job Summary
       if: always()
       run: |
-        echo "### [View Allure Report](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.html)" >> $GITHUB_STEP_SUMMARY
+        echo "### 📊 [View Allure Report](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.html)" >> $GITHUB_STEP_SUMMARY
 
     - name: Post Allure Report link
       if: always() && github.event_name == 'pull_request'
       uses: thollander/actions-comment-pull-request@v2
       with:
         message: |
-          ### Test Report Generated
-          [View Allure Report](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.html)
+          ### 📊 Test Report Generated
+          🔍 [View Allure Report](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.html)
         comment_tag: allure_report_link
 
     - uses: actions/upload-artifact@v4
