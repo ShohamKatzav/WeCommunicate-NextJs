@@ -52,16 +52,14 @@ jobs:
       continue-on-error: true
       with:
         ref: gh-pages
-        path: gh-pages
+        path: gh-pages-dir
 
     - name: Restore Allure history into results
       if: always()
       run: |
-        # Ensure the destination directory exists
         mkdir -p tests/playwright-report/allure-results/history
-        # Check if history exists in the checked-out gh-pages branch
-        if [ -d "gh-pages/history" ]; then
-          cp -R gh-pages/history/. tests/playwright-report/allure-results/history/
+        if [ -d "gh-pages-dir/history" ]; then
+          cp -R gh-pages-dir/history/. tests/playwright-report/allure-results/history/
         fi
 
     - name: Generate Allure Report (v3)
@@ -71,15 +69,8 @@ jobs:
     - name: Prepare allure-history folder
       if: always()
       run: |
-        rm -rf allure-history
-        mkdir -p allure-history
-        # Copy the newly generated report
-        if [ -d "tests/playwright-report/allure-report" ]; then
-          cp -R tests/playwright-report/allure-report/. allure-history/
-        fi
-        if [ -d "tests/playwright-report/allure-results/history" ]; then
-           cp -R tests/playwright-report/allure-results/history/. allure-history/history/
-        fi
+        mkdir -p allure-history-deploy
+        cp -R tests/playwright-report/allure-report/. allure-history-deploy/
 
     - name: Deploy report to Github Pages
       if: always()
@@ -87,8 +78,8 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_branch: gh-pages
-        publish_dir: allure-history
-        keep_files: true
+        publish_dir: allure-history-deploy
+        keep_files: false
 
     - name: Add Allure link to Job Summary
       if: always()
