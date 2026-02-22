@@ -11,7 +11,7 @@
     "test-ui": "cross-env E2E_TEST=true playwright test --ui -c tests/playwright.config.ts",
     "test-debug": "cross-env E2E_TEST=true playwright test --debug -c tests/playwright.config.ts",
     "test:cleanup": "tsx tests/scripts/cleanup.ts",
-    "allure:generate": "allure generate tests/playwright-report/allure-results -o tests/playwright-report/allure-report --clean",
+    "allure:generate": "rimraf tests/playwright-report/allure-report && allure generate tests/playwright-report/allure-results -o tests/playwright-report/allure-report",
     "allure:open": "allure open tests/playwright-report/allure-report",
     "allure:serve": "allure serve tests/playwright-report/allure-results"
   },

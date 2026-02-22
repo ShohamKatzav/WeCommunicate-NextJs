@@ -71,7 +71,11 @@ jobs:
       run: |
         rm -rf allure-history
         mkdir -p allure-history
-        cp -R tests/playwright-report/allure-report/. allure-history/
+        if [ -d "tests/playwright-report/allure-report" ]; then
+          cp -R tests/playwright-report/allure-report/. allure-history/
+        else
+          echo "Allure report directory not found; skipping copy."
+        fi
 
     - name: Deploy report to Github Pages
       if: always()
