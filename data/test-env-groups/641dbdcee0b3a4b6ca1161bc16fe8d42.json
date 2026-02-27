@@ -1,1 +1,1 @@
-{"id":"641dbdcee0b3a4b6ca1161bc16fe8d42","fullName":"e2e/auth-navigation.spec.ts:67:3","name":"Navigation to secured chat page with fake token","status":"passed","testResultsByEnv":{"default":"0f3d186798a610f9ce373a7798b38abc"}}
+{"id":"641dbdcee0b3a4b6ca1161bc16fe8d42","fullName":"e2e/auth-navigation.spec.ts:67:3","name":"Navigation to secured chat page with fake token","status":"passed","testResultsByEnv":{"default":"1e3c3f9b9d36a7260abc13c0c4a59aa1"}}
