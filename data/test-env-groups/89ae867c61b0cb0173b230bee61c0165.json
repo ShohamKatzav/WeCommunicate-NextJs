@@ -1,1 +1,1 @@
-{"id":"89ae867c61b0cb0173b230bee61c0165","fullName":"e2e/auth-navigation.spec.ts:49:3","name":"Allow navigation to non secured contact path without login","status":"passed","testResultsByEnv":{"default":"a6172458ab7dc1ab33353be5b6db572b"}}
+{"id":"89ae867c61b0cb0173b230bee61c0165","fullName":"e2e/auth-navigation.spec.ts:49:3","name":"Allow navigation to non secured contact path without login","status":"passed","testResultsByEnv":{"default":"699a8e0c9584d2f7853a5664db17d922"}}
