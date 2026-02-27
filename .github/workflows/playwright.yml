@@ -4,6 +4,7 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+
 jobs:
   test:
     timeout-minutes: 60
@@ -11,6 +12,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+
     steps:
     - uses: actions/checkout@v4
 
@@ -53,6 +55,14 @@ jobs:
       with:
         ref: gh-pages
         path: gh-pages-dir
+
+    - name: Restore Allure history
+      if: always()
+      run: |
+        mkdir -p tests/allure-results/history
+        if [ -d gh-pages-dir/history ]; then
+          cp -r gh-pages-dir/history tests/allure-results/
+        fi
 
     - name: Generate Allure Report (Clear -> Restore -> Generate)
       if: always()
