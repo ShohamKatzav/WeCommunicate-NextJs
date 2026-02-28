@@ -40,6 +40,9 @@ jobs:
       run: pnpm exec playwright install --with-deps
       working-directory: ./tests
 
+    - name: Clean old results
+      run: rm -rf tests/playwright-report/allure-results
+
     - name: Run Playwright tests
       run: pnpm test
       continue-on-error: true
@@ -56,19 +59,23 @@ jobs:
         ref: gh-pages
         path: gh-pages-dir
 
-    - name: Restore Allure history (correct path)
+    - name: Restore Allure 3 JSONL History
       if: always()
       run: |
-        mkdir -p tests/playwright-report/allure-results/history
-        if [ -d gh-pages-dir/history ]; then
-          cp -r gh-pages-dir/history/. tests/playwright-report/allure-results/history/
+        if [ -f gh-pages-dir/allure-history.jsonl ]; then
+          cp gh-pages-dir/allure-history.jsonl ./allure-history.jsonl
         else
-          echo "No history found (first run)"
+          echo "No Allure 3 history file found. Starting fresh."
         fi
 
     - name: Generate Allure Report
       if: always()
       run: pnpm run allure:report
+
+    - name: Prepare Deployment
+      if: always()
+      run: |
+        cp ./allure-history.jsonl tests/playwright-report/allure-report/
 
     - name: Deploy report to Github Pages
       if: always()
