@@ -59,13 +59,15 @@ jobs:
         ref: gh-pages
         path: gh-pages-dir
 
-    - name: Restore Allure 3 JSONL History
+    - name: Restore Allure 3 History to tests folder
       if: always()
       run: |
+        # Restore the .jsonl file from gh-pages directly into your tests/ folder
         if [ -f gh-pages-dir/allure-history.jsonl ]; then
-          cp gh-pages-dir/allure-history.jsonl ./allure-history.jsonl
+          cp gh-pages-dir/allure-history.jsonl tests/allure-history.jsonl
+          echo "History restored to tests/ folder."
         else
-          echo "No Allure 3 history file found. Starting fresh."
+          echo "No history found. First run will create tests/allure-history.jsonl"
         fi
 
     - name: Generate Allure Report
@@ -75,7 +77,8 @@ jobs:
     - name: Prepare Deployment
       if: always()
       run: |
-        cp ./allure-history.jsonl tests/playwright-report/allure-report/
+        # Move the updated history file into the report folder so it deploys
+        cp tests/allure-history.jsonl tests/playwright-report/allure-report/
 
     - name: Deploy report to Github Pages
       if: always()

@@ -10,7 +10,7 @@
     "test": "cross-env E2E_TEST=true playwright test -c tests/playwright.config.ts",
     "test-ui": "cross-env E2E_TEST=true playwright test --ui -c tests/playwright.config.ts",
     "test-debug": "cross-env E2E_TEST=true playwright test --debug -c tests/playwright.config.ts",
-    "allure:report": "allure generate"
+    "allure:report": "allure generate tests/playwright-report/allure-results --config tests/allurerc.json"
   },
   "type": "module",
   "dependencies": {
