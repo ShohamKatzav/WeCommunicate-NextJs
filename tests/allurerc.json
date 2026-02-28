@@ -1,5 +1,5 @@
 {
-    "output": "playwright-report/allure-report",
-    "historyPath": "allure-history.jsonl",
+    "output": "tests/playwright-report/allure-report",
+    "historyPath": "tests/allure-history.jsonl",
     "appendHistory": true
 }
