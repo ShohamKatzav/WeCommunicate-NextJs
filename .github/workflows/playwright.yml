@@ -56,15 +56,17 @@ jobs:
         ref: gh-pages
         path: gh-pages-dir
 
-    - name: Restore Allure history
+    - name: Restore Allure history (correct path)
       if: always()
       run: |
-        mkdir -p tests/allure-results/history
+        mkdir -p tests/playwright-report/allure-results/history
         if [ -d gh-pages-dir/history ]; then
-          cp -r gh-pages-dir/history tests/allure-results/
+          cp -r gh-pages-dir/history/. tests/playwright-report/allure-results/history/
+        else
+          echo "No history found (first run)"
         fi
 
-    - name: Generate Allure Report (Clear -> Restore -> Generate)
+    - name: Generate Allure Report
       if: always()
       run: pnpm run allure:report
 
