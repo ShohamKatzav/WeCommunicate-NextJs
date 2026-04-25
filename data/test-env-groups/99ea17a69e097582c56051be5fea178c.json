@@ -1,1 +1,1 @@
-{"id":"99ea17a69e097582c56051be5fea178c","fullName":"e2e/presence.spec.ts:5:3","name":"Online users indicator test","status":"passed","testResultsByEnv":{"default":"ea0b191f8ecfdd25316afe4aaafe8f46"}}
+{"id":"99ea17a69e097582c56051be5fea178c","fullName":"e2e/presence.spec.ts:5:3","name":"Online users indicator test","status":"failed","testResultsByEnv":{"default":"d1ffa4231e296bea8dc715f756b20b80"}}
