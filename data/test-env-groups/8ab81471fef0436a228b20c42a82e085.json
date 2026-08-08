@@ -1,1 +1,1 @@
-{"id":"8ab81471fef0436a228b20c42a82e085","fullName":"e2e/auth-navigation.spec.ts:47:5","name":"Navigation to secured chat page without login","status":"passed","testResultsByEnv":{"default":"24173fc3077c16e33e44fe148b43d185"}}
+{"id":"8ab81471fef0436a228b20c42a82e085","fullName":"e2e/auth-navigation.spec.ts:47:5","name":"Navigation to secured chat page without login","status":"passed","testResultsByEnv":{"default":"60a2ab4cd2e62d80aea93b3147dc7ef8"}}

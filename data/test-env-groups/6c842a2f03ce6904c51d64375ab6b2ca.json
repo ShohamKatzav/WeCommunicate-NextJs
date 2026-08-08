@@ -1,1 +1,1 @@
-{"id":"6c842a2f03ce6904c51d64375ab6b2ca","fullName":"e2e/offline-mode-edge-cases.spec.ts:66:5","name":"@Offline mode - Existing message should queue for deletion while offline","status":"passed","testResultsByEnv":{"default":"96c056b02e468e264be744dd66a44823"}}
+{"id":"6c842a2f03ce6904c51d64375ab6b2ca","fullName":"e2e/offline-mode-edge-cases.spec.ts:66:5","name":"@Offline mode - Existing message should queue for deletion while offline","status":"broken","testResultsByEnv":{"default":"87f64444973d43da6bbdaa2779c57a7c"}}
