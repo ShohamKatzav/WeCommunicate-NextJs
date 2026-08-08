@@ -1,0 +1,1 @@
+{"id":"9ad93bbf9f3a9e489fe83cfeca711c21","fullName":"e2e/offline-mode-edge-cases.spec.ts:127:9","name":"@Offline mode - Messages should dissapear after refresh when cleaning history while offline","status":"passed","testResultsByEnv":{"default":"6f549d291f1f3f328e1dc64d60811bd5"}}
