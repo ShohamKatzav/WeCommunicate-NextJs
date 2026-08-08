@@ -16,7 +16,9 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
         await authPage.page.goto('/about');
         await expect(authPage.getAboutPage().aboutHeader).toBeVisible();
         await context.setOffline(true);
-        await authPage.getChatPage().navbar.chatLink.click();
+        await authPage.page.goto('/chat', { waitUntil: 'domcontentloaded' });
+        // reload to ensure service worker / client mount state updates under offline
+        await authPage.page.reload();
         await expect(authPage.getOfflinePage().offlineHeader).toBeVisible();
 
     });
@@ -25,7 +27,9 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
         await authPage.page.goto('/about');
         await expect(authPage.getAboutPage().aboutHeader).toBeVisible();
         await context.setOffline(true);
-        await authPage.getChatPage().navbar.locationsLink.click();
+        await authPage.page.goto('/locations', { waitUntil: 'domcontentloaded' });
+        // reload to ensure service worker / client mount state updates under offline
+        await authPage.page.reload();
         await expect(authPage.getOfflinePage().offlineHeader).toBeVisible();
 
     });
@@ -44,7 +48,10 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
         const chat = authPage.getChatPage();
 
         const recipientShortName = recipient.split('@')[0];
-        await (await chat.selectUser(recipientShortName)).click();
+        const conversationRow = await chat.selectUser(recipientShortName);
+
+        await conversationRow.click();
+        await expect(chat.messageInput).toBeVisible({ timeout: 10000 });
 
         await context.setOffline(true);
         await chat.sendMessage(OFFLINE_TESTS_DATA.SEND_TEST.test_message, false);

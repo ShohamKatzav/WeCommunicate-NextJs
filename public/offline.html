@@ -212,7 +212,7 @@
         </svg>
     </div>
 
-    <h1 id="status-text">You're offline 📡</h1>
+    <h1 id="status-text">You're offline <span aria-hidden="true">📡</span></h1>
 
     <p id="description-text">Looks like you've lost your <strong>internet connection</strong></p>
     <p class="italic">"Sometimes you need to disconnect to reconnect." — Anonymous</p>
@@ -257,9 +257,23 @@
                 }, 3000);
             }
 
-            // Update UI based on connection status
-            function updateStatus() {
-                const online = navigator.onLine;
+            // Probe the network by requesting a small uncached endpoint
+            async function probeNetwork(timeout = 1500) {
+                const controller = new AbortController();
+                const id = setTimeout(() => controller.abort(), timeout);
+                try {
+                    const res = await fetch('/api/health', { method: 'GET', cache: 'no-store', signal: controller.signal });
+                    clearTimeout(id);
+                    return res.ok;
+                } catch (e) {
+                    clearTimeout(id);
+                    return false;
+                }
+            }
+
+            // Update UI based on an actual probe result rather than relying solely on navigator.onLine
+            async function updateStatus() {
+                const online = await probeNetwork();
 
                 if (online) {
                     statusText.textContent = "You're back online! 🎉";
@@ -275,7 +289,7 @@
 
                     retryBtn.disabled = false;
                 } else {
-                    statusText.textContent = "You're offline 📡";
+                    statusText.textContent = "You're offline";
                     descriptionText.innerHTML = 'Looks like you\'ve lost your <strong>internet connection</strong>';
 
                     statusIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

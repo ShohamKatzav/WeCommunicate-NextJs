@@ -24,6 +24,13 @@ const NEVER_CACHE = [
     '/sign-up',
 ];
 
+const OFFLINE_QUEUE_PATHS = [
+    '/chat',
+    '/api/chat',
+    '/api/cleanhistory',
+    '/api/conversation'
+];
+
 function shouldNeverCache(url) {
     return NEVER_CACHE.some(path => url.includes(path));
 }
@@ -172,13 +179,18 @@ self.addEventListener('fetch', async event => {
         event.respondWith(
             (async () => {
                 try {
-                    const networkRes = await fetch(req);
+                    // Force a no-store network fetch for navigations so we don't get a stale
+                    // cached HTML document from the browser HTTP cache. If network is unavailable
+                    // this will throw and we will return the offline fallback.
+                    const networkRes = await fetch(req, { cache: 'no-store' });
                     if (networkRes.status === 200 && !shouldNeverCache(url.pathname)) {
                         cachePut(CACHE_NAME, req, networkRes);
                     }
                     return networkRes;
 
-                } catch {
+                } catch (err) {
+                    // On network failure, always serve the offline page so targeted
+                    // navigations show the offline UI deterministically.
                     const fallback = await caches.match('/offline.html');
                     return fallback || new Response('Offline page not found', {
                         status: 503,
@@ -214,7 +226,10 @@ self.addEventListener('fetch', async event => {
         return;
     }
 
-    if (event.request.method === 'POST' && url.pathname === '/chat') {
+    if (
+        (event.request.method === 'POST' || event.request.method === 'DELETE') &&
+        OFFLINE_QUEUE_PATHS.includes(url.pathname)
+    ) {
         event.respondWith(
             fetch(event.request.clone())
                 .catch(async (error) => {

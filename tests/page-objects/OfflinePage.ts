@@ -4,6 +4,7 @@ export default class OfflinePage {
 
     page: Page;
     offlineHeader: Locator;
+    connectionIndicator: Locator;
 
 
     constructor(page: Page) {

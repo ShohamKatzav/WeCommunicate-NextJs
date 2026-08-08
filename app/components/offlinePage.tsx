@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 
-export default function OfflinePage() {
-    const [isOnline, setIsOnline] = useState(navigator.onLine);
+export default function OfflinePage({ forceOffline }: { forceOffline?: boolean }) {
+    const [isOnline, setIsOnline] = useState(() => {
+        if (forceOffline) return false;
+        return navigator.onLine;
+    });
 
     useEffect(() => {
         const handleOnline = () => setIsOnline(true);
