@@ -3,23 +3,29 @@ import { useState, useEffect, ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import OfflinePage from './offlinePage';
 
-const TARGETED_PATHS = ['/chat', '/locations'];
+const TARGETED_PATHS = ['/chat', '/locations', '/moderator'];
+
+const isTargetedPath = (path?: string) => {
+    if (!path) return false;
+    const normalized = path.startsWith('/') ? path : `/${path}`;
+    const cleaned = normalized.split('?')[0].split('#')[0].replace(/\/+$/, '');
+    return TARGETED_PATHS.some(target => cleaned === target || cleaned.startsWith(`${target}/`));
+};
 
 export default function OfflineHandler({ children }: { children: ReactNode }) {
-    const pathname = usePathname();
-    const getInitialShowOffline = () => false;
-
+    const pathname = usePathname() || undefined;
+    const getInitialShowOffline = () => typeof window !== 'undefined' && !navigator.onLine && isTargetedPath(window.location.pathname);
     const [showOffline, setShowOffline] = useState<boolean>(getInitialShowOffline);
 
     useEffect(() => {
         const checkOnlineStatus = async () => {
             try {
                 if (!navigator.onLine) {
-                    setShowOffline(false);
+                    setShowOffline(isTargetedPath(pathname));
                     return;
                 }
 
-                if (TARGETED_PATHS.includes(pathname!)) {
+                if (isTargetedPath(pathname)) {
                     const probeUrl = `${window.location.origin}/api/health`;
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 2000);
@@ -46,8 +52,16 @@ export default function OfflineHandler({ children }: { children: ReactNode }) {
 
         checkOnlineStatus();
 
-        const handleOnline = () => checkOnlineStatus();
-        const handleOffline = () => checkOnlineStatus();
+        // Going offline while already using chat/locations is an expected
+        // application state: those pages queue actions locally. Do not
+        // replace the current page just because the connection was lost.
+        const handleOnline = () => setShowOffline(false);
+        const handleOffline = () => {
+            // A route transition that is already in progress is handled by
+            // the link capture listener below. This event must not tear down
+            // an active offline-capable page.
+            return;
+        };
 
         const handleLinkClick = (e: MouseEvent) => {
             try {
@@ -56,10 +70,34 @@ export default function OfflineHandler({ children }: { children: ReactNode }) {
                 const anchor = target.closest && (target.closest('a') as HTMLAnchorElement | null);
                 if (!anchor || !anchor.href) return;
                 const url = new URL(anchor.href, window.location.href);
-                if (!url.pathname) return;
-                if (!navigator.onLine && TARGETED_PATHS.includes(url.pathname)) {
-                    setShowOffline(true);
+                if (!isTargetedPath(url.pathname)) return;
+
+                // Capture targeted links before Next handles them as an RSC
+                // navigation. A failed RSC request otherwise leaves the old
+                // page's loading UI visible indefinitely while offline.
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+
+                const goOffline = () => window.location.replace('/offline.html');
+                if (!navigator.onLine) {
+                    goOffline();
+                    return;
                 }
+
+                const controller = new AbortController();
+                const timeoutId = window.setTimeout(() => controller.abort(), 1000);
+                fetch('/api/health', {
+                    method: 'GET',
+                    cache: 'no-store',
+                    signal: controller.signal,
+                })
+                    .then((response) => {
+                        if (!response.ok) throw new Error('Health check failed');
+                        window.location.assign(url.href);
+                    })
+                    .catch(goOffline)
+                    .finally(() => window.clearTimeout(timeoutId));
             } catch (err) {
                 // ignore parsing/link errors
             }

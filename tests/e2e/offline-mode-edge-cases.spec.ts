@@ -33,6 +33,18 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
         await expect(authPage.getOfflinePage().offlineHeader).toBeVisible();
 
     });
+
+    customTest('@Offline mode - @Navigate to moderator page', async ({ context, authPage }) => {
+        await authPage.page.goto('/about');
+        await expect(authPage.getAboutPage().aboutHeader).toBeVisible();
+        await context.setOffline(true);
+        await authPage.page.goto('/moderator', { waitUntil: 'domcontentloaded' });
+        // reload to ensure service worker / client mount state updates under offline
+        await authPage.page.reload();
+        await expect(authPage.getOfflinePage().offlineHeader).toBeVisible();
+
+    });
+
     /**
     * Test: Sending a message while offline should queue it and send when reconnected
     *
