@@ -1,1 +1,0 @@
-{"id":"65f7953e67f2b3efffd54e2c3ba670f7","fullName":"e2e/offline-mode-edge-cases.spec.ts:42:5","name":"@Offline mode - Message should queue and send when back online","status":"broken","testResultsByEnv":{"default":"6af5b7e87b88d1a5feac7f91beee8641"}}
