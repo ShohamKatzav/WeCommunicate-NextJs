@@ -1,1 +1,1 @@
-{"id":"4ed1ff8183433cd716b97cb3b1596cb4","fullName":"e2e/auth-navigation.spec.ts:37:5","name":"Allow navigation to non secured about path without login","status":"passed","testResultsByEnv":{"default":"3d6db9a5f1005e4a3fda4b6f6ed3d26f"}}
+{"id":"4ed1ff8183433cd716b97cb3b1596cb4","fullName":"e2e/auth-navigation.spec.ts:37:5","name":"Allow navigation to non secured about path without login","status":"passed","testResultsByEnv":{"default":"a60ffc007405b6686bc15046ed21fe36"}}
