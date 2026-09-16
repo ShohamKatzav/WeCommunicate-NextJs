@@ -21,10 +21,10 @@ customTest.describe('Checking conversation actions done by the dropdown', () => 
 
     customTest('Clean room history', async ({ authPage }) => {
         await authPage.getChatPage().sendMessage('Clean history test');
-        expect(await authPage.getChatPage().getSentMessagesCount()).toBeGreaterThan(0);
+        await expect(authPage.getChatPage().getSentMessagesLocator()).not.toHaveCount(0);
         await authPage.getChatPage().dropDown.clearHistory();
         await authPage.page.waitForLoadState('networkidle');
-        expect(await authPage.getChatPage().getSentMessagesCount()).toEqual(0);
+        await expect(authPage.getChatPage().getSentMessagesLocator()).toHaveCount(0);
     });
 
     customTest('Delete conversation', async ({ authPage }) => {

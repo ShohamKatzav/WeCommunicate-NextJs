@@ -22,7 +22,7 @@ export default class ForgotPasswordPage {
         this.verifyOTPHeader = page.locator('h1:has-text("Verify OTP")');
         this.OTPInput = page.locator('#otp');
         this.verifyCodeButton = page.getByRole('button', { name: 'Verify Code' });
-        this.invalidOTPDiv = page.getByText('Invalid OTP');
+        this.invalidOTPDiv = page.getByText('Invalid or expired verification code');
         this.OTPVerifiedConfirmation = page.locator('text=OTP verified successfully!');
         this.OTPSentDiv = page.getByText('If an account with this email exists');
         this.emailInputError = page.locator('#email-error');

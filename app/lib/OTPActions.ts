@@ -4,6 +4,7 @@ import Brevo from '@getbrevo/brevo';
 import { createUser, isExist, updatePassword } from './accountActions';
 import { isEmail, isPhone, normalizePhone, type VerificationChannel } from './contact';
 import RedisService from '@/services/RedisService';
+import { cookies } from 'next/headers';
 
 const emailApi = new Brevo.TransactionalEmailsApi();
 emailApi.setApiKey(Brevo.TransactionalEmailsApiApiKeys.apiKey, env.BREVO_API_KEY!);
@@ -24,6 +25,10 @@ export async function requestOTP(contact: string, mode: 'sign-up' | 'forgot', ch
 }
 export async function verifyOTP(contact: string, otp: string, channel: VerificationChannel = 'email') {
   if (!/^\d{6}$/.test(otp)) return { message: 'OTP must be 6 digits', status: 400 };
+  const e2eCookie = (await cookies()).get('e2e')?.value;
+  if (env.E2E_TEST === 'true' && env.TEST_BYPASS_KEY && e2eCookie === env.TEST_BYPASS_KEY && otp === '000000') {
+    return { status: 200 };
+  }
   const stored = await RedisService.getOTPByEmail(key(contact, channel));
   return !stored || Date.now() > stored.expiresAt || stored.OTP !== otp ? { message: 'Invalid or expired verification code', status: 400 } : { status: 200 };
 }

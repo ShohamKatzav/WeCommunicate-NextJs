@@ -20,7 +20,7 @@ customTest.describe('OTP processes - Forgot Password Functionality', () => {
         await expect(authPage.getForgotPasswordPage().emailInput).toHaveValue('shoham');
         await authPage.getForgotPasswordPage().sendCodeButton.click();
         let validationError = await authPage.getEmailValidationError(authPage.getForgotPasswordPage().emailInput);
-        expect(validationError).toContain("Please include an '@' in the email address");
+        expect(validationError).toContain("Please include an '@' in the email address. 'shoham' is missing an '@'.");
 
         await authPage.getForgotPasswordPage().emailInput.click();
         await authPage.getForgotPasswordPage().emailInput.fill('shoham@');
@@ -105,6 +105,7 @@ customTest.describe('OTP processes - Sign up Functionality', () => {
         await authPage.getLoginPage().navigateToLoginPage();
         await authPage.getLoginPage().signUpLink.click();
         await authPage.getSignUpPage().page.waitForLoadState('networkidle');
+        await authPage.getSignUpPage().nicknameInput.fill('Test User');
         await authPage.getSignUpPage().emailInput.fill(loginData.username);
         await authPage.getSignUpPage().sendCodeButton.click();
         await expect(authPage.getSignUpPage().sendCodeButton).toBeEnabled();

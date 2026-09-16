@@ -10,9 +10,14 @@ jobs:
   test:
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     permissions:
       contents: write
       pull-requests: write
+      pages: write
+      id-token: write
 
     steps:
     - uses: actions/checkout@v4
@@ -78,24 +83,31 @@ jobs:
     - name: Prepare Deployment
       if: always()
       run: |
-        mkdir -p tests/playwright-report/allure-report
         if [ -f tests/allure-history.jsonl ]; then
           cp tests/allure-history.jsonl tests/playwright-report/allure-report/
           echo "History file prepared for deployment."
         else
           echo "Warning: tests/allure-history.jsonl not found!"
         fi
+        test -f tests/playwright-report/allure-report/index.html
 
-    - name: Deploy report to Github Pages
-      if: always()
-      uses: peaceiris/actions-gh-pages@v3
+    - name: Configure GitHub Pages
+      if: always() && github.event_name != 'pull_request'
+      uses: actions/configure-pages@v5
+
+    - name: Upload report to GitHub Pages
+      if: always() && github.event_name != 'pull_request'
+      uses: actions/upload-pages-artifact@v3
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_branch: gh-pages
-        publish_dir: tests/playwright-report/allure-report
+        path: tests/playwright-report/allure-report
+
+    - name: Deploy report to GitHub Pages
+      if: always() && github.event_name != 'pull_request'
+      uses: actions/deploy-pages@v4
+      id: deployment
 
     - name: Add Allure link to Job Summary
-      if: always()
+      if: always() && github.event_name != 'pull_request'
       run: |
         echo "### 📊 [View Allure Report](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.html)" >> $GITHUB_STEP_SUMMARY
 
@@ -105,7 +117,7 @@ jobs:
       with:
         message: |
           ### 📊 Test Report Generated
-          🔍 [View Allure Report](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.html)
+          The Allure report is available in the `playwright-report` workflow artifact.
         comment_tag: allure_report_link
 
     - uses: actions/upload-artifact@v4

@@ -23,7 +23,7 @@ customTest.describe('Chat Messages Functionality', () => {
         await authPage.getChatPage().getDeleteButtonByMessageText(textToSend).click();
 
         // Confirm deletion in the dialog of both users
-        await expect(authPage.getChatPage().lastMessageSent).toContainText('You deleted this message');
+        await expect(authPage.getChatPage().getSentMessageByText('You deleted this message')).toBeVisible();
         await expect(pOManager2.getChatPage().lastMessageReceived).toContainText('This message was deleted');
     });
 

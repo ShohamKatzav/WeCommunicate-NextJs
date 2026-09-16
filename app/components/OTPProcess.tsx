@@ -3,7 +3,7 @@ import '../login/login.css'
 import { JSX, useState } from "react";
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/app/hooks/useUser';
-import { Eye, EyeOff, Mail, Phone, Shield, Lock, KeyRound } from 'lucide-react';
+import { Eye, EyeOff, Mail, Shield, Lock, KeyRound } from 'lucide-react';
 import { requestOTP, verifyOTP, resetPassword, createAccount } from '@/app/lib/OTPActions'
 import { isPhone } from '@/app/lib/contact';
 
@@ -295,7 +295,7 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                                 <div className="mb-3 flex rounded-lg bg-gray-100 p-1 dark:bg-gray-700">
                                     {(['email', 'sms'] as const).map(option => <button key={option} type="button" onClick={() => setChannel(option)} className={`flex-1 rounded-md py-2 text-sm font-medium ${channel === option ? 'bg-white text-indigo-700 shadow dark:bg-gray-600 dark:text-white' : ''}`}>{option === 'email' ? 'Email' : 'SMS'}</button>)}
                                 </div>
-                                {mode === 'sign-up' && <input value={nickname} onChange={ev => setNickname(ev.target.value)} placeholder="Choose a nickname" className="inputBox mb-3 w-full" maxLength={40} required />}
+                                {mode === 'sign-up' && <input id="nickname" value={nickname} onChange={ev => setNickname(ev.target.value)} placeholder="Choose a nickname" className="inputBox mb-3 w-full" maxLength={40} required />}
                                 <label htmlFor="email" className="sr-only">Email or phone number</label>
                                 <input
                                     id="email"

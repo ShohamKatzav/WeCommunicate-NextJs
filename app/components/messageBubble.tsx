@@ -69,6 +69,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
     return (
       <div
         className={messageStyle}
+        data-testid={message.sender === user?.email ? "sent-message" : "received-message"}
       >
         <IoBan size={isMobile ? 25 : 30} />
         {deletedMessageText}
@@ -86,6 +87,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
         onMouseEnter={() => !isMobile && setHover(true)}
         onMouseLeave={() => !isMobile && setHover(false)}
         className={messageStyle}
+        data-testid={message.sender === user?.email ? "sent-message" : "received-message"}
         ref={messageRef}
       >
         <div className="text-sm md:text-lg text-gray-200 mb-1">{sender}</div>

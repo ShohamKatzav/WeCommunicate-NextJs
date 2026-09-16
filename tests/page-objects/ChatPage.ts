@@ -16,7 +16,6 @@ export default class ChatPage {
     messageInput: Locator;
     sendMessageButton: Locator;
     pendingMessageIndicator: Locator;
-    lastMessageSent: Locator;
     lastMessageReceived: Locator;
     fileInputLabel: Locator;
     fileInput: Locator;
@@ -36,8 +35,7 @@ export default class ChatPage {
         this.messageInput = page.getByRole('textbox', { name: 'Message input' });
         this.sendMessageButton = page.getByRole('button', { name: 'Send message' });
         this.pendingMessageIndicator = page.locator('.inline');
-        this.lastMessageSent = page.locator('.overflow-y-scroll div.bg-green-500').last();
-        this.lastMessageReceived = page.locator('.overflow-y-scroll div.bg-gray-500:last-child');
+        this.lastMessageReceived = page.locator('.overflow-y-auto div.bg-gray-500:last-child');
         this.fileInputLabel = page.locator('#uploaded-file').locator('..');
         this.fileInput = page.locator('#uploaded-file');
         this.lastSentImage = page.getByAltText('Sent image').last();
@@ -196,10 +194,15 @@ export default class ChatPage {
 
 
     getSentMessagesLocator(): Locator {
-        return this.page.locator('.overflow-y-scroll div.bg-green-500');
+        return this.page.getByTestId('sent-message');
     }
+
+    getSentMessageByText(text: string): Locator {
+        return this.getSentMessagesLocator().filter({ hasText: text }).last();
+    }
+
     async getSentMessagesCount(): Promise<number> {
-        return await this.page.locator('.overflow-y-scroll div.bg-green-500').count();
+        return await this.getSentMessagesLocator().count();
     }
 
 }

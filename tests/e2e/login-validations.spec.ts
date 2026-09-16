@@ -33,17 +33,18 @@ customTest.describe('Login Functionality', () => {
     customTest('@Login @Negative Invalid format and credentials', async ({ authPage, loginData }) => {
         await authPage.getLoginPage().emailInput.fill('shoham');
         await authPage.getLoginPage().loginButton.click();
-        let validationError = await authPage.getEmailValidationError(authPage.getLoginPage().emailInput);
-        expect(validationError).toContain("Please include an '@' in the email address");
+        await expect(authPage.getLoginPage().emailInputError)
+            .toContainText('Please enter a valid email or phone number with country code');
 
         await authPage.getLoginPage().emailInput.fill('shoham@');
         await authPage.getLoginPage().loginButton.click();
-        validationError = await authPage.getEmailValidationError(authPage.getLoginPage().emailInput);
-        expect(validationError).toContain("Please enter a part following '@'");
+        await expect(authPage.getLoginPage().emailInputError)
+            .toContainText('Please enter a valid email or phone number with country code');
 
         await authPage.getLoginPage().emailInput.fill('shoham@g');
         await authPage.getLoginPage().loginButton.click();
-        await expect(authPage.getLoginPage().emailInputError).toContainText('Please enter a valid email');
+        await expect(authPage.getLoginPage().emailInputError)
+            .toContainText('Please enter a valid email or phone number with country code');
 
         await authPage.getLoginPage().emailInput.fill(loginData.username);
         await authPage.getLoginPage().passwordInput.fill('wrongPassword123');

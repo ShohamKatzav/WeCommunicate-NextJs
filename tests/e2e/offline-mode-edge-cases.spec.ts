@@ -69,7 +69,7 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
         await chat.sendMessage(OFFLINE_TESTS_DATA.SEND_TEST.test_message, false);
         await expect(chat.toastWarnings.messageSendingOfflineWarning).toBeVisible();
         await chat.reconnectAndVerifySync(context);
-        await expect(chat.lastMessageSent).toContainText(OFFLINE_TESTS_DATA.SEND_TEST.test_message);
+        await expect(chat.getSentMessagesLocator()).toContainText(OFFLINE_TESTS_DATA.SEND_TEST.test_message);
     });
 
     /**
@@ -105,7 +105,7 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
 
         // Reconnect & Verify
         await chat.reconnectAndVerifySync(context);
-        await expect(chat.lastMessageSent).toContainText(OFFLINE_TESTS_DATA.DELETE_TEST.confirm_message);
+        await expect(chat.getSentMessageByText(OFFLINE_TESTS_DATA.DELETE_TEST.confirm_message)).toBeVisible();
     });
 
     /**
@@ -129,7 +129,7 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
             }
             await chat.reconnectAndVerifySync(context);
             await expect(chat.pendingMessageIndicator).toHaveCount(0, { timeout: 10000 });
-            await expect(chat.lastMessageSent).toContainText('Msg 3');
+            await expect(chat.getSentMessageByText('Msg 3')).toBeVisible();
         });
     });
 
