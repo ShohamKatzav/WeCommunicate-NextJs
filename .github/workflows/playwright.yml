@@ -83,6 +83,7 @@ jobs:
     - name: Prepare Deployment
       if: always()
       run: |
+        mkdir -p tests/playwright-report/allure-report
         if [ -f tests/allure-history.jsonl ]; then
           cp tests/allure-history.jsonl tests/playwright-report/allure-report/
           echo "History file prepared for deployment."
