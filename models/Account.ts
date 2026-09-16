@@ -2,6 +2,8 @@ import { Document, Schema, models, model } from 'mongoose';
 
 export interface IAccount extends Document {
     email: string;
+    phone?: string;
+    nickname?: string;
     password: string;
     cleanHistory?: Date;
     location?: Schema.Types.ObjectId;
@@ -19,6 +21,8 @@ const AccountSchema = new Schema<IAccount>({
         type: String,
         required: true
     },
+    phone: { type: String, unique: true, sparse: true, trim: true },
+    nickname: { type: String, trim: true, maxlength: 40 },
     password: {
         type: String,
         required: true

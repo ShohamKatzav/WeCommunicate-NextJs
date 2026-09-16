@@ -3,7 +3,6 @@ import { ReactNode, useEffect, useState, useCallback } from "react";
 import User from "@/types/user";
 import UserContext from "./userContext";
 import { getUserObJFromCoockie, createUserCoockie, deleteUserCoockie } from "../lib/cookieActions";
-import AsName from "../utils/stringFormat";
 
 type UserProviderProps = {
     children: ReactNode;
@@ -31,10 +30,6 @@ export const UserProvider = ({ children }: UserProviderProps) => {
 
     const updateUser = useCallback(async (userData: User | null) => {
         try {
-            if (userData?.email) {
-                userData = { ...userData, email: AsName(userData.email) };
-            }
-
             setUser(userData);
 
             if (userData) {

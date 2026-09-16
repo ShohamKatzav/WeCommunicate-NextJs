@@ -26,7 +26,7 @@ const UsersRow = ({ chatUser, getLastMessages, active }: ListProps) => {
             <div className="flex items-center gap-3">
                 <div className="relative">
                     <div className="w-10 h-10 rounded-full bg-linear-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white font-semibold">
-                        {AsShortName(chatUser.email || '')[0]}
+                        {(chatUser.nickname || AsShortName(chatUser.email || ''))[0]}
                     </div>
                     {
                         active ?
@@ -37,7 +37,7 @@ const UsersRow = ({ chatUser, getLastMessages, active }: ListProps) => {
                 </div>
                 <div className="flex-1 min-w-0">
                     <div className="font-medium text-gray-900 dark:text-white truncate">
-                        {AsShortName(chatUser.email || '')}
+                        {chatUser.nickname || AsShortName(chatUser.email || '')}
                     </div>
                     {
                         active ?

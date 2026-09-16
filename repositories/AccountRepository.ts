@@ -38,6 +38,9 @@ export default class AccountRepository {
             throw new Error('Failed to find user by email');
         }
     }
+    static async getUserByPhone(phone: string) {
+        return Account.findOne({ phone }).exec();
+    }
     static async getEmailById(accountID: Types.ObjectId) {
         try {
             const user = await Account.findById(accountID).exec();
@@ -47,9 +50,9 @@ export default class AccountRepository {
             throw new Error('Failed to find user by ID');
         }
     }
-    static async addUser(email: string, hash: string) {
+    static async addUser(email: string, hash: string, nickname?: string, phone?: string) {
         try {
-            const result = await Account.create({ email, password: hash });
+            const result = await Account.create({ email, password: hash, nickname, phone });
             return result._id;
         } catch (err) {
             console.error('Failed to create user:', err);
@@ -59,7 +62,7 @@ export default class AccountRepository {
     static async getUsernames() {
         try {
             const users = await Account.find().exec();
-            const chatUsers = users.map(user => ({ _id: user._id, email: user.email }));
+            const chatUsers = users.map(user => ({ _id: user._id, email: user.email, nickname: user.nickname }));
             return chatUsers;
         } catch (err) {
             console.error('Could not get usernames:', err instanceof Error ? err.stack || err.message : err);

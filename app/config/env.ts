@@ -14,6 +14,7 @@ const envSchema = z.object({
     UPSTASH_REDIS_REST_TOKEN: z.string(),
     BREVO_API_KEY: z.string(),
     SMTP_USER: z.email(),
+    BREVO_SMS_SENDER: z.string().min(1).max(11).default('WeCommunicate'),
     NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string(),
     VAPID_PRIVATE_KEY: z.string(),
     E2E_TEST: z.string().optional().default('false'),

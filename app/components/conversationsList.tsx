@@ -31,7 +31,7 @@ const ConversationsList =
                     initialConversations?.length > 0 && (
                         <div className="divide-y divide-gray-200 dark:divide-gray-700 overflow-auto" style={{ maxHeight: 'calc(100vh - 270px)' }}>
                             {initialConversations.map((conversation: any) => {
-                                const membersEmailsIncludeQuery = conversation.members?.some((m: any) => m.email?.toUpperCase().includes(query.toUpperCase()));
+                                const membersEmailsIncludeQuery = conversation.members?.some((m: any) => m.email?.toUpperCase().includes(query.toUpperCase()) || m.nickname?.toUpperCase().includes(query.toUpperCase()));
                                 const messageIncludeQuery = conversation.messages[0]?.text?.toUpperCase().includes(query.toUpperCase());
                                 const show = query.trim() === '' || (membersEmailsIncludeQuery || messageIncludeQuery);
                                 if (!show) return null;

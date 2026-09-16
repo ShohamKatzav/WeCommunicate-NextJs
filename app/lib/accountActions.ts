@@ -1,125 +1,38 @@
 "use server"
-import { env } from '@/app/config/env'
+import { env } from '@/app/config/env';
 import connectDB from "@/app/lib/MongoDb";
-import AccountRepository from "@/repositories/AccountRepository"
+import AccountRepository from "@/repositories/AccountRepository";
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import ModerationService from '@/services/ModerationService';
+import { isEmail, isPhone, normalizePhone } from './contact';
 
-export const isExist = async (email: string) => {
-    try {
-        await connectDB();
-        const userExists = await AccountRepository.getUserByEmail(email);
-        const status = userExists != null ? 200 : 401;
-        const accountExists = status == 200 ? true : false;
-        return JSON.parse(JSON.stringify({ accountExists, status }));
-    } catch (err) {
-        console.error('Failed to find user:', err);
-        throw err;
-    }
-}
+async function findAccount(identifier: string) { return isPhone(identifier) ? AccountRepository.getUserByPhone(normalizePhone(identifier)) : AccountRepository.getUserByEmail(identifier.trim().toLowerCase()); }
 
-export const createUser = async (email: string, password: string) => {
-    if (!email || !password)
-        return JSON.parse(JSON.stringify({ message: "Email and password are required", status: 400 }));
-
-    try {
-        await connectDB();
-        const user = await AccountRepository.getUserByEmail(email);
-        if (user === null) {
-            const hash = await bcrypt.hash(password, 10);
-            const user = await AccountRepository.addUser(email, hash);
-            const loginData = {
-                _id: user._id,
-                email,
-                isModerator: false,
-                signInTime: Date.now()
-            };
-            const token = jwt.sign(loginData, env.JWT_SECRET_KEY!);
-            return JSON.parse(JSON.stringify({ success: true, token, status: 201 }));
-        }
-
-    } catch (err) {
-        console.error('Failed to create user:', err);
-        return JSON.parse(JSON.stringify({ error: "Internal Server Error", status: 500 }));
-    }
-}
-
-export const authenticateUser = async (email: string, password: string) => {
-    if (!email || !password)
-        return JSON.parse(JSON.stringify({ message: "Email and password are required", status: 400 }));
-
-    try {
-        await connectDB();
-        const user = await AccountRepository.getUserByEmail(email);
-        if (!user) {
-            return { message: "User not found", status: 404 };
-        }
-        const banStatus = await ModerationService.isUserBanned(user._id.toString());
-        if (banStatus.isBanned) {
-            const untilText = banStatus.bannedUntil
-                ? ` until ${banStatus.bannedUntil.toLocaleString()}`
-                : "";
-
-            return {
-                message: `Your account has been banned${untilText}. Reason: ${banStatus.reason ?? "Policy violation"}`,
-                status: 403
-            };
-        }
-        const passwordMatch = await bcrypt.compare(password, user.password);
-        if (passwordMatch) {
-            const loginData = {
-                _id: user._id,
-                email,
-                isModerator: user.isModerator || false,
-                signInTime: Date.now()
-            };
-            const token = jwt.sign(loginData, env.JWT_SECRET_KEY!);
-            return JSON.parse(JSON.stringify({ success: true, token, isModerator: loginData.isModerator, status: 200 }));
-        }
-        else
-            return JSON.parse(JSON.stringify({ message: "Invalid password", status: 401 }));
-
-    } catch (err) {
-        console.error('Failed to create user:', err);
-        return JSON.parse(JSON.stringify({ error: "Internal Server Error", status: 500 }));
-    }
-}
-
-export const getUsernames = async () => {
-    try {
-        await connectDB();
-        const usersListResult = await AccountRepository.getUsernames();
-        return JSON.parse(JSON.stringify(usersListResult));
-    } catch (err) {
-        console.error('Failed to get usernames:', err);
-        throw err;
-    }
-}
-
-export const updatePassword = async (email: string, newPassword: string) => {
-    try {
-        await connectDB();
-        const hash = await bcrypt.hash(newPassword, 10);
-        await AccountRepository.updatePassword(email, hash);
-        return JSON.parse(JSON.stringify({ success: true, status: 201 }));
-    } catch (err) {
-        console.error('Failed to update password:', err);
-        throw err;
-    }
-}
-
-
-export async function getUsersByEmails(userEmails: string[]) {
-    try {
-        if (!userEmails || userEmails.length === 0) {
-            return [];
-        }
-        const usersByEmail = JSON.parse(JSON.stringify(await AccountRepository.getUsersByEmails(userEmails)));
-        return usersByEmail;
-
-    } catch (error) {
-        console.error("Server Action: Failed to find users by email:", error);
-        return [];
-    }
-}
+export const isExist = async (identifier: string) => { await connectDB(); const user = await findAccount(identifier); return { accountExists: Boolean(user), status: user ? 200 : 401 }; };
+export const createUser = async (identifier: string, password: string, nickname: string) => {
+  if (!password || !nickname.trim() || (!isEmail(identifier) && !isPhone(identifier))) return { message: 'A valid email or phone number, nickname, and password are required', status: 400 };
+  try {
+    await connectDB(); if (await findAccount(identifier)) return { message: `An account already exists for this ${isPhone(identifier) ? 'phone number' : 'email address'}`, status: 409 };
+    const phone = isPhone(identifier) ? normalizePhone(identifier) : undefined;
+    // Realtime messaging uses email as its internal key; phone-only accounts get a private stable key.
+    const email = phone ? `phone:${phone}` : identifier.trim().toLowerCase();
+    const accountId = await AccountRepository.addUser(email, await bcrypt.hash(password, 10), nickname.trim(), phone);
+    const token = jwt.sign({ _id: accountId.toString(), email, nickname: nickname.trim(), isModerator: false, signInTime: Date.now() }, env.JWT_SECRET_KEY!);
+    return { success: true, token, email, nickname: nickname.trim(), isModerator: false, status: 201 };
+  } catch (err) { console.error('Failed to create user:', err); return { message: 'Internal Server Error', status: 500 }; }
+};
+export const authenticateUser = async (identifier: string, password: string) => {
+  if (!identifier || !password) return { message: 'Email or phone number and password are required', status: 400 };
+  try {
+    await connectDB(); const user = await findAccount(identifier); if (!user) return { message: 'User not found', status: 404 };
+    const banStatus = await ModerationService.isUserBanned(user._id.toString());
+    if (banStatus.isBanned) return { message: `Your account has been banned. Reason: ${banStatus.reason ?? 'Policy violation'}`, status: 403 };
+    if (!await bcrypt.compare(password, user.password)) return { message: 'Invalid password', status: 401 };
+    const token = jwt.sign({ _id: user._id, email: user.email, nickname: user.nickname, isModerator: user.isModerator || false, signInTime: Date.now() }, env.JWT_SECRET_KEY!);
+    return { success: true, token, email: user.email, nickname: user.nickname, isModerator: user.isModerator || false, status: 200 };
+  } catch (err) { console.error('Failed to authenticate user:', err); return { message: 'Internal Server Error', status: 500 }; }
+};
+export const getUsernames = async () => { await connectDB(); return JSON.parse(JSON.stringify(await AccountRepository.getUsernames())); };
+export const updatePassword = async (identifier: string, newPassword: string) => { await connectDB(); const user = await findAccount(identifier); if (!user) return { message: 'Account not found', status: 404 }; await AccountRepository.updatePassword(user.email, await bcrypt.hash(newPassword, 10)); return { success: true, status: 201 }; };
+export async function getUsersByEmails(userEmails: string[]) { return JSON.parse(JSON.stringify(await AccountRepository.getUsersByEmails(userEmails))); }

@@ -32,6 +32,7 @@ export async function createUserCoockie(data: User): Promise<any> {
     name: 'user',
     value: JSON.stringify({
       email: data.email,
+      nickname: data.nickname,
       token: data.token,
       isModerator
     }),

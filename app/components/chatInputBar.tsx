@@ -29,7 +29,7 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
     };
 
     return (
-        <div className="w-full md:w-[75%] md:place-self-center">
+        <div className="w-full xl:w-[75%] xl:place-self-center">
             {isMobile && (
                 <div className="flex flex-col gap-2 px-3">
                     <label className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 cursor-pointer shrink-0 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">

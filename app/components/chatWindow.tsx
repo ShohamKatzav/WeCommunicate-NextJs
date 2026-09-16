@@ -44,14 +44,14 @@ const ChatWindow = ({ messages, participants, isMobile }: ChatWindowProps) => {
 
     return (
         <div
-            className={`flex-1 bg-linear-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4 ${!participants.current ?
+            className={`flex min-h-0 flex-1 flex-col overflow-hidden bg-linear-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-3 xl:p-4 ${!participants.current ?
                 "flex items-center justify-center" : ""}`}>
             {
                 participants.current ?
-                    (<div className="bg-white dark:bg-gray-800 rounded-2xl border-gray-200 dark:border-gray-700">
-                        <div>
+                    (<div className="flex min-h-0 flex-1 flex-col bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
+                        <div className="flex min-h-0 flex-1 flex-col">
                             {(!messages || messages?.length === 0) && <div className="text-sm text-gray-400 self-start">No messages yet — say hi 👋</div>}
-                            <div ref={chatBox} className="flex flex-col-reverse h-[60vh] overflow-y-scroll w-full p-2">
+                            <div ref={chatBox} className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto w-full p-2">
                                 <div>
                                     {messages?.map((message, index) =>
                                         <MessageBubble key={index} message={message} />)

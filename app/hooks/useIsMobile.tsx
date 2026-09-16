@@ -4,7 +4,9 @@ const useIsMobile = () => {
     const [isMobileScreen, setIsMobileScreen] = useState(false);
 
     useEffect(() => {
-        const checkScreen = () => setIsMobileScreen(window.innerWidth <= 768);
+        // Keep the compact chat controls in sync with the point at which the
+        // two sidebars become drawers (Tailwind's xl breakpoint).
+        const checkScreen = () => setIsMobileScreen(window.innerWidth < 1280);
         checkScreen();
 
         window.addEventListener('resize', checkScreen);

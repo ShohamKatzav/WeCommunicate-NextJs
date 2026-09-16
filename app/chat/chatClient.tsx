@@ -140,7 +140,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
     }
 
     return (
-        <div className="h-[80dvh] md:h-[calc(100dvh-80px)] md:mb-20 flex bg-linear-to-br bg-white dark:from-gray-900 dark:to-gray-800">
+        <div className="h-[calc(100dvh-5rem)] xl:h-[calc(100dvh-80px)] xl:mb-20 flex overflow-hidden bg-linear-to-br bg-white dark:from-gray-900 dark:to-gray-800">
             <PushNotificationManager
                 message={messageToPush}
                 activeSocketUsers={chatListActiveUsers}
@@ -155,7 +155,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
                 initialRecentConversations={conversationsForBar}
             />
 
-            <div className="flex flex-1 flex-col">
+            <div className="flex min-w-0 flex-1 flex-col">
                 <ChatHeader
                     setMobileChatsSidebarOpen={setMobileChatsSidebarOpen}
                     setMobileUsersSidebarOpen={setMobileUsersSidebarOpen}
@@ -176,7 +176,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
                 />
 
                 {participants.current && (
-                    <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-3 md:p-4 md:pb-24 shadow-lg z-15 mb-4">
+                    <div className="shrink-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-3 xl:p-4 xl:pb-24 shadow-lg z-15">
                         <ChatInputBar
                             message={messageToSend}
                             setMessage={setMessageToSend}
@@ -199,14 +199,14 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
             {isMobileChatsSidebarOpen && (
                 <div
                     onClick={() => setMobileChatsSidebarOpen(false)}
-                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-16 md:hidden transition-opacity"
+                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-16 xl:hidden transition-opacity"
                 />
             )}
 
             {isMobileUsersSidebarOpen && (
                 <div
                     onClick={() => setMobileUsersSidebarOpen(false)}
-                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-16 md:hidden transition-opacity"
+                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-16 xl:hidden transition-opacity"
                 />
             )}
 

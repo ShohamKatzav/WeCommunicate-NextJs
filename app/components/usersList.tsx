@@ -77,12 +77,12 @@ export default function UsersListClient({
     return (
         <div className={`
                 ${isMobileUsersSidebarOpen ? 'translate-x-0' : 'translate-x-full'}
-                md:translate-x-0 fixed md:relative right-0 z-20 
-                w-80 md:w-1/8 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700
+                xl:translate-x-0 fixed xl:relative right-0 z-20
+                w-80 xl:w-60 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700
                 transition-transform duration-300 ease-in-out h-full flex flex-col shadow-xl
             `}>
             <aside className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg transition-transform duration-300`}>
-                <div className="flex-1 overflow-y-auto touch-pan-y max-h-[calc(var(--app-inner-height,100vh)-20vh)] md:max-h-none">
+                <div className="flex-1 overflow-y-auto touch-pan-y max-h-[calc(var(--app-inner-height,100vh)-20vh)] xl:max-h-none">
                     <div className="px-3 py-2 text-xs text-green-600 dark:text-green-400 font-semibold">
                         Active now
                     </div>

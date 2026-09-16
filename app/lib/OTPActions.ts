@@ -1,162 +1,31 @@
 "use server"
 import { env } from '@/app/config/env';
-import Brevo from "@getbrevo/brevo";
-import { isExist, updatePassword, createUser } from './accountActions'
-import RedisService from '@/services/RedisService'
-import { cookies } from 'next/headers';
+import Brevo from '@getbrevo/brevo';
+import { createUser, isExist, updatePassword } from './accountActions';
+import { isEmail, isPhone, normalizePhone, type VerificationChannel } from './contact';
+import RedisService from '@/services/RedisService';
 
-const apiInstance = new Brevo.TransactionalEmailsApi();
-apiInstance.setApiKey(Brevo.TransactionalEmailsApiApiKeys.apiKey, env.BREVO_API_KEY!);
-
-function generateOTP(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+const emailApi = new Brevo.TransactionalEmailsApi();
+emailApi.setApiKey(Brevo.TransactionalEmailsApiApiKeys.apiKey, env.BREVO_API_KEY!);
+const key = (contact: string, channel: VerificationChannel) => `${channel}:${channel === 'sms' ? normalizePhone(contact) : contact.trim().toLowerCase()}`;
+const newCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+async function sendCode(contact: string, channel: VerificationChannel, otp: string) {
+  if (channel === 'sms') {
+    const result = await fetch('https://api.brevo.com/v3/transactionalSMS/send', { method: 'POST', headers: { 'api-key': env.BREVO_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify({ sender: env.BREVO_SMS_SENDER, recipient: normalizePhone(contact).slice(1), content: `Your WeCommunicate code is ${otp}. It expires in 10 minutes.`, type: 'transactional' }) });
+    if (!result.ok) throw new Error(`Brevo SMS failed (${result.status})`); return;
+  }
+  const message = new Brevo.SendSmtpEmail(); message.to = [{ email: contact }]; message.sender = { name: 'WeCommunicate', email: env.SMTP_USER }; message.subject = 'Your WeCommunicate verification code'; message.htmlContent = `<p>Your verification code is <strong>${otp}</strong>.</p><p>It expires in 10 minutes.</p>`;
+  await emailApi.sendTransacEmail(message);
 }
-
-async function sendEmailOTP(email: string, otp: string, mode: string = 'sign-up') {
-    const sendSmtpEmail = new Brevo.SendSmtpEmail();
-
-    sendSmtpEmail.to = [{ email: email }];
-    sendSmtpEmail.sender = { name: "WeCommunicate", email: env.SMTP_USER };
-    sendSmtpEmail.subject = mode === 'sign-up' ? 'Verify Your Email Address' :
-        'Password Reset OTP';
-    sendSmtpEmail.htmlContent = mode === 'sign-up' ? `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #333;">Welcome! Verify Your Email</h2>
-        <p>Thank you for signing up. Please use the following OTP to verify your email address:</p>
-        <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
-          ${otp}
-        </div>
-        <p style="color: #666;">This OTP will expire in 10 minutes.</p>
-        <p style="color: #666;">If you didn't sign up for an account, please ignore this email.</p>
-      </div>
-    ` :
-        `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #333;">Password Reset Request</h2>
-        <p>You have requested to reset your password. Use the following OTP to complete the process:</p>
-        <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
-          ${otp}
-        </div>
-        <p style="color: #666;">This OTP will expire in 10 minutes.</p>
-        <p style="color: #666;">If you didn't request this, please ignore this email.</p>
-      </div>
-    `;
-
-    return await apiInstance.sendTransacEmail(sendSmtpEmail);
+export async function requestOTP(contact: string, mode: 'sign-up' | 'forgot', channel: VerificationChannel = 'email') {
+  if (!(channel === 'sms' ? isPhone(contact) : isEmail(contact))) return { message: channel === 'sms' ? 'Use an international phone number, e.g. +972 50 123 4567' : 'Enter a valid email address', status: 400 };
+  const exists = await isExist(contact); if (mode === 'sign-up' && exists.accountExists) return { message: `An account already exists for this ${channel === 'sms' ? 'phone number' : 'email address'}`, status: 400 }; if (mode === 'forgot' && !exists.accountExists) return { status: 200 };
+  try { const otp = newCode(); await RedisService.addOTP(key(contact, channel), { OTP: otp, expiresAt: Date.now() + 600000 }); await sendCode(contact, channel, otp); return { status: 200 }; } catch (error) { console.error(error); return { message: 'Unable to send code. Check Brevo SMS credits and sender settings.', status: 500 }; }
 }
-
-export async function requestOTP(email: string, mode: string = 'sign-up') {
-    try {
-        if (!email) {
-            return { message: 'Email is required', status: 400 };
-        }
-        const existsResult = await isExist(email);
-        if (!existsResult.accountExists && mode === 'forgot') return { status: 200 };
-        if (existsResult.accountExists && mode === 'sign-up')
-            return { message: 'An account with this email is already exist', status: 400 };
-
-        const newOTP = generateOTP();
-        const expiresAt = Date.now() + 10 * 60 * 1000;
-
-        await RedisService.addOTP(email, { OTP: newOTP, expiresAt });
-
-        await sendEmailOTP(email, newOTP, mode);
-
-        return { message: 'OTP sent successfully', status: 200 }
-    } catch (error) {
-        console.error('Send OTP error:', error);
-        return { message: 'Failed to send OTP', status: 500 }
-    }
+export async function verifyOTP(contact: string, otp: string, channel: VerificationChannel = 'email') {
+  if (!/^\d{6}$/.test(otp)) return { message: 'OTP must be 6 digits', status: 400 };
+  const stored = await RedisService.getOTPByEmail(key(contact, channel));
+  return !stored || Date.now() > stored.expiresAt || stored.OTP !== otp ? { message: 'Invalid or expired verification code', status: 400 } : { status: 200 };
 }
-
-export async function verifyOTP(email: string, otp: string) {
-    try {
-        const cookieStore = await cookies();
-        const e2eCookie = cookieStore.get('e2e')?.value;
-
-        if (!email || !otp) {
-            return { message: 'Email and OTP are required', status: 400 }
-        }
-        if (env.E2E_TEST === 'true' && env.TEST_BYPASS_KEY && e2eCookie === env.TEST_BYPASS_KEY) {
-            return { message: 'OTP verified successfully (Bypass)', status: 200 };
-        }
-
-        const storedData = await RedisService.getOTPByEmail(email);
-
-        if (!storedData) {
-            return { message: 'OTP not found or expired', status: 400 }
-        }
-
-        if (Date.now() > storedData.expiresAt) {
-            await RedisService.deleteOTP(email);
-            return { message: 'OTP has expired', status: 400 }
-        }
-
-        if (storedData.OTP !== otp) {
-            return { message: 'Invalid OTP', status: 400 }
-        }
-
-        await RedisService.deleteOTP(email);
-        return { message: 'OTP verified successfully', status: 200 }
-    } catch (error) {
-        console.error('Verify OTP error:', error);
-        return { message: 'Failed to verify OTP', status: 500 }
-    }
-}
-
-async function validateInputBeforeAction(email: string, otp: string, newPassword: string) {
-    if (!email || !otp || !newPassword) {
-        return { message: 'Email, OTP, and new password are required', status: 400 }
-    }
-
-    if (newPassword.length < 8) {
-        return { message: 'Password must be at least 8 characters', status: 400 }
-    }
-
-    const storedData = await RedisService.getOTPByEmail(email);
-
-    if (!storedData) {
-        return { message: 'OTP not found or expired', status: 400 }
-    }
-
-    if (Date.now() > storedData.expiresAt) {
-        await RedisService.deleteOTP(email);
-        return { message: 'OTP has expired', status: 400 }
-
-    }
-
-    if (storedData.OTP !== otp) {
-        return { message: 'Invalid OTP', status: 400 }
-    }
-    return { status: 200 }
-}
-
-export async function resetPassword(email: string, otp: string, newPassword: string) {
-    const validationResult = await validateInputBeforeAction(email, otp, newPassword);
-    if (validationResult.status !== 200)
-        return validationResult;
-    try {
-        await updatePassword(email, newPassword);
-        await RedisService.deleteOTP(email);
-
-        return { message: 'Password reset successfully', status: 200 }
-    } catch (error) {
-        console.error('Reset password error:', error);
-        return { message: 'Failed to reset password', status: 500 }
-    }
-}
-
-export async function createAccount(email: string, otp: string, newPassword: string) {
-    const validationResult = await validateInputBeforeAction(email, otp, newPassword);
-    if (validationResult.status !== 200)
-        return validationResult;
-    try {
-        await createUser(email, newPassword);
-        await RedisService.deleteOTP(email);
-
-        return { message: 'Account created successfully', status: 200 }
-    } catch (error) {
-        console.error('Reset password error:', error);
-        return { message: 'Failed to create account', status: 500 }
-    }
-}
+export async function createAccount(contact: string, otp: string, password: string, nickname = '', channel: VerificationChannel = 'email') { const verified = await verifyOTP(contact, otp, channel); if (verified.status !== 200) return verified; const result = await createUser(contact, password, nickname); if (result.status < 300) await RedisService.deleteOTP(key(contact, channel)); return result; }
+export async function resetPassword(contact: string, otp: string, password: string, channel: VerificationChannel = 'email') { const verified = await verifyOTP(contact, otp, channel); if (verified.status !== 200) return verified; const result = await updatePassword(contact, password); if (result.status < 300) await RedisService.deleteOTP(key(contact, channel)); return result; }

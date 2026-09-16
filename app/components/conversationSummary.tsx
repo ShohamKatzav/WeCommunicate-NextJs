@@ -73,7 +73,7 @@ const ConversationSummary = ({ conversation, getLastMessages }: ConversationConv
                 <div className="w-12 h-12 rounded-full bg-linear-to-r from-amber-400 to-red-500 flex items-center justify-center">
                     {otherMembers.length > 0 ? (
                         otherMembers.map((member, index) => {
-                            const letter = (member.email || "U")[0].toUpperCase();
+                            const letter = (member.nickname || member.email || "U")[0].toUpperCase();
                             const isLast = index === otherMembers.length - 1;
 
                             return (
@@ -95,8 +95,8 @@ const ConversationSummary = ({ conversation, getLastMessages }: ConversationConv
                         <div className="col-span-7">
                             {(otherMembers.map((member, index) => (
                                 index < otherMembers.length - 1 ?
-                                    <span key={index} className="font-medium">{AsShortName(member.email)}, </span> :
-                                    <span key={index} className="font-medium">{AsShortName(member.email)}</span>
+                                    <span key={index} className="font-medium">{member.nickname || AsShortName(member.email)}, </span> :
+                                    <span key={index} className="font-medium">{member.nickname || AsShortName(member.email)}</span>
                             )))
                             }
                         </div>

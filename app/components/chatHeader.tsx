@@ -48,21 +48,21 @@ const ChatHeader = ({
     };
 
     return (
-        < div className="grid-cols-12 md:flex md:items-center gap-3 p-3 border-b dark:border-gray-700" >
+        < div className="grid-cols-12 xl:flex xl:items-center gap-3 p-3 border-b dark:border-gray-700" >
             <div className="flex items-center gap-3 w-full">
                 {/* Mobile open chats */}
                 <button
                     onClick={() => setMobileChatsSidebarOpen(true)}
-                    className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    className="xl:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
                     <HiChatBubbleLeftRight color="rgb(152, 65, 249)" size={26} />
                 </button>
 
                 <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start">
-                        <h1 className="text-xl md:text-3xl font-bold mb-1 truncate">
+                        <h1 className="text-xl xl:text-3xl font-bold mb-1 truncate">
                             <span className="bg-clip-text bg-linear-to-r from-blue-500 to-purple-600 text-transparent">
-                                {"Welcome " + AsShortName(user?.email as string)}
+                                {"Welcome " + (user?.nickname || AsShortName(user?.email as string))}
                             </span>
                         </h1>
                     </div>
@@ -88,8 +88,8 @@ const ChatHeader = ({
                                 <div className="flex items-center gap-1 text-xs text-gray-500">
                                     <span className={`w-1.5 h-1.5 bg-${onlineCount > 0 ? 'green' : 'gray'}-500 rounded-full`}></span>
                                     {participants.current.length > 1 ? `${onlineCount} of ${participants.current.length} members online` :
-                                        `${onlineCount > 0 ? `${AsShortName(participants.current[0]?.email as string)} online` :
-                                            `${AsShortName(participants.current[0]?.email as string)} isn't here right now`}`
+                                            `${onlineCount > 0 ? `${participants.current[0]?.nickname || AsShortName(participants.current[0]?.email as string)} online` :
+                                            `${participants.current[0]?.nickname || AsShortName(participants.current[0]?.email as string)} isn't here right now`}`
                                     }
                                 </div>
                             )
@@ -104,7 +104,7 @@ const ChatHeader = ({
                 <div className="grid">
                     <button
                         onClick={() => setMobileUsersSidebarOpen(true)}
-                        className="py-1 md:hidden md:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                        className="py-1 xl:hidden xl:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                     >
                         <HiUsers color="rgb(152, 65, 249)" size={26} />
                     </button>

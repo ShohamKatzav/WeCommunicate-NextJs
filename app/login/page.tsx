@@ -20,7 +20,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   const validateEmail = (email: string): boolean => {
-    return /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email);
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || /^\+[1-9]\d{7,14}$/.test(email.replace(/[\s()-]/g, ''));
   }
 
   const validatePassword = (password: string): boolean => {
@@ -44,10 +44,10 @@ const Login = () => {
     let isValid = true;
 
     if (!email) {
-      setEmailError("Please enter your email");
+      setEmailError("Please enter your email or phone number");
       isValid = false;
     } else if (!validateEmail(email)) {
-      setEmailError("Please enter a valid email");
+      setEmailError("Please enter a valid email or phone number with country code");
       isValid = false;
     }
 
@@ -75,14 +75,14 @@ const Login = () => {
       // Authenticate user
       const authResponse = await authenticateUser(email, password);
       if (await authResponse.success) {
-        await updateUser({ email, token: authResponse.token, isModerator: authResponse.isModerator, });
+        await updateUser({ email: authResponse.email, nickname: authResponse.nickname, token: authResponse.token, isModerator: authResponse.isModerator, });
         router.replace("/chat");
         return true;
       } else if (authResponse.status === 401) {
         setGeneralError("Wrong email or password. Please try again.");
         return false;
       } else if (authResponse.status === 403) {
-        setGeneralError(authResponse.message);
+        setGeneralError(authResponse.message ?? "Your account is unavailable.");
       } else {
         setGeneralError("An unexpected error occurred. Please try again.");
         return false;
@@ -142,15 +142,15 @@ const Login = () => {
         )}
         <div className={`inputContainer row-start-${generalError ? '2 ' : '1 mt-10 md:mt-20 '}space-y-4 grid lg:grid-cols-5 md:grid-cols-3`}>
           <div className="md:col-start-2 lg:col-start-3 md:col-span-1">
-            <label htmlFor="email" className="sr-only">Email</label>
+            <label htmlFor="email" className="sr-only">Email or phone number</label>
             <input
               id="email"
-              type="email"
+              type="text"
               value={email}
-              placeholder="Enter your email here"
+              placeholder="Email or phone number"
               onChange={ev => setEmail(ev.target.value)}
               className="inputBox w-full"
-              autoComplete="email"
+              autoComplete="username"
               disabled={loading}
               aria-invalid={!!emailError}
               aria-describedby={emailError ? "email-error" : undefined}
