@@ -86,6 +86,14 @@ jobs:
         mkdir -p tests/playwright-report/allure-report
         test -f tests/playwright-report/allure-report/index.html
 
+    - name: Persist Allure report history
+      if: always() && github.event_name != 'pull_request'
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_branch: gh-pages
+        publish_dir: tests/playwright-report/allure-report
+
     - name: Configure GitHub Pages
       if: always() && github.event_name != 'pull_request'
       uses: actions/configure-pages@v5
