@@ -69,6 +69,13 @@ export default class ChatPage {
         return this.page.locator(`span.font-medium:text-is("${capitalSecondUserShortName}")`).first();
     }
 
+    getConversationRow(username: string): Locator {
+        const capitalizedUsername = username.charAt(0).toUpperCase() + username.slice(1);
+        return this.page.locator('li').filter({
+            has: this.page.locator('span.font-medium', { hasText: capitalizedUsername })
+        }).first();
+    }
+
     async getMessageReceivedByText(text: string): Promise<Locator> {
         return await this.page.locator(`.bg-gray-500 div:has-text("${text}")`).last();
     }
@@ -89,10 +96,25 @@ export default class ChatPage {
      * await selectUser('shoham')
      */
     async selectUser(username: string): Promise<Locator> {
-        const firstCapitalizedUsername = username.charAt(0).toUpperCase() + username.slice(1);
-        const locator = this.page.locator('.text-gray-900').filter({ hasText: firstCapitalizedUsername }).first();
+        const locator = this.getConversationRow(username);
         await locator.waitFor({ state: 'visible', timeout: 10000 });
         return locator;
+    }
+
+    async ensureConversation(username: string): Promise<void> {
+        const conversation = this.getConversationRow(username);
+
+        if (await conversation.count() > 0) {
+            await conversation.click();
+            return;
+        }
+
+        await this.newConversationButton.click();
+        await this.conversationForm.participantLabel
+            .filter({ hasText: username })
+            .click();
+        await this.conversationForm.startChattingButton.click();
+        await expect(this.dropDown.dropdownButton).toBeVisible();
     }
 
     async leaveChatRoom(): Promise<void> {

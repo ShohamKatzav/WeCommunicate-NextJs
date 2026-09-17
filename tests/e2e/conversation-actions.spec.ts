@@ -10,13 +10,25 @@ customTest.describe('Checking conversation actions done by the dropdown', () => 
         await authPage.getLoginPage().navigateToLoginPage();
         const anotherLoginData = dataSet.find(user => user.username !== loginData.username);
         secondUserShortName = anotherLoginData?.username.split('@')[0] || '';
-        await (await authPage.getChatPage().selectUser(secondUserShortName)).click();
+        const chat = authPage.getChatPage();
+        const conversation = chat.getConversationRow(secondUserShortName);
+
+        if (await conversation.count() === 0) {
+            await chat.newConversationButton.click();
+            await chat.conversationForm.participantLabel
+                .filter({ hasText: secondUserShortName })
+                .click();
+            await chat.conversationForm.startChattingButton.click();
+        } else {
+            await conversation.click();
+        }
     });
 
     customTest('Leaving room successfuly', async ({ authPage }) => {
-        await expect(authPage.getChatPage().conversationInfoDiv).toBeVisible();
-        await authPage.getChatPage().dropDown.leaveRoom();
-        await expect(authPage.getChatPage().noConversationSelectedHeader).toBeVisible();
+        const chat = authPage.getChatPage();
+        await expect(chat.dropDown.dropdownButton).toBeVisible();
+        await chat.dropDown.leaveRoom();
+        await expect(chat.noConversationSelectedHeader).toBeVisible();
     });
 
     customTest('Clean room history', async ({ authPage }) => {

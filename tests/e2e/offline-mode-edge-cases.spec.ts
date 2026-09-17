@@ -60,9 +60,7 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
         const chat = authPage.getChatPage();
 
         const recipientShortName = recipient.split('@')[0];
-        const conversationRow = await chat.selectUser(recipientShortName);
-
-        await conversationRow.click();
+        await chat.ensureConversation(recipientShortName);
         await expect(chat.messageInput).toBeVisible({ timeout: 10000 });
 
         await context.setOffline(true);
@@ -87,7 +85,7 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
         const chat = authPage.getChatPage();
 
         const recipientShortName = recipient.split('@')[0];
-        await (await chat.selectUser(recipientShortName)).click();
+        await chat.ensureConversation(recipientShortName);
 
         // Online Setup
         await chat.sendMessage(OFFLINE_TESTS_DATA.DELETE_TEST.test_message);
@@ -121,7 +119,7 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
             const chat = authPage.getChatPage();
             const recipientShortName = recipient.split('@')[0];
 
-            await (await chat.selectUser(recipientShortName)).click();
+            await chat.ensureConversation(recipientShortName);
             await context.setOffline(true);
             for (const text of OFFLINE_TESTS_DATA.QUEUE_TEST.test_messages) {
                 await chat.sendMessage(text, false);
@@ -148,7 +146,7 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
             const chat = authPage.getChatPage();
             const recipientShortName = recipient.split('@')[0];
 
-            await (await chat.selectUser(recipientShortName)).click();
+            await chat.ensureConversation(recipientShortName);
             await chat.sendMessage(OFFLINE_TESTS_DATA.SEND_TEST.test_message);
             expect(await chat.getSentMessagesLocator().count()).toBeGreaterThanOrEqual(1);
 
@@ -159,7 +157,7 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
             ]);
             await chat.reconnectAndVerifySync(context);
             await chat.page.reload();
-            await (await chat.selectUser(recipientShortName)).click();
+            await chat.ensureConversation(recipientShortName);
             await expect(chat.getSentMessagesLocator()).toHaveCount(0);
         });
     });
@@ -176,14 +174,14 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
             const { recipient } = OFFLINE_TESTS_DATA.CONVERSATION_DELETE_TEST;
             const chat = authPage.getChatPage();
             const recipientShortName = recipient.split('@')[0];
-            await (await chat.selectUser(recipientShortName)).click();
+            await chat.ensureConversation(recipientShortName);
             await chat.sendMessage(OFFLINE_TESTS_DATA.SEND_TEST.test_message);
 
             await context.setOffline(true);
             await chat.dropDown.deleteConversation();
             await expect(chat.dropDown.deletionModalClosed()).resolves.toBe(true);
             await chat.toastWarnings.conversationDeletingOfflineWarning.waitFor({ state: 'visible', timeout: 5000 });
-            await expect(chat.getSenderDivAtConversationsBar(recipient)).not.toBeVisible();
+            await expect(chat.getSenderDivAtConversationsBar(recipientShortName)).not.toBeVisible();
         });
     });
 });
