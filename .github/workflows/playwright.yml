@@ -76,6 +76,21 @@ jobs:
           echo "No previous Allure history found."
         fi
 
+    - name: Add Allure executor metadata
+      if: always()
+      run: |
+        cat > tests/playwright-report/allure-results/executor.json <<EOF
+        {
+          "name": "GitHub Actions",
+          "type": "github",
+          "buildOrder": ${{ github.run_number }},
+          "buildName": "${{ github.workflow }} #${{ github.run_number }}",
+          "buildUrl": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+          "reportName": "Allure Report",
+          "reportUrl": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+        }
+        EOF
+
     - name: Generate Allure Report
       if: always()
       run: pnpm run allure:report
