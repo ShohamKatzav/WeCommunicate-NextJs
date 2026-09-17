@@ -15,8 +15,7 @@ export default function ClientProviders({ children }: { children: React.ReactNod
                 <Navbar />
                 <NotificationProvider>
                     <Toaster richColors position="top-center" />
-                    <div className="mt-10">{children}</div>
-                    <div className="h-1/5 mb-20"></div>
+                    <div className="pt-16 pb-24 md:pt-8 md:pb-20 min-h-0">{children}</div>
                 </NotificationProvider>
             </SocketProvider>
             <Footer />

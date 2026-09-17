@@ -86,6 +86,7 @@ jobs:
         mkdir -p tests/playwright-report/allure-report
         if [ -f tests/allure-history.jsonl ]; then
           cp tests/allure-history.jsonl tests/playwright-report/allure-report/
+          cp tests/allure-history.jsonl tests/playwright-report/allure-report/allure-history.jsonl
           echo "History file prepared for deployment."
         else
           echo "Warning: tests/allure-history.jsonl not found!"

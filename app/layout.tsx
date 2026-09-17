@@ -35,20 +35,27 @@ export const viewport: Viewport = {
 
 export default function RootLayout({
   children,
-}: { children: React.ReactNode; }) {
+}: {
+  children: React.ReactNode;
+}) {
+  const bodyClassName = [
+    geistSans.variable,
+    geistMono.variable,
+    "antialiased",
+    "bg-gradient-to-b from-gray-50 via-white to-gray-100",
+    "text-gray-900",
+    "dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 dark:text-gray-50",
+  ].join(" ");
+
   return (
     <html lang="en">
       <head>
         <link rel="apple-touch-icon" href="/icon.png" />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={bodyClassName}>
         <InstallPrompt />
         <OfflineHandler>
-          <ClientProviders>
-            {children}
-          </ClientProviders>
+          <ClientProviders>{children}</ClientProviders>
         </OfflineHandler>
       </body>
     </html>
