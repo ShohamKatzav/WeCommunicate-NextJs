@@ -11,6 +11,13 @@ interface OTPProcessProps {
     mode: 'forgot' | 'sign-up';
 }
 
+const sanitizePhoneInput = (value: string) => {
+    const sanitized = value.replace(/[^\d\s()+-]/g, '');
+    return sanitized.startsWith('+')
+        ? `+${sanitized.slice(1).replace(/\+/g, '')}`
+        : sanitized.replace(/\+/g, '');
+};
+
 const OTPProcess = ({ mode }: OTPProcessProps) => {
     const router = useRouter();
     const { updateUser } = useUser();
@@ -293,16 +300,16 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                                 </div>
 
                                 <div className="mb-3 flex rounded-lg bg-gray-100 p-1 dark:bg-gray-700">
-                                    {(['email', 'sms'] as const).map(option => <button key={option} type="button" onClick={() => setChannel(option)} className={`flex-1 rounded-md py-2 text-sm font-medium ${channel === option ? 'bg-white text-indigo-700 shadow dark:bg-gray-600 dark:text-white' : ''}`}>{option === 'email' ? 'Email' : 'SMS'}</button>)}
+                                    {(['email', 'sms'] as const).map(option => <button key={option} type="button" onClick={() => { setChannel(option); if (option === 'sms') setEmail(sanitizePhoneInput(email)); }} className={`flex-1 rounded-md py-2 text-sm font-medium ${channel === option ? 'bg-white text-indigo-700 shadow dark:bg-gray-600 dark:text-white' : ''}`}>{option === 'email' ? 'Email' : 'SMS'}</button>)}
                                 </div>
                                 {mode === 'sign-up' && <input id="nickname" value={nickname} onChange={ev => setNickname(ev.target.value)} placeholder="Choose a nickname" className="inputBox mb-3 w-full" maxLength={40} required />}
                                 <label htmlFor="email" className="sr-only">Email or phone number</label>
-                                <input
+                                    <input
                                     id="email"
                                     type={channel === 'email' ? 'email' : 'tel'}
                                     value={email}
                                     placeholder={channel === 'email' ? 'Enter your email' : 'Enter phone number, e.g. +972 50 123 4567'}
-                                    onChange={ev => setEmail(ev.target.value)}
+                                        onChange={ev => setEmail(channel === 'sms' ? sanitizePhoneInput(ev.target.value) : ev.target.value)}
                                     className="inputBox w-full"
                                     autoComplete={channel === 'email' ? 'email' : 'tel'}
                                     inputMode={channel === 'sms' ? 'tel' : undefined}
