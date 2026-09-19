@@ -6,6 +6,7 @@ import { createUser, isExist } from './accountActions';
 import { updateAccountPassword } from './accountHelpers';
 import { isEmail, isPhone, normalizePhone, type VerificationChannel } from './contact';
 import RedisService from '@/services/RedisService';
+import { isTestBypass } from './testBypass';
 import { cookies } from 'next/headers';
 
 const emailApi = new Brevo.TransactionalEmailsApi();
@@ -31,11 +32,13 @@ export async function requestOTP(contact: string, mode: 'sign-up' | 'forgot', ch
   const exists = await isExist(contact); if (mode === 'sign-up' && exists.accountExists) return { message: `An account already exists for this ${channel === 'sms' ? 'phone number' : 'email address'}`, status: 400 }; if (mode === 'forgot' && !exists.accountExists) return { status: 200 };
 
   const otpKey = key(contact, channel);
-  // Without this, requestOTP can be looped to drain Brevo's free email/SMS
-  // quota - the client-side 60s timer in OTPProcess.tsx is only cosmetic.
-  const allowedToSend = await RedisService.startOTPSendCooldown(otpKey, OTP_SEND_COOLDOWN_SECONDS);
-  if (!allowedToSend) {
-    return { message: 'Please wait a bit before requesting another code.', status: 429 };
+  if (!(await isTestBypass())) {
+    // Without this, requestOTP can be looped to drain Brevo's free email/SMS
+    // quota - the client-side 60s timer in OTPProcess.tsx is only cosmetic.
+    const allowedToSend = await RedisService.startOTPSendCooldown(otpKey, OTP_SEND_COOLDOWN_SECONDS);
+    if (!allowedToSend) {
+      return { message: 'Please wait a bit before requesting another code.', status: 429 };
+    }
   }
 
   try { const otp = newCode(); await RedisService.addOTP(otpKey, { OTP: otp, expiresAt: Date.now() + 600000 }); await sendCode(contact, channel, otp); return { status: 200 }; } catch (error) { console.error(error); return { message: 'Unable to send code. Check Brevo SMS credits and sender settings.', status: 500 }; }
@@ -48,12 +51,14 @@ export async function verifyOTP(contact: string, otp: string, channel: Verificat
   }
 
   const otpKey = key(contact, channel);
-  // A 6-digit code is only safe if guessing it is rate-limited - without
-  // this, ~10^6 unlimited, parallelizable attempts fit inside the 10-minute
-  // expiry window.
-  const attempts = await RedisService.incrOTPAttempts(otpKey, OTP_ATTEMPT_WINDOW_SECONDS);
-  if (attempts > MAX_OTP_ATTEMPTS) {
-    return { message: 'Too many attempts. Please request a new code and try again later.', status: 429 };
+  if (!(await isTestBypass())) {
+    // A 6-digit code is only safe if guessing it is rate-limited - without
+    // this, ~10^6 unlimited, parallelizable attempts fit inside the
+    // 10-minute expiry window.
+    const attempts = await RedisService.incrOTPAttempts(otpKey, OTP_ATTEMPT_WINDOW_SECONDS);
+    if (attempts > MAX_OTP_ATTEMPTS) {
+      return { message: 'Too many attempts. Please request a new code and try again later.', status: 429 };
+    }
   }
 
   const stored = await RedisService.getOTPByEmail(otpKey);

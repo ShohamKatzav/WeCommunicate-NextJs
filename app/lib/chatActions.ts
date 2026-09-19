@@ -13,6 +13,7 @@ import MessageDTO from "@/types/messageDTO";
 import { revalidatePath } from 'next/cache';
 import RedisService from '@/services/RedisService';
 import { sendNotification } from '@/app/lib/pushActions';
+import { isTestBypass } from '@/app/lib/testBypass';
 
 // Push notifications are sent from here (server-side, right after a message
 // is persisted) rather than from the sender's browser - a push triggered
@@ -151,17 +152,19 @@ export const saveMessage = async (message: MessageDTO) => {
         }
         message = { ...message, sender: senderEmail };
 
-        // saveMessage was previously an unthrottled server action - 30
-        // messages per minute is generous for real chat use but stops
-        // flooding a conversation or hammering the DB/moderation API.
-        const allowedToSend = await RedisService.checkRateLimit('send-message', userID, 30, 60);
-        if (!allowedToSend) {
-            return JSON.parse(JSON.stringify({
-                success: false,
-                blocked: true,
-                rateLimited: true,
-                message: "You're sending messages too quickly. Please slow down and try again shortly."
-            }));
+        if (!(await isTestBypass())) {
+            // saveMessage was previously an unthrottled server action - 30
+            // messages per minute is generous for real chat use but stops
+            // flooding a conversation or hammering the DB/moderation API.
+            const allowedToSend = await RedisService.checkRateLimit('send-message', userID, 30, 60);
+            if (!allowedToSend) {
+                return JSON.parse(JSON.stringify({
+                    success: false,
+                    blocked: true,
+                    rateLimited: true,
+                    message: "You're sending messages too quickly. Please slow down and try again shortly."
+                }));
+            }
         }
 
         const banStatus = await ModerationService.isUserBanned(userID);

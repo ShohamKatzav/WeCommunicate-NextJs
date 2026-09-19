@@ -114,7 +114,14 @@ async function handlePublishMessage(io, socket, message) {
 }
 
 async function handleDeleteMessage(io, socket, message) {
-    const conversationId = message?.conversationID;
+    // The client's own stored copy of a message it just sent carries
+    // `conversation` (the raw Mongoose field name, from the saveMessage
+    // response) rather than `conversationID` (the client Message type) -
+    // handlePublishMessage's payload corrects this before emitting, but
+    // 'delete message' sends the bubble's own message object as-is. Fall
+    // back to `conversation` the same way useMessageHandling.tsx already
+    // does when building the publish payload.
+    const conversationId = message?.conversationID || message?.conversation;
     if (!conversationId || !message?._id) return;
 
     // Only the message's actual sender may broadcast its deletion -

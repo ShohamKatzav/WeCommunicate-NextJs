@@ -18,7 +18,11 @@ export default class ChatActionsDropdown {
         this.conversationDetailsButton = page.getByText(' Conversation Details');
         this.leaveRoomButton = page.getByText(' Leave Room');
         this.clearHistoryButton = page.getByText(' Clear Room History');
-        this.deleteConversationButton = page.getByRole('button', { name: ' Delete Conversation' });
+        // exact: true - conversation rows are now real <button>s too
+        // (keyboard accessibility fix), so a fuzzy/substring name match here
+        // can ambiguously match a row whose content happens to contain this
+        // text, not just the actual dropdown menu item.
+        this.deleteConversationButton = page.getByRole('button', { name: 'Delete Conversation', exact: true });
         this.confirmDeletionButton = page.getByRole('button', { name: 'Delete', exact: true });
         this.conversationDetailsModal = page.locator('#conversation-details-modal');
     }
