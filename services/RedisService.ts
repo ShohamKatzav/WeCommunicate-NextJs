@@ -19,21 +19,39 @@ export default class RedisService {
         return `user_sockets:${this.normalizeEmail(email)}`;
     }
 
+    // Registry of which emails currently have at least one socket, scored by
+    // the time presence was last established. It exists so getOnlineUsers
+    // never has to scan the keyspace for user_sockets:* keys.
+    private static readonly PRESENCE_KEY = 'online_users';
+    private static readonly PRESENCE_TTL_SECONDS = 60 * 60 * 24;
+
     static async addUserSocket(email: string, socketId: string) {
         if (!email || !socketId) return;
         const key = this.socketKey(email);
-        await this.redis().sadd(key, socketId);
+        const pipeline = this.redis().pipeline();
+        pipeline.sadd(key, socketId);
         // Without a TTL, a missed disconnect event (server restart, crashed
         // process, etc.) leaves a socket id in this set forever, and that
         // user shows as permanently online. Bound the damage to at most a
         // day instead of indefinitely - a normal reconnect refreshes it well
         // before that.
-        await this.redis().expire(key, 60 * 60 * 24);
+        pipeline.expire(key, this.PRESENCE_TTL_SECONDS);
+        // Same window as the set's TTL, so a stale registry entry and a stale
+        // socket set always age out together.
+        pipeline.zadd(this.PRESENCE_KEY, { score: Date.now(), member: this.normalizeEmail(email) });
+        await pipeline.exec();
     }
 
     static async removeUserSocket(email: string, socketId: string) {
         if (!email || !socketId) return;
-        await this.redis().srem(this.socketKey(email), socketId);
+        const key = this.socketKey(email);
+        await this.redis().srem(key, socketId);
+        // Drop the user from the presence registry once their last socket is
+        // gone, so the registry stays an accurate list of who is online.
+        const remaining = await this.redis().scard(key);
+        if (remaining === 0) {
+            await this.redis().zrem(this.PRESENCE_KEY, this.normalizeEmail(email));
+        }
     }
 
     static async getUserSocketsByEmail(email: string): Promise<string[]> {
@@ -46,29 +64,21 @@ export default class RedisService {
         return sockets.length ? sockets[0] : null;
     }
 
-    static async getOnlineUsers(): Promise<{ email: string; sockets: string[] }[]> {
-        // Note: KEYS scans the whole keyspace and is not recommended at
-        // scale - a proper fix means switching presence tracking to a
-        // single sorted set (touching addUserSocket/removeUserSocket too),
-        // which is out of scope for this pass. This at least stops doing
-        // the per-key SMEMBERS lookups one at a time in sequence, which
-        // was turning N keys into N sequential round-trip latencies.
-        const keys = await this.redis().keys('user_sockets:*');
-        if (keys.length === 0) return [];
+    static async getOnlineUsers(): Promise<{ email: string }[]> {
+        // Two commands regardless of how many users exist. This used to be
+        // KEYS user_sockets:* followed by one SMEMBERS per key, which both
+        // scans the whole keyspace (KEYS is O(N) and blocking) and costs
+        // 1+N commands against the Upstash quota - on a path any connected
+        // client can trigger at will, on every connect and every disconnect.
+        const staleBefore = Date.now() - this.PRESENCE_TTL_SECONDS * 1000;
+        const pipeline = this.redis().pipeline();
+        pipeline.zremrangebyscore(this.PRESENCE_KEY, 0, staleBefore);
+        pipeline.zrange(this.PRESENCE_KEY, 0, -1);
+        const [, emails] = await pipeline.exec<[number, string[]]>();
 
-        const socketsByKey = await Promise.all(keys.map(key => this.redis().smembers(key)));
-
-        const users: { email: string; sockets: string[] }[] = [];
-        keys.forEach((key, i) => {
-            const sockets = socketsByKey[i];
-            if (sockets.length > 0) {
-                users.push({
-                    email: key.replace('user_sockets:', ''),
-                    sockets
-                });
-            }
-        });
-        return users;
+        // Socket ids are deliberately not returned: this result is broadcast
+        // to every connected client and none of them use the ids.
+        return (emails ?? []).filter(Boolean).map(email => ({ email }));
     }
 
 

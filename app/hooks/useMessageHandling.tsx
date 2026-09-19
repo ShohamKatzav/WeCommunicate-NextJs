@@ -132,6 +132,11 @@ export const useMessageHandling = ({
                         return;
                     }
 
+                    if (result.tooLong) {
+                        toast.warning(result.message || 'That message is too long to send.');
+                        return;
+                    }
+
                     // Determinating message to show base on modereting result and emmiting event
                     let message = '';
                     if (result.punishment?.includes("ban")) {

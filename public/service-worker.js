@@ -272,6 +272,7 @@ self.addEventListener('fetch', async event => {
                         // client happens to generate temp ids (see messageBubble.tsx's
                         // isPending check, which uses the same rule).
                         const isMongoObjectId = (value) => typeof value === 'string' && /^[a-f0-9]{24}$/.test(value);
+                        const isPlainObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
 
                         const hasObjectIdPayload = Array.isArray(body) &&
                             body.length > 0 &&
@@ -285,11 +286,19 @@ self.addEventListener('fetch', async event => {
                         const isDeleteMessage = (hasObjectIdPayload || hasTempIdPayload) && body.length === 2 && body[1] === 'message';
                         const isDeleteConversation = hasObjectIdPayload && body.length === 2 && body[1] === 'conversation';
                         const isCleanHistory = hasObjectIdPayload && body.length === 2 && body[1] === 'cleanHistory';
+                        // Recognise a pending message by the fields the save
+                        // actually needs, not by an exact key count. Counting keys
+                        // meant adding or removing a single optional field on
+                        // MessageDTO silently stopped offline sends from being
+                        // queued at all, with nothing to point at the cause.
                         const isSaveMessage =
                             Array.isArray(body) &&
-                            typeof body[0]?._id === "string" &&
+                            isPlainObject(body[0]) &&
+                            typeof body[0]._id === "string" &&
                             !isMongoObjectId(body[0]._id) &&  // pending id, not yet a persisted message
-                            Object.keys(body[0]).length === 7;
+                            typeof body[0].sender === "string" &&
+                            'conversationID' in body[0] &&
+                            'participantID' in body[0];
 
                         let queued = false;
 
@@ -302,7 +311,14 @@ self.addEventListener('fetch', async event => {
                             queued = true;
                         }
                         else if (isSaveMessage) {
-                            const messageToSave = { ...body[0], date: new Date().toISOString(), file: body[0].file === "$undefined" ? undefined : body[0].file }
+                            // A server action serialises `undefined` as the string
+                            // "$undefined". Drop every field carrying that marker
+                            // rather than special-casing `file`, so a newly added
+                            // optional field can't reach the API as that literal.
+                            const withoutUndefinedMarkers = Object.fromEntries(
+                                Object.entries(body[0]).filter(([, value]) => value !== "$undefined")
+                            );
+                            const messageToSave = { ...withoutUndefinedMarkers, date: new Date().toISOString() };
                             await addToQueue('saveMessage', { messageBody: messageToSave });
                             queued = true;
                         }

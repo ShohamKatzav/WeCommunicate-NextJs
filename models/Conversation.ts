@@ -26,7 +26,9 @@ const ConversationSchema = new Schema<IConversation>({
 });
 
 ConversationSchema.index({ members: 1 });
-ConversationSchema.index({ messages: 1 });
+// No index on `messages`: nothing ever queries a conversation by the message
+// ids it contains (the array is only pushed to and populated), so this was a
+// multikey index that grew by one entry per message sent and paid for nothing.
 ConversationSchema.index({ deletedBy: 1 });
 
 export default models?.Conversation || model<IConversation>('Conversation', ConversationSchema);

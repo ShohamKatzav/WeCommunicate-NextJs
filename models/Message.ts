@@ -1,4 +1,5 @@
 import { Document, Schema, models, model } from 'mongoose';
+import { MAX_MESSAGE_LENGTH } from '@/app/config/limits';
 
 interface IMessage extends Document {
     date: Date;
@@ -21,7 +22,8 @@ const MessageSchema = new Schema<IMessage>({
     },
     text: {
         type: String,
-        required: false
+        required: false,
+        maxlength: [MAX_MESSAGE_LENGTH, `A message cannot be longer than ${MAX_MESSAGE_LENGTH} characters`]
     },
     status: {
         type: String,
