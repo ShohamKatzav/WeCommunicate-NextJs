@@ -61,7 +61,10 @@ self.addEventListener('sync', async (event) => {
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys()
-            .then(names => Promise.all(names.map(n => n !== CACHE_NAME && caches.delete(n))))
+            // STATIC_ASSET_CACHE must be kept too - it wasn't populated yet
+            // during install, so on first activation this used to delete it
+            // right after it started filling, defeating static asset caching.
+            .then(names => Promise.all(names.map(n => ![CACHE_NAME, STATIC_ASSET_CACHE].includes(n) && caches.delete(n))))
             .then(() => self.clients.claim())
     );
 });
@@ -85,7 +88,23 @@ self.addEventListener('push', function (event) {
 
 self.addEventListener('notificationclick', function (event) {
     event.notification.close()
-    event.waitUntil(clients.openWindow('https://wecommunicate-nextjs.onrender.com/chat'))
+    // Use the SW's own scope instead of a hardcoded origin - a hardcoded
+    // URL breaks on any deployment other than the one it was written for
+    // (including local dev), and always opening a new window instead of
+    // focusing an existing tab piles up duplicate tabs.
+    const targetUrl = new URL('chat', self.registration.scope).href;
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+            for (const client of windowClients) {
+                if (client.url === targetUrl && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            if (clients.openWindow) {
+                return clients.openWindow(targetUrl);
+            }
+        })
+    );
 })
 
 async function processQueue() {
@@ -138,6 +157,15 @@ async function processQueue() {
                 await removeFromQueue(item.id);
                 queue = await getDeleteQueue();
 
+            } else if (response.status >= 400 && response.status < 500) {
+                // A definite rejection (moderation block, ban, unauthorized,
+                // etc., now that the API routes report these accurately
+                // instead of always returning 200) - retrying this will only
+                // ever fail the same way, so drop it instead of retrying it
+                // forever on every future reconnect.
+                console.error(`Permanently rejected ${item.operation} with status ${response.status}, dropping from queue:`, item.id);
+                await removeFromQueue(item.id);
+                queue = await getDeleteQueue();
             } else {
                 console.error(`Sync failed for ${item.operation} with status ${response.status}:`, item.id);
                 i++;
@@ -236,38 +264,67 @@ self.addEventListener('fetch', async event => {
                     try {
                         const body = await event.request.clone().json();
 
+                        // A real, persisted document always has a Mongo ObjectId; a
+                        // pending/temp id (however it's generated client-side -
+                        // timestamp string, UUID, etc.) never does. Using "is this a
+                        // valid ObjectId" as the single signal, instead of matching a
+                        // specific temp-id format, keeps this in sync with however the
+                        // client happens to generate temp ids (see messageBubble.tsx's
+                        // isPending check, which uses the same rule).
+                        const isMongoObjectId = (value) => typeof value === 'string' && /^[a-f0-9]{24}$/.test(value);
+
                         const hasObjectIdPayload = Array.isArray(body) &&
                             body.length > 0 &&
-                            typeof body[0] === 'string' &&
-                            body[0].match(/^[a-f0-9]{24}$/);
+                            isMongoObjectId(body[0]);
 
-                        const hastempIdPayload = Array.isArray(body) &&
+                        const hasTempIdPayload = Array.isArray(body) &&
                             body.length > 0 &&
                             typeof body[0] === 'string' &&
-                            body[0].match(/^\d{13,}$/);
+                            !isMongoObjectId(body[0]);
 
-                        const isDeleteMessage = (hasObjectIdPayload || hastempIdPayload) && body.length === 2 && body[1] === 'message';
+                        const isDeleteMessage = (hasObjectIdPayload || hasTempIdPayload) && body.length === 2 && body[1] === 'message';
                         const isDeleteConversation = hasObjectIdPayload && body.length === 2 && body[1] === 'conversation';
                         const isCleanHistory = hasObjectIdPayload && body.length === 2 && body[1] === 'cleanHistory';
                         const isSaveMessage =
                             Array.isArray(body) &&
                             typeof body[0]?._id === "string" &&
-                            /^\d{13,}$/.test(body[0]._id) &&  // numeric tempId
+                            !isMongoObjectId(body[0]._id) &&  // pending id, not yet a persisted message
                             Object.keys(body[0]).length === 7;
+
+                        let queued = false;
 
                         if (isDeleteMessage) {
                             await addToQueue('deleteMessage', { messageId: body[0] });
+                            queued = true;
                         }
                         else if (isDeleteConversation) {
                             await addToQueue('deleteConversation', { conversationId: body[0] });
+                            queued = true;
                         }
                         else if (isSaveMessage) {
                             const messageToSave = { ...body[0], date: new Date().toISOString(), file: body[0].file === "$undefined" ? undefined : body[0].file }
                             await addToQueue('saveMessage', { messageBody: messageToSave });
+                            queued = true;
                         }
 
                         else if (isCleanHistory) {
                             await addToQueue('cleanHistory', { conversationId: body[0] });
+                            queued = true;
+                        }
+
+                        if (!queued) {
+                            // Nothing matched a known shape - don't lie and claim we
+                            // queued something we didn't, or the caller (and the user)
+                            // will believe this will be retried when it silently won't.
+                            console.error('Unrecognized offline request shape, not queued:', body);
+                            return new Response(JSON.stringify({
+                                queued: false,
+                                offline: true,
+                                error: 'Unrecognized request - not queued for retry'
+                            }), {
+                                status: 503,
+                                headers: { 'Content-Type': 'application/json' }
+                            });
                         }
 
                         return new Response(JSON.stringify({
@@ -345,7 +402,7 @@ self.addEventListener('message', async event => {
                 caches.keys().then(names => {
                     return Promise.all(
                         names
-                            .filter(n => n !== CACHE_NAME)
+                            .filter(n => ![CACHE_NAME, STATIC_ASSET_CACHE].includes(n))
                             .map(n => caches.delete(n))
                     );
                 })

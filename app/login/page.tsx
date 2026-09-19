@@ -83,6 +83,9 @@ const Login = () => {
         return false;
       } else if (authResponse.status === 403) {
         setGeneralError(authResponse.message ?? "Your account is unavailable.");
+      } else if (authResponse.status === 429) {
+        setGeneralError(authResponse.message ?? "Too many login attempts. Please try again in a few minutes.");
+        return false;
       } else {
         setGeneralError("An unexpected error occurred. Please try again.");
         return false;
@@ -140,7 +143,7 @@ const Login = () => {
             </div>
           </div>
         )}
-        <div className={`inputContainer row-start-${generalError ? '2 ' : '1 mt-10 md:mt-20 '}space-y-4 grid lg:grid-cols-5 md:grid-cols-3`}>
+        <div className={`inputContainer space-y-4 grid lg:grid-cols-5 md:grid-cols-3 ${generalError ? 'row-start-2' : 'row-start-1 mt-10 md:mt-20'}`}>
           <div className="md:col-start-2 lg:col-start-3 md:col-span-1">
             <label htmlFor="email" className="sr-only">Email or phone number</label>
             <input
@@ -194,8 +197,7 @@ const Login = () => {
             )}
           </div>
 
-          <div className={`md:col-start-2 lg:col-start-3 md:col-span-3 flex items-center justify-between 
-              row-start-${generalError ? '4' : '3'}`}>
+          <div className={`md:col-start-2 lg:col-start-3 md:col-span-3 flex items-center justify-between ${generalError ? 'row-start-4' : 'row-start-3'}`}>
             <a
               href="/forgot-password"
               className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-500"
@@ -205,7 +207,7 @@ const Login = () => {
           </div>
         </div>
 
-        <div className={`row-start-${generalError ? '4 ' : '3 '} mt-5`}>
+        <div className={`mt-5 ${generalError ? 'row-start-4' : 'row-start-3'}`}>
           <div className="inputContainer justify-self-center">
             <button
               className="inputButton disabled:opacity-50 disabled:cursor-not-allowed w-3xs"

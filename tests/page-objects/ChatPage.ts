@@ -35,7 +35,13 @@ export default class ChatPage {
         this.messageInput = page.getByRole('textbox', { name: 'Message input' });
         this.sendMessageButton = page.getByRole('button', { name: 'Send message' });
         this.pendingMessageIndicator = page.locator('.inline');
-        this.lastMessageReceived = page.locator('.overflow-y-auto div.bg-gray-500:last-child');
+        // getByTestId is robust to DOM structure changes (e.g. the delete
+        // button no longer being rendered at all for messages you don't
+        // own), unlike a CSS :last-child selector, which silently starts
+        // matching every received message once its sibling count changes.
+        // Matches the same data-testid pattern getSentMessagesLocator() below
+        // already uses.
+        this.lastMessageReceived = page.getByTestId('received-message').last();
         this.fileInputLabel = page.locator('#uploaded-file').locator('..');
         this.fileInput = page.locator('#uploaded-file');
         this.lastSentImage = page.getByAltText('Sent image').last();

@@ -1,56 +1,30 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { FiBell, FiX } from 'react-icons/fi';
 import { FaCheckCircle } from 'react-icons/fa';
 import urlBase64ToUint8Array from '@/app/utils/urlBase64ToUint8Array'
-import { subscribeUser, unsubscribeUser, sendNotification } from '@/app/lib/pushActions'
+import { subscribeUser, unsubscribeUser } from '@/app/lib/pushActions'
 import { useUser } from '../hooks/useUser';
 import useIsMobile from '../hooks/useIsMobile';
-import Message from '@/types/message';
-import ChatUser from '@/types/chatUser'
-import { getUsersByEmails } from '@/app/lib/accountActions';
 
-interface PushNotificationManagerProps {
-    message: Message;
-    activeSocketUsers: ChatUser[];
-}
+// Push notifications are triggered server-side (see saveMessage in
+// chatActions.ts) right after a message is persisted, rather than from
+// here - a client-driven send never fires if the sender closes the tab
+// right after hitting send. This component only manages the subscription.
 
 const SOFT_ASK_DISMISSED_KEY = 'pushNotificationSoftAskDismissed';
 
-export default function PushNotificationManager({ message, activeSocketUsers }: PushNotificationManagerProps) {
-    const { user, loadingUser } = useUser();
+export default function PushNotificationManager() {
+    const { loadingUser } = useUser();
     const isMobile = useIsMobile();
-    const [isSupported, setIsSupported] = useState(false)
+    // null = not yet determined. Browser support can't be known during SSR
+    // (there's no navigator/window on the server), so defaulting this to
+    // false would render the "not supported" message on every load, even in
+    // browsers that do support it, until the effect below corrects it.
+    const [isSupported, setIsSupported] = useState<boolean | null>(null)
     const [subscription, setSubscription] = useState<PushSubscription | null>(null)
-    const [sendingMessage, setSendingMessage] = useState(false)
     const [showSoftAsk, setShowSoftAsk] = useState(false);
-
-    const handlePushNotification = useCallback(async () => {
-        if (!subscription || sendingMessage) return;
-        if (!message.participantID || message.participantID.length === 0) return;
-        try {
-            const activeUserEmails = activeSocketUsers.map(a => a.email);
-            const activeUsersIDS = (await getUsersByEmails(activeUserEmails as string[])).map((a: any) => a._id.toLowerCase());
-            const offlineParticipants = message.participantID.filter(
-                participantId => !activeUsersIDS.includes(participantId.toLowerCase())
-            );
-            // All participants are online, skipping push notification
-            if (offlineParticipants.length === 0) {
-                return;
-            }
-            setSendingMessage(true);
-            const messageForOfflineUsers = {
-                ...message,
-                participantID: offlineParticipants
-            };
-            await sendNotification(messageForOfflineUsers);
-        } catch (error) {
-            console.error("Failed to send notification:", error);
-        } finally {
-            setSendingMessage(false);
-        }
-    }, [subscription, sendingMessage, message]);
 
     async function registerServiceWorker() {
         try {
@@ -88,7 +62,7 @@ export default function PushNotificationManager({ message, activeSocketUsers }: 
             })
             setSubscription(sub)
             const serializedSub = JSON.parse(JSON.stringify(sub))
-            await subscribeUser(serializedSub, user?.email as string)
+            await subscribeUser(serializedSub)
             localStorage.removeItem(SOFT_ASK_DISMISSED_KEY);
         } catch (error) {
             console.error("Subscription failed:", error);
@@ -98,7 +72,7 @@ export default function PushNotificationManager({ message, activeSocketUsers }: 
     async function unsubscribeFromPush() {
         await subscription?.unsubscribe()
         setSubscription(null)
-        await unsubscribeUser(user?.email as string)
+        await unsubscribeUser()
         setShowSoftAsk(true);
     }
 
@@ -112,20 +86,19 @@ export default function PushNotificationManager({ message, activeSocketUsers }: 
     };
 
     useEffect(() => {
-        if (subscription && message.participantID) {
-            handlePushNotification();
-        }
-    }, [message._id, subscription]);
-
-    useEffect(() => {
-        if ('serviceWorker' in navigator && 'PushManager' in window) {
-            setIsSupported(true);
-        }
-        if (isSupported && !loadingUser) {
+        const supported = 'serviceWorker' in navigator && 'PushManager' in window;
+        setIsSupported(supported);
+        if (supported && !loadingUser) {
             registerServiceWorker();
         }
-    }, [isSupported, loadingUser]);
+    }, [loadingUser]);
 
+
+    if (isSupported === null) {
+        // Not yet determined - render nothing rather than flash the wrong
+        // message while we wait for the effect above to run.
+        return null;
+    }
 
     if (!isSupported) {
         return <p className="text-center text-sm text-gray-500 dark:text-gray-400 p-2">Push notifications are not supported in this browser.</p>

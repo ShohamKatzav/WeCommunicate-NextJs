@@ -15,7 +15,12 @@ async function verifyModeratorAccess(): Promise<boolean> {
         const user = JSON.parse(userCookie.value);
         const decoded = jwt.verify(user.token, env.JWT_SECRET_KEY!) as any;
 
-        return decoded.isModerator === true;
+        // Re-check the live value in the DB rather than trusting the token's
+        // isModerator claim - otherwise a session issued before a demotion
+        // keeps working as a moderator until the token happens to expire.
+        await connectDB();
+        const account = await AccountRepository.getUserByID(decoded._id);
+        return account?.isModerator === true;
     } catch {
         return false;
     }

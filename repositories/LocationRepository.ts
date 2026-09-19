@@ -11,8 +11,6 @@ interface LocationData {
     accountId: Types.ObjectId;
     username?: string;
 }
-const lockMap: { [key: string]: boolean } = {};
-
 export default class LocationRepository {
 
     static async getLocationsWithUsernames(locations: LocationData[]) {
@@ -37,7 +35,13 @@ export default class LocationRepository {
 
     static async getLocations() {
         try {
-            const accounts = await Account.find().populate('location').exec();
+            // Filter to accounts that have a location set, and only project
+            // the fields actually used below, instead of loading every field
+            // (including password hashes) of every account.
+            const accounts = await Account.find({ location: { $exists: true } })
+                .select('_id location')
+                .populate({ path: 'location', select: 'latitude longitude accuracy error time' })
+                .exec();
             const filteredAccounts = accounts.filter(account => account.location);
             const locations: LocationData[] = filteredAccounts.map((account) => {
                 const { latitude, longitude, accuracy, error, time } = account.location;
@@ -52,47 +56,29 @@ export default class LocationRepository {
     }
 
     static async updateLocation(accountId: Types.ObjectId, location: LocationData): Promise<void> {
-        const accountLockKey = accountId.toString();
-
-        if (lockMap[accountLockKey]) {
-            return;
-        }
-
-        lockMap[accountLockKey] = true;
-
         try {
-            const account = await Account.findById(accountId).populate('location').exec();
-            if (!account) {
-                throw new Error(`Account with ID ${accountId} not found`);
-            }
-
-            let locationId;
-
-            if (account.location) {
-                // Update the existing location
-                await Location.updateOne({ _id: account.location._id }, {
-                    ...location,
-                    account: accountId
-                });
-                locationId = account.location._id;
-            } else {
-                // Create a new location if one doesn't exist
-                const savedLocation = await Location.create({
-                    ...location,
-                    account: accountId
-                });
-                locationId = savedLocation._id;
-            }
+            // A single atomic upsert instead of a manual "read, then decide
+            // update-vs-create" guarded by an in-memory lock. That lock never
+            // worked across multiple server processes, and - worse - silently
+            // dropped the update entirely (no error, no retry) whenever it
+            // happened to already be held. Keying the upsert directly on
+            // `account` is also more correct than the old approach if
+            // Account.location and the actual Location document ever drifted
+            // out of sync: this always finds (or creates) the one Location
+            // document that really belongs to this account.
+            const savedLocation = await Location.findOneAndUpdate(
+                { account: accountId },
+                { ...location, account: accountId },
+                { upsert: true, new: true, setDefaultsOnInsert: true }
+            );
 
             await Account.updateOne({ _id: accountId }, {
-                $set: { location: locationId }
+                $set: { location: savedLocation._id }
             });
 
         } catch (err) {
             console.error('Failed to update location:', err);
             throw err;
-        } finally {
-            delete lockMap[accountLockKey];
         }
     }
 }

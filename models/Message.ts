@@ -39,4 +39,10 @@ const MessageSchema = new Schema<IMessage>({
         required: true
     }
 });
+
+// Every message read goes through getMessages/countMessages, both of which
+// filter by conversation (and often date) - without this index those are
+// full collection scans.
+MessageSchema.index({ conversation: 1, date: 1 });
+
 export default models?.Message || model<IMessage>('Message', MessageSchema);

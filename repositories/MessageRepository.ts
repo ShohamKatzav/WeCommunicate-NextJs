@@ -16,7 +16,13 @@ type ChatQuery = {
 export default class MessageRepository {
     static async GetMessages(query: ChatQuery, limit: number, skip: number) {
         try {
+            // The skip/limit math in chatActions.getMessages assumes ascending
+            // (oldest-first) order - without an explicit sort this relied on
+            // MongoDB's natural insertion order, which isn't guaranteed and
+            // can silently reorder pages (e.g. after any update that moves a
+            // document). _id is a stable tiebreaker for messages sharing a date.
             return await Message.find(query)
+                .sort({ date: 1, _id: 1 })
                 .skip(skip)
                 .limit(limit)
                 .populate("file")
@@ -90,9 +96,16 @@ export default class MessageRepository {
 
             if (messageToDelete.sender !== requestSenderEmail) return null;
 
+            // Actually strip the content, not just mark it revoked - the
+            // client only hides revoked messages in its UI, so leaving text
+            // in the document means anyone reading the API response (e.g.
+            // devtools) can still see "deleted" messages.
             return await Message.updateOne(
                 { _id: messageObjectId },
-                { $set: { status: "revoked" } }
+                {
+                    $set: { status: "revoked" },
+                    $unset: { text: "", file: "" }
+                }
             );
         } catch (err) {
             console.error("Failed to delete message:", err);

@@ -100,15 +100,20 @@ export const useSocketEvents = ({
     }, [socket, loadingSocket, pathname]);
 
     // Incoming messages
+    // Note: we intentionally do NOT gate this on socket.connected. It's a
+    // plain mutable property, not React state, so React never re-runs this
+    // effect when it flips - if the component mounts before the handshake
+    // completes, the listener would never get attached. socket.io queues
+    // .on() registrations regardless of connection state, so this is safe.
     useEffect(() => {
-        if (!socket || loadingSocket || !socket.connected) return;
+        if (!socket || loadingSocket) return;
 
         socket.on("publish message", handleIncomingMessage);
 
         return () => {
             socket.off("publish message", handleIncomingMessage);
         };
-    }, [socket, loadingSocket, socket?.connected, handleIncomingMessage]);
+    }, [socket, loadingSocket, handleIncomingMessage]);
 
     // Message deletion
     useEffect(() => {

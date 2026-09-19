@@ -19,7 +19,8 @@ export interface IAccount extends Document {
 const AccountSchema = new Schema<IAccount>({
     email: {
         type: String,
-        required: true
+        required: true,
+        unique: true
     },
     phone: { type: String, unique: true, sparse: true, trim: true },
     nickname: { type: String, trim: true, maxlength: 40 },

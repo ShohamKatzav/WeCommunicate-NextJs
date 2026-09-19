@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { useUser } from '../hooks/useUser';
 import { useSocket } from '../hooks/useSocket';
 import useIsMobile from '../hooks/useIsMobile';
-import Message from '@/types/message';
 import ChatUser from '@/types/chatUser';
 import Conversation from '@/types/conversation';
 import ChatInputBar from '../components/chatInputBar';
@@ -35,8 +34,6 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
     const [isMobileChatsSidebarOpen, setMobileChatsSidebarOpen] = useState(false);
     const [isMobileUsersSidebarOpen, setMobileUsersSidebarOpen] = useState(false);
     const [newConversationMode, setNewConversationMode] = useState('single');
-    const [messageToPush, setMessageToPush] = useState<Message>({ text: '' });
-    const [lastReceivedMessage, setLastReceivedMessage] = useState<Message>();
 
     const { conversationsForBar, updateConversationsBar } = useConversationsManager({
         initialConversations: initialConversationsWithMessages,
@@ -74,8 +71,6 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
         setChat,
         messageToSend,
         setMessageToSend,
-        setLastReceivedMessage,
-        setMessageToPush,
         updateConversationsBar
     });
 
@@ -141,17 +136,12 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
 
     return (
         <div className="h-[calc(100dvh-5rem)] xl:h-[calc(100dvh-80px)] xl:mb-20 flex overflow-hidden bg-linear-to-br bg-white dark:from-gray-900 dark:to-gray-800">
-            <PushNotificationManager
-                message={messageToPush}
-                activeSocketUsers={chatListActiveUsers}
-            />
+            <PushNotificationManager />
 
             <ConversationsBar
                 isMobileChatsSidebarOpen={isMobileChatsSidebarOpen}
                 handleOpenModal={handleOpenModal}
                 getLastMessages={getLastMessages}
-                lastRecievedMessage={lastReceivedMessage}
-                participants={participants}
                 initialRecentConversations={conversationsForBar}
             />
 

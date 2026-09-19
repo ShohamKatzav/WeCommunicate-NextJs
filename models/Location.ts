@@ -32,7 +32,8 @@ export const LocationSchema = new Schema<ILocation>({
     account: {
         type: Schema.Types.ObjectId,
         ref: 'Account',
-        required: true
+        required: true,
+        unique: true
     }
 });
 export default models?.Location || model<ILocation>('Location', LocationSchema);

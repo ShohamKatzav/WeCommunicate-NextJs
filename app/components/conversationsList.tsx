@@ -1,14 +1,10 @@
 "use client"
-import { RefObject } from "react";
 import ChatUser from "@/types/chatUser";
-import Message from "@/types/message";
 import ConversationSummary from "./conversationSummary";
 import Conversation from "@/types/conversation";
 
 interface ConversationsListProps {
     getLastMessages: (participantFromList: ChatUser[]) => Promise<void>;
-    newMessage: Message | undefined;
-    participants: RefObject<ChatUser[] | null>;
     query: string;
     initialConversations: Conversation[];
 }

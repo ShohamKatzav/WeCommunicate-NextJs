@@ -42,15 +42,6 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
         }));
     };
 
-    const increaseNotifications = (roomID: string) => {
-        if (roomID) {
-            setNewMessageNotification(prevState => ({
-                ...prevState,
-                [roomID]: (prevState[roomID] || 0) + 1,
-            }));
-        }
-    };
-
     const notificationsUpdate = (data: Record<string, number>) => {
         if (data) {
             const updatedNotifications: Record<string, number> = {};
@@ -66,8 +57,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
             value={{
                 newMessageNotification,
                 setNewMessageNotification,
-                initializeRoomNotifications,
-                increaseNotifications
+                initializeRoomNotifications
             }}
         >
             {children}

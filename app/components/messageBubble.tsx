@@ -48,13 +48,21 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
 
   const deleteMessageHandler = async () => {
     try {
-      await deleteMessage(message._id!, "message");
+      const result = await deleteMessage(message._id!, "message");
+      if (!result.success) {
+        // A definite rejection from the server (e.g. not the actual sender,
+        // or the message no longer exists) - don't pretend it was deleted
+        // locally or broadcast a delete for it to everyone else.
+        toast.error(result.message || "Couldn't delete that message.");
+        return;
+      }
       socket?.emit("delete message", message);
+      setDeleted(true);
     }
     catch {
+      // A genuine network failure - the service worker queues this for
+      // retry, so optimistically show it as deleted.
       toast.info("Could not complete the operation now. The message will be deleted when the connection is restored.");
-    }
-    finally {
       setDeleted(true);
     }
   }
@@ -117,7 +125,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
           {message.file?.contentType.includes("audio")
             && message.file && (
               <audio controls>
-                <source src={message.file.url} type="audio/mpeg" />
+                <source src={message.file.url} type={message.file.contentType} />
                 Your browser does not support the audio element.
               </audio>
             )}
@@ -131,7 +139,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
                 preload="none"
                 className="cursor-pointer"
               >
-                <source src={message.file.url} type="video/mp4" />
+                <source src={message.file.url} type={message.file.contentType} />
                 Your browser does not support the video tag.
               </video>
             )}
@@ -164,19 +172,20 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
           }
         </div>
       </div>
-      <button onClick={deleteMessageHandler}
-        ref={deleteButtonRef}
-        className='flex'>
-        <TiDeleteOutline
-          onMouseEnter={() => !isMobile && setHover(true)}
-          onMouseLeave={() => !isMobile && setHover(false)}
-          className={
-            message.sender === user?.email ?
-              showActions || hover ? 'block' : 'hidden' : 'hidden'}
-          size={40}
-          color="red"
-        />
-      </button>
+      {message.sender === user?.email && (
+        <button onClick={deleteMessageHandler}
+          ref={deleteButtonRef}
+          className='flex'
+          aria-label="Delete message">
+          <TiDeleteOutline
+            onMouseEnter={() => !isMobile && setHover(true)}
+            onMouseLeave={() => !isMobile && setHover(false)}
+            className={showActions || hover ? 'block' : 'hidden'}
+            size={40}
+            color="red"
+          />
+        </button>
+      )}
 
       {/* Fullscreen Media Viewer */}
       {isFullscreen && message.file && (
