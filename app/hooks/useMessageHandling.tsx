@@ -41,10 +41,13 @@ export const useMessageHandling = ({
             setChat([...chatRef.current, data].sort((a: Message, b: Message) =>
                 new Date(a.date!).getTime() - new Date(b.date!).getTime()
             ));
+            // The conversation this message belongs to is already open, so
+            // it's effectively read the moment it arrives - tell the sender.
+            socket?.emit('message read', { conversationId: data.conversationID });
         }
 
         updateConversationsBar(data);
-    }, [userEmail, currentConversationId, chatRef, setChat, updateConversationsBar]);
+    }, [userEmail, currentConversationId, chatRef, setChat, updateConversationsBar, socket]);
 
     const handleServerSavedMessageResponse = useCallback(async (savedMessage: any, tempId: string) => {
         const tempMessage = chatRef.current.find(

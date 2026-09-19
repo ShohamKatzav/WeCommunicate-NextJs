@@ -10,6 +10,7 @@ import useIsMobile from '@/app/hooks/useIsMobile';
 import { TiDeleteOutline } from "react-icons/ti";
 import { IoBan } from "react-icons/io5";
 import { TbClockQuestion } from "react-icons/tb";
+import { Check, CheckCheck } from "lucide-react";
 import { toast } from "sonner";
 import FullscreenMediaViewer from './fullscreenMediaViewer';
 import { AsShortName } from "../utils/stringFormat";
@@ -86,6 +87,8 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
   }
 
   const isPending = !message._id?.match(/^[a-f0-9]{24}$/);
+  const isOwnMessage = message.sender === user?.email;
+  const isRead = message.status === 'read';
 
   return (
     <div className={message.sender === user?.email ? "flex" : ''}>
@@ -165,11 +168,16 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
             )}
         </>
         }
-        <div className="text-xs md:text-sm text-gray-200 mt-1 text-right">
+        <div className="text-xs md:text-sm text-gray-200 mt-1 text-right flex items-center justify-end gap-1">
           {dateToDisplay}
           {
             isPending && <TbClockQuestion color="red" size={38} className="inline p-2" />
           }
+          {isOwnMessage && !isPending && (
+            isRead
+              ? <CheckCheck size={16} className="text-blue-300" aria-label="Read" />
+              : <Check size={16} aria-label="Sent" />
+          )}
         </div>
       </div>
       {message.sender === user?.email && (
