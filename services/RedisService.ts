@@ -90,20 +90,58 @@ export default class RedisService {
     }
 
 
+    private static otpKey(contact: string) {
+        return `otp:${this.normalizeEmail(contact)}`;
+    }
+    private static otpAttemptsKey(contact: string) {
+        return `otp_attempts:${this.normalizeEmail(contact)}`;
+    }
+    private static otpCooldownKey(contact: string) {
+        return `otp_cooldown:${this.normalizeEmail(contact)}`;
+    }
+
     static async getOTPByEmail(email: string): Promise<OTP | null> {
         if (!email) return null;
-        return await this.redis().hget('otp', this.normalizeEmail(email)) as OTP;
+        return await this.redis().get(this.otpKey(email)) as OTP | null;
     }
 
     static async addOTP(email: string, otp: OTP) {
         if (!email || !otp?.OTP || !otp?.expiresAt) return;
-        await this.redis().hset('otp', {
-            [this.normalizeEmail(email)]: otp
-        });
+        // Store each OTP under its own key with a TTL matching its expiry -
+        // the previous single unbounded hash never dropped old codes, which
+        // both wastes the Upstash free-tier quota forever and keeps stale
+        // codes around indefinitely.
+        const ttlSeconds = Math.max(1, Math.ceil((otp.expiresAt - Date.now()) / 1000));
+        await this.redis().set(this.otpKey(email), otp, { ex: ttlSeconds });
     }
 
     static async deleteOTP(email: string) {
         if (!email) return;
-        await this.redis().hdel('otp', this.normalizeEmail(email));
+        await this.redis().del(this.otpKey(email));
+        await this.redis().del(this.otpAttemptsKey(email));
+    }
+
+    // Marks a send as having happened; returns false if one was already sent
+    // within `cooldownSeconds`, so callers can refuse to send another.
+    static async startOTPSendCooldown(email: string, cooldownSeconds = 60): Promise<boolean> {
+        if (!email) return false;
+        const result = await this.redis().set(this.otpCooldownKey(email), '1', {
+            nx: true,
+            ex: cooldownSeconds,
+        });
+        return result === 'OK';
+    }
+
+    // Increments the verification attempt counter for a contact and returns
+    // the new count. The counter expires on its own after `windowSeconds` so
+    // a lockout is temporary rather than permanent.
+    static async incrOTPAttempts(email: string, windowSeconds = 900): Promise<number> {
+        if (!email) return Infinity;
+        const key = this.otpAttemptsKey(email);
+        const count = await this.redis().incr(key);
+        if (count === 1) {
+            await this.redis().expire(key, windowSeconds);
+        }
+        return count;
     }
 }

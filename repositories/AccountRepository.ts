@@ -14,7 +14,7 @@ export default class AccountRepository {
     static async getUsersByID(IDs: string[]) {
         try {
             const obj_ids = IDs.map(id => new Types.ObjectId(id));
-            return await Account.find({ _id: { $in: obj_ids } }).exec();
+            return await Account.find({ _id: { $in: obj_ids } }).select('_id email nickname').exec();
         } catch (err) {
             console.error('Failed to find users by ID:', err);
             throw new Error('Failed to find users by ID');
@@ -22,7 +22,7 @@ export default class AccountRepository {
     }
     static async getUsersByEmails(emails: string[]) {
         try {
-            return await Account.find({ email: { $in: emails } }).exec();
+            return await Account.find({ email: { $in: emails } }).select('_id email nickname').exec();
         } catch (err) {
             console.error('Failed to find users by email:', err);
             throw new Error('Failed to find users by email');

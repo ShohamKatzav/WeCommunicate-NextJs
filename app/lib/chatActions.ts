@@ -7,10 +7,43 @@ import AccountRepository from "@/repositories/AccountRepository";
 import MessageRepository from "@/repositories/MessageRepository";
 import ConversationRepository from "@/repositories/ConversationRepository";
 import CleanHistoryRepository from "@/repositories/CleanHistoryRepository";
-import { extractUserIDFromCoockie } from '@/app/lib/cookieActions';
+import { extractUserIDFromCoockie, extractUsersEmailFromCoockie } from '@/app/lib/cookieActions';
 import { IAccount } from "@/models/Account";
 import MessageDTO from "@/types/messageDTO";
 import { revalidatePath } from 'next/cache';
+import RedisService from '@/services/RedisService';
+import { sendNotification } from '@/app/lib/pushActions';
+
+// Push notifications are sent from here (server-side, right after a message
+// is persisted) rather than from the sender's browser - a push triggered
+// client-side never fires if the sender closes the tab right after sending.
+// "Offline" means the participant currently has no connected socket at all.
+async function notifyOfflineParticipants(message: MessageDTO, messageDoc: any) {
+    try {
+        const participantIds = message.participantID || [];
+        if (participantIds.length === 0) return;
+
+        const participants = await AccountRepository.getUsersByID(participantIds);
+        const offlineParticipantIds: string[] = [];
+        for (const participant of participants) {
+            const sockets = await RedisService.getUserSocketsByEmail(participant.email);
+            if (sockets.length === 0) {
+                offlineParticipantIds.push(participant._id.toString());
+            }
+        }
+
+        if (offlineParticipantIds.length === 0) return;
+
+        await sendNotification({
+            ...message,
+            sender: messageDoc.sender,
+            conversationID: messageDoc.conversation?.toString(),
+            participantID: offlineParticipantIds,
+        });
+    } catch (err) {
+        console.error('Failed to send push notification:', err);
+    }
+}
 
 export const getMessages = async (participantsId: string[], page: number) => {
     if (typeof page !== 'number' || page < 1) {
@@ -146,6 +179,10 @@ export const saveMessage = async (message: MessageDTO) => {
         }
 
         const messageDoc = await MessageRepository.SaveMessage(message, userID);
+
+        // Fire-and-forget: don't make the sender wait on push delivery.
+        void notifyOfflineParticipants(message, messageDoc);
+
         const result = JSON.parse(JSON.stringify({ success: true, messageDoc }));
         if (result) {
             revalidatePath('/chat');
@@ -182,8 +219,21 @@ export const deleteMessage = async (id: string, type: string = "message") => {
 export const getConversationMembers = async (conversationId: string) => {
     try {
         await connectDB();
+        const requesterEmail = await extractUsersEmailFromCoockie();
+        if (!requesterEmail) {
+            return { success: false, members: [] };
+        }
         const conversation = await ConversationRepository.GetConversationById(conversationId);
         if (!conversation) {
+            return { success: false, members: [] };
+        }
+        // Only members of the conversation may see who else is in it -
+        // conversation IDs are otherwise guessable/discoverable, and this
+        // would leak the member list of any conversation to anyone logged in.
+        const isRequesterMember = conversation.members?.some(
+            (member: any) => member.email?.toLowerCase() === requesterEmail.toLowerCase()
+        );
+        if (!isRequesterMember) {
             return { success: false, members: [] };
         }
         const result = JSON.parse(JSON.stringify({

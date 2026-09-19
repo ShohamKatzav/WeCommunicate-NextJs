@@ -6,8 +6,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import ModerationService from '@/services/ModerationService';
 import { isEmail, isPhone, normalizePhone } from './contact';
-
-async function findAccount(identifier: string) { return isPhone(identifier) ? AccountRepository.getUserByPhone(normalizePhone(identifier)) : AccountRepository.getUserByEmail(identifier.trim().toLowerCase()); }
+import { findAccount } from './accountHelpers';
 
 export const isExist = async (identifier: string) => { await connectDB(); const user = await findAccount(identifier); return { accountExists: Boolean(user), status: user ? 200 : 401 }; };
 export const createUser = async (identifier: string, password: string, nickname: string) => {
@@ -18,7 +17,7 @@ export const createUser = async (identifier: string, password: string, nickname:
     // Realtime messaging uses email as its internal key; phone-only accounts get a private stable key.
     const email = phone ? `phone:${phone}` : identifier.trim().toLowerCase();
     const accountId = await AccountRepository.addUser(email, await bcrypt.hash(password, 10), nickname.trim(), phone);
-    const token = jwt.sign({ _id: accountId.toString(), email, nickname: nickname.trim(), isModerator: false, signInTime: Date.now() }, env.JWT_SECRET_KEY!);
+    const token = jwt.sign({ _id: accountId.toString(), email, nickname: nickname.trim(), isModerator: false, signInTime: Date.now() }, env.JWT_SECRET_KEY!, { expiresIn: '7d' });
     return { success: true, token, email, nickname: nickname.trim(), isModerator: false, status: 201 };
   } catch (err) { console.error('Failed to create user:', err); return { message: 'Internal Server Error', status: 500 }; }
 };
@@ -29,10 +28,8 @@ export const authenticateUser = async (identifier: string, password: string) => 
     const banStatus = await ModerationService.isUserBanned(user._id.toString());
     if (banStatus.isBanned) return { message: `Your account has been banned. Reason: ${banStatus.reason ?? 'Policy violation'}`, status: 403 };
     if (!await bcrypt.compare(password, user.password)) return { message: 'Invalid password', status: 401 };
-    const token = jwt.sign({ _id: user._id, email: user.email, nickname: user.nickname, isModerator: user.isModerator || false, signInTime: Date.now() }, env.JWT_SECRET_KEY!);
+    const token = jwt.sign({ _id: user._id, email: user.email, nickname: user.nickname, isModerator: user.isModerator || false, signInTime: Date.now() }, env.JWT_SECRET_KEY!, { expiresIn: '7d' });
     return { success: true, token, email: user.email, nickname: user.nickname, isModerator: user.isModerator || false, status: 200 };
   } catch (err) { console.error('Failed to authenticate user:', err); return { message: 'Internal Server Error', status: 500 }; }
 };
 export const getUsernames = async () => { await connectDB(); return JSON.parse(JSON.stringify(await AccountRepository.getUsernames())); };
-export const updatePassword = async (identifier: string, newPassword: string) => { await connectDB(); const user = await findAccount(identifier); if (!user) return { message: 'Account not found', status: 404 }; await AccountRepository.updatePassword(user.email, await bcrypt.hash(newPassword, 10)); return { success: true, status: 201 }; };
-export async function getUsersByEmails(userEmails: string[]) { return JSON.parse(JSON.stringify(await AccountRepository.getUsersByEmails(userEmails))); }

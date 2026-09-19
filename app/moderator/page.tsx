@@ -50,8 +50,8 @@ export default function ModeratorPanel() {
     useEffect(() => {
         if (!socket || !user?.isModerator) return;
         socket.on("moderator_update_banned_user", (data) => handleUserBanned(data, true));
-        socket.on("moderator_update_unbanned_user", (email) => handleUserBanned(email, false));
-        socket.on("update_ban_expire", (emails) => handleBanExpired(emails));
+        socket.on("moderator_update_unbanned_user", (data) => handleUserBanned(data, false));
+        socket.on("update_ban_expire", (data) => handleBanExpired(data.userEmails));
         return () => {
             socket.off("moderator_update_banned_user", handleUserBanned);
             socket.off("moderator_update_unbanned_user", handleUserBanned);

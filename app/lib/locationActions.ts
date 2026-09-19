@@ -11,11 +11,16 @@ export async function GetLocations() {
         throw err;
     }
 }
-export async function SaveLocations(location: any) {
+export async function SaveLocations(email: string, location: any) {
     try {
         await dbConnect();
-        const account = await AccountRepository.getUserByEmail(location.username);
-        return await LocationRepository.updateLocation(account._id, location);
+        // The account a location is saved against always comes from the
+        // caller's verified identity, never from a client-supplied
+        // "username" field - otherwise any socket client could overwrite
+        // another user's location.
+        const account = await AccountRepository.getUserByEmail(email);
+        if (!account) throw new Error(`Account not found for ${email}`);
+        return await LocationRepository.updateLocation(account._id, { ...location, username: email });
     } catch (err) {
         console.error('Failed to save location:', err);
         throw err;

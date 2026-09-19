@@ -3,6 +3,8 @@ import handleSocketConnection from '@/socket/handlers';
 import authMiddleware from '@/socket/authMIddleware'
 import rateLimitMiddleware from '@/socket/rateLimitMiddleware'
 import AccountRepository from '@/repositories/AccountRepository'
+import Account from '@/models/Account'
+import RedisService from '@/services/RedisService'
 
 let io = null;
 let banCheckInterval = null;
@@ -32,8 +34,8 @@ async function checkExpiredBans(io) {
 
 export default async function handler(req, res) {
     if (res.socket.server.io) {
-        console.log('Socket already initialized');
         res.end();
+        return;
     }
 
     if (!io)

@@ -17,7 +17,6 @@ interface UseMessageHandlingProps {
     messageToSend: Message;
     setMessageToSend: React.Dispatch<React.SetStateAction<Message>>;
     setLastReceivedMessage: (message: Message) => void;
-    setMessageToPush: (message: Message) => void;
     updateConversationsBar: (message: Message | null, mode?: string, cleanId?: string) => Promise<void>;
 }
 
@@ -34,7 +33,6 @@ export const useMessageHandling = ({
     messageToSend,
     setMessageToSend,
     setLastReceivedMessage,
-    setMessageToPush,
     updateConversationsBar
 }: UseMessageHandlingProps) => {
 
@@ -91,10 +89,9 @@ export const useMessageHandling = ({
             conversationID: currentConversationId.current || newConversationId
         };
 
-        setMessageToPush(tempMessage);
         setLastReceivedMessage(finalMessage);
         updateConversationsBar(finalMessage);
-    }, [socket, currentConversationId, chatRef, setChat, setMessageToPush, setLastReceivedMessage, updateConversationsBar]);
+    }, [socket, currentConversationId, chatRef, setChat, setLastReceivedMessage, updateConversationsBar]);
 
     const handleSendMessage = useCallback(async () => {
         const tempId = new Date().getTime().toString();
