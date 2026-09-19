@@ -141,6 +141,32 @@ export const useSocketEvents = ({
             socket.off("delete message", handleMessageDeleted);
         };
     }, [socket, loadingSocket, setChat, chatRef]);
+
+    // Read receipts
+    useEffect(() => {
+        if (!socket || loadingSocket) return;
+
+        const handleMessagesRead = () => {
+            // This event only reaches clients that have this exact
+            // conversation's room open, so every message currently in
+            // chatRef belongs to it - no per-message conversationId check
+            // needed. The server already excludes the reader's own
+            // messages, so this only ever marks messages *I* sent as read.
+            setChat(
+                chatRef.current.map(msg =>
+                    msg.sender?.toUpperCase() === userEmail?.toUpperCase() && msg.status !== 'revoked'
+                        ? { ...msg, status: 'read' }
+                        : msg
+                )
+            );
+        };
+
+        socket.on("messages read", handleMessagesRead);
+
+        return () => {
+            socket.off("messages read", handleMessagesRead);
+        };
+    }, [socket, loadingSocket, setChat, chatRef, userEmail]);
     return {
         chatListActiveUsers,
         typingUsers

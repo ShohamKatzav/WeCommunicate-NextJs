@@ -34,6 +34,7 @@ export default async function handleSocketConnection(io, socket) {
         io.emit('update connected users', allUsers);
 
         socket.on('join room', (body) => handleJoinRoom(body, socket));
+        socket.on('message read', (data) => handleMessageRead(io, socket, data));
         socket.on('publish message', (message) => handlePublishMessage(io, socket, message));
         socket.on('delete message', (message) => handleDeleteMessage(io, socket, message));
         socket.on('notifications update', () => handleNotificationsUpdate(socket, email));
@@ -69,6 +70,33 @@ async function handleJoinRoom(body, socket) {
     socket.to(room).emit('request typing status', {
         requestedBy: socket.id
     });
+}
+
+// Marks every not-yet-read message from other members as read, and tells
+// the room so senders can update their own sent messages' status. In a
+// group conversation this fires as soon as ANY other member has read a
+// message, not "read by everyone" - a per-member "seen by" list is a
+// bigger feature than this first pass covers.
+async function handleMessageRead(io, socket, data) {
+    const conversationId = data?.conversationId;
+    const readerEmail = socket.data.email;
+    if (!conversationId || !readerEmail) return;
+
+    if (!(await isConversationMember(conversationId, readerEmail))) return;
+
+    const result = await Message.updateMany(
+        {
+            conversation: conversationId,
+            sender: { $ne: readerEmail },
+            status: { $nin: ['read', 'revoked'] }
+        },
+        { $set: { status: 'read' } }
+    );
+
+    if (result.modifiedCount > 0) {
+        const room = `chat_room_${conversationId}`;
+        io.to(room).emit('messages read', { conversationId, readerEmail });
+    }
 }
 
 async function handleUpdateConnectedUsers(io) {
