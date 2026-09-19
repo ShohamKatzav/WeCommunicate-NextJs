@@ -54,7 +54,12 @@ const ChatWindow = ({ messages, participants, isMobile }: ChatWindowProps) => {
                             <div ref={chatBox} className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto w-full p-2">
                                 <div>
                                     {messages?.map((message, index) =>
-                                        <MessageBubble key={index} message={message} />)
+                                        // Incoming messages re-sort this array by date (see
+                                        // handleIncomingMessage), which can reorder existing
+                                        // items - an index key would then reattach a bubble's
+                                        // state (deleted, playback position, etc.) to whatever
+                                        // message now happens to occupy that index.
+                                        <MessageBubble key={message._id || `msg-${index}`} message={message} />)
                                     }
                                 </div>
                                 {(messages?.length === parseInt(process.env.NEXT_PUBLIC_MESSAGES_PER_PAGE!) || loadNew) &&

@@ -3,15 +3,12 @@ import { Plus, Search, MessageSquareDiff } from 'lucide-react';
 import { useState } from 'react';
 import ConversationsList from './conversationsList';
 import ChatUser from '@/types/chatUser';
-import Message from '@/types/message';
 import Conversation from '@/types/conversation';
 
 interface ConversationsBarProps {
     isMobileChatsSidebarOpen: boolean;
     handleOpenModal: (mode: string) => void;
     getLastMessages: (roomParticipants: ChatUser[]) => Promise<void>;
-    lastRecievedMessage: Message | undefined;
-    participants: React.RefObject<ChatUser[] | null>;
     initialRecentConversations: Conversation[];
 }
 
@@ -19,8 +16,6 @@ const ConversationsBar =
     ({ isMobileChatsSidebarOpen,
         handleOpenModal,
         getLastMessages,
-        lastRecievedMessage,
-        participants,
         initialRecentConversations }:
         ConversationsBarProps) => {
 
@@ -70,8 +65,6 @@ const ConversationsBar =
                     <div className="flex-1 overflow-y-auto">
                         <ConversationsList
                             getLastMessages={getLastMessages}
-                            newMessage={lastRecievedMessage}
-                            participants={participants}
                             query={query}
                             initialConversations={initialRecentConversations}
                         />

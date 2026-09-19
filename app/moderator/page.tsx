@@ -49,15 +49,24 @@ export default function ModeratorPanel() {
 
     useEffect(() => {
         if (!socket || !user?.isModerator) return;
-        socket.on("moderator_update_banned_user", (data) => handleUserBanned(data, true));
-        socket.on("moderator_update_unbanned_user", (data) => handleUserBanned(data, false));
-        socket.on("update_ban_expire", (data) => handleBanExpired(data.userEmails));
+
+        // These must be the exact same function references passed to both
+        // .on() and .off() - the previous code registered inline arrows but
+        // tried to remove them with a different (bare) reference, which is a
+        // silent no-op, so listeners piled up on every reconnect.
+        const onBanned = (data: { userEmail: string, message: string }) => handleUserBanned(data, true);
+        const onUnbanned = (data: { userEmail: string, message: string }) => handleUserBanned(data, false);
+        const onBanExpire = (data: { userEmails: string[] }) => handleBanExpired(data.userEmails);
+
+        socket.on("moderator_update_banned_user", onBanned);
+        socket.on("moderator_update_unbanned_user", onUnbanned);
+        socket.on("update_ban_expire", onBanExpire);
         return () => {
-            socket.off("moderator_update_banned_user", handleUserBanned);
-            socket.off("moderator_update_unbanned_user", handleUserBanned);
-            socket.off("update_ban_expire", handleBanExpired);
+            socket.off("moderator_update_banned_user", onBanned);
+            socket.off("moderator_update_unbanned_user", onUnbanned);
+            socket.off("update_ban_expire", onBanExpire);
         };
-    }, [socket, socket?.connected]);
+    }, [socket, user?.isModerator]);
 
     const fetchUsers = async () => {
         setLoading(true);

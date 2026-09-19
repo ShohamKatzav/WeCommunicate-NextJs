@@ -18,7 +18,11 @@ const SOFT_ASK_DISMISSED_KEY = 'pushNotificationSoftAskDismissed';
 export default function PushNotificationManager() {
     const { loadingUser } = useUser();
     const isMobile = useIsMobile();
-    const [isSupported, setIsSupported] = useState(false)
+    // null = not yet determined. Browser support can't be known during SSR
+    // (there's no navigator/window on the server), so defaulting this to
+    // false would render the "not supported" message on every load, even in
+    // browsers that do support it, until the effect below corrects it.
+    const [isSupported, setIsSupported] = useState<boolean | null>(null)
     const [subscription, setSubscription] = useState<PushSubscription | null>(null)
     const [showSoftAsk, setShowSoftAsk] = useState(false);
 
@@ -82,14 +86,19 @@ export default function PushNotificationManager() {
     };
 
     useEffect(() => {
-        if ('serviceWorker' in navigator && 'PushManager' in window) {
-            setIsSupported(true);
-        }
-        if (isSupported && !loadingUser) {
+        const supported = 'serviceWorker' in navigator && 'PushManager' in window;
+        setIsSupported(supported);
+        if (supported && !loadingUser) {
             registerServiceWorker();
         }
-    }, [isSupported, loadingUser]);
+    }, [loadingUser]);
 
+
+    if (isSupported === null) {
+        // Not yet determined - render nothing rather than flash the wrong
+        // message while we wait for the effect above to run.
+        return null;
+    }
 
     if (!isSupported) {
         return <p className="text-center text-sm text-gray-500 dark:text-gray-400 p-2">Push notifications are not supported in this browser.</p>

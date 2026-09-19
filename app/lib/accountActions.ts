@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs';
 import ModerationService from '@/services/ModerationService';
 import { isEmail, isPhone, normalizePhone } from './contact';
 import { findAccount } from './accountHelpers';
+import RedisService from '@/services/RedisService';
 
 export const isExist = async (identifier: string) => { await connectDB(); const user = await findAccount(identifier); return { accountExists: Boolean(user), status: user ? 200 : 401 }; };
 export const createUser = async (identifier: string, password: string, nickname: string) => {
@@ -24,6 +25,11 @@ export const createUser = async (identifier: string, password: string, nickname:
 export const authenticateUser = async (identifier: string, password: string) => {
   if (!identifier || !password) return { message: 'Email or phone number and password are required', status: 400 };
   try {
+    // Without this, login is an unthrottled password-guessing oracle against
+    // any known email/phone - 10 attempts per 15 minutes per identifier.
+    const allowed = await RedisService.checkRateLimit('login', identifier, 10, 900);
+    if (!allowed) return { message: 'Too many login attempts. Please try again in a few minutes.', status: 429 };
+
     await connectDB(); const user = await findAccount(identifier); if (!user) return { message: 'User not found', status: 404 };
     const banStatus = await ModerationService.isUserBanned(user._id.toString());
     if (banStatus.isBanned) return { message: `Your account has been banned. Reason: ${banStatus.reason ?? 'Policy violation'}`, status: 403 };

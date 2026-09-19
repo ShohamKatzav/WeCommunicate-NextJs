@@ -65,10 +65,24 @@ export default function OfflineHandler({ children }: { children: ReactNode }) {
 
         const handleLinkClick = (e: MouseEvent) => {
             try {
+                // Only step in when we already know we're offline - doing
+                // this unconditionally on every click (even while perfectly
+                // online) used to force a full page reload instead of
+                // Next's normal client-side navigation for every single
+                // click between these pages, plus up to a second of
+                // health-check latency before that reload even started.
+                // The reactive pathname-based check above still catches the
+                // rarer case of a navigation to a page that turns out to be
+                // unreachable despite navigator.onLine being true.
+                if (navigator.onLine) return;
+
                 const target = e.target as HTMLElement | null;
                 if (!target) return;
                 const anchor = target.closest && (target.closest('a') as HTMLAnchorElement | null);
                 if (!anchor || !anchor.href) return;
+                // Let the browser handle modified clicks (new tab, new
+                // window, etc.) normally instead of hijacking them too.
+                if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
                 const url = new URL(anchor.href, window.location.href);
                 if (!isTargetedPath(url.pathname)) return;
 
@@ -79,25 +93,7 @@ export default function OfflineHandler({ children }: { children: ReactNode }) {
                 e.stopPropagation();
                 e.stopImmediatePropagation();
 
-                const goOffline = () => window.location.replace('/offline.html');
-                if (!navigator.onLine) {
-                    goOffline();
-                    return;
-                }
-
-                const controller = new AbortController();
-                const timeoutId = window.setTimeout(() => controller.abort(), 1000);
-                fetch('/api/health', {
-                    method: 'GET',
-                    cache: 'no-store',
-                    signal: controller.signal,
-                })
-                    .then((response) => {
-                        if (!response.ok) throw new Error('Health check failed');
-                        window.location.assign(url.href);
-                    })
-                    .catch(goOffline)
-                    .finally(() => window.clearTimeout(timeoutId));
+                window.location.replace('/offline.html');
             } catch (err) {
                 // ignore parsing/link errors
             }

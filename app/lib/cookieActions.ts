@@ -81,5 +81,9 @@ export async function extractUsersEmailFromCoockie(): Promise<any> {
 
 export async function deleteUserCoockie(): Promise<any> {
   const cookieStore = await cookies();
-  cookieStore.set('user', "");
+  // .set('user', "") with none of the original attributes (httpOnly,
+  // secure, sameSite, path) can create a distinct cookie rather than
+  // clearing the original one. .delete() is the correct way to actually
+  // remove it.
+  cookieStore.delete('user');
 }

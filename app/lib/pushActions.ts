@@ -70,15 +70,14 @@ export async function sendNotification(message: Message) {
         }
 
         const users = await AccountRepository.getUsersByID(message.participantID!) as IAccount[];
-        const emails = users.map(user => user.email);
-        const emailSearchConditions = emails.map(email => ({
-            email: {
-                $regex: `^${email}$`,
-                $options: 'i'
-            }
-        }));
+        // Both Account.email and PushSubscription.email are always stored
+        // lowercased already, so a plain $in match is correct - no need to
+        // build a regex out of these values (a regex per-email is also a
+        // ReDoS/injection surface, and "+"-addressed emails like
+        // a+b@gmail.com break as a regex quantifier).
+        const emails = users.map(user => user.email?.trim().toLowerCase());
         const subscriptions = await PushSubscription.find({
-            $or: emailSearchConditions
+            email: { $in: emails }
         }).lean() as unknown as IPushSubscription[];
         if (!subscriptions) {
             throw new Error('No subscription available')

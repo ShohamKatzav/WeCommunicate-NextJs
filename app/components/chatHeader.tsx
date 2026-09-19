@@ -86,7 +86,7 @@ const ChatHeader = ({
 
                             participants.current && (
                                 <div className="flex items-center gap-1 text-xs text-gray-500">
-                                    <span className={`w-1.5 h-1.5 bg-${onlineCount > 0 ? 'green' : 'gray'}-500 rounded-full`}></span>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${onlineCount > 0 ? 'bg-green-500' : 'bg-gray-500'}`}></span>
                                     {participants.current.length > 1 ? `${onlineCount} of ${participants.current.length} members online` :
                                             `${onlineCount > 0 ? `${participants.current[0]?.nickname || AsShortName(participants.current[0]?.email as string)} online` :
                                             `${participants.current[0]?.nickname || AsShortName(participants.current[0]?.email as string)} isn't here right now`}`

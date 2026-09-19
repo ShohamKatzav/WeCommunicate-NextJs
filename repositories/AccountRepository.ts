@@ -30,9 +30,13 @@ export default class AccountRepository {
     }
     static async getUserByEmail(email: string) {
         try {
-            return await Account.findOne({
-                email: { $regex: new RegExp("^" + email + "$", "i") }
-            }).exec();
+            // Emails are always stored lowercased (see createUser), so an
+            // exact match after normalizing the input is both correct and
+            // avoids building a RegExp out of user-controlled input (which
+            // is both a ReDoS/injection surface and, ironically, breaks on
+            // "+"-addressed emails like a+b@gmail.com being interpreted as
+            // a regex quantifier).
+            return await Account.findOne({ email: email?.trim().toLowerCase() }).exec();
         } catch (err) {
             console.error('Failed to find user by email:', err);
             throw new Error('Failed to find user by email');
@@ -61,7 +65,10 @@ export default class AccountRepository {
     }
     static async getUsernames() {
         try {
-            const users = await Account.find().exec();
+            // Only project the fields actually used below - this loads every
+            // account (including password hashes) on every chat page render
+            // otherwise.
+            const users = await Account.find().select('_id email nickname').lean().exec();
             const chatUsers = users.map(user => ({ _id: user._id, email: user.email, nickname: user.nickname }));
             return chatUsers;
         } catch (err) {
@@ -87,7 +94,7 @@ export default class AccountRepository {
     static async updateBanStatus(email: string, isBanned: boolean) {
         try {
             return await Account.updateOne(
-                { email: { $regex: new RegExp("^" + email + "$", "i") } },
+                { email: email?.trim().toLowerCase() },
                 isBanned
                     ? {
                         $set: {
@@ -114,7 +121,7 @@ export default class AccountRepository {
     static async updateModeratorStatus(email: string, isModerator: boolean) {
         try {
             return await Account.updateOne(
-                { email: { $regex: new RegExp("^" + email + "$", "i") } },
+                { email: email?.trim().toLowerCase() },
                 { $set: { isModerator } }
             );
         } catch (err) {

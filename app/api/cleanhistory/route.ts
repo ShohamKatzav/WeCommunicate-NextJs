@@ -8,6 +8,9 @@ export async function POST(request: any) {
 
             const result = await cleanHistory(conversationIdString);
 
+            if (!result?.success) {
+                  return NextResponse.json(result, { status: 500 });
+            }
             return NextResponse.json(result);
       }
       catch (error) {

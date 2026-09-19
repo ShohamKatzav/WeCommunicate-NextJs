@@ -21,7 +21,14 @@ export default class RedisService {
 
     static async addUserSocket(email: string, socketId: string) {
         if (!email || !socketId) return;
-        await this.redis().sadd(this.socketKey(email), socketId);
+        const key = this.socketKey(email);
+        await this.redis().sadd(key, socketId);
+        // Without a TTL, a missed disconnect event (server restart, crashed
+        // process, etc.) leaves a socket id in this set forever, and that
+        // user shows as permanently online. Bound the damage to at most a
+        // day instead of indefinitely - a normal reconnect refreshes it well
+        // before that.
+        await this.redis().expire(key, 60 * 60 * 24);
     }
 
     static async removeUserSocket(email: string, socketId: string) {
@@ -40,18 +47,27 @@ export default class RedisService {
     }
 
     static async getOnlineUsers(): Promise<{ email: string; sockets: string[] }[]> {
+        // Note: KEYS scans the whole keyspace and is not recommended at
+        // scale - a proper fix means switching presence tracking to a
+        // single sorted set (touching addUserSocket/removeUserSocket too),
+        // which is out of scope for this pass. This at least stops doing
+        // the per-key SMEMBERS lookups one at a time in sequence, which
+        // was turning N keys into N sequential round-trip latencies.
         const keys = await this.redis().keys('user_sockets:*');
-        const users: { email: string; sockets: string[] }[] = [];
+        if (keys.length === 0) return [];
 
-        for (const key of keys) {
-            const sockets = await this.redis().smembers(key);
+        const socketsByKey = await Promise.all(keys.map(key => this.redis().smembers(key)));
+
+        const users: { email: string; sockets: string[] }[] = [];
+        keys.forEach((key, i) => {
+            const sockets = socketsByKey[i];
             if (sockets.length > 0) {
                 users.push({
                     email: key.replace('user_sockets:', ''),
                     sockets
                 });
             }
-        }
+        });
         return users;
     }
 
@@ -143,5 +159,27 @@ export default class RedisService {
             await this.redis().expire(key, windowSeconds);
         }
         return count;
+    }
+
+    // Tracks how many times the moderation API has failed and fallen open
+    // (see ModerationService.moderateMessage) - no TTL, this is meant to
+    // accumulate as a standing signal, not expire like a rate-limit counter.
+    static async incrModerationFailure() {
+        await this.redis().incr('moderation_failures_total');
+    }
+
+    // Generic fixed-window rate limiter for server actions (login attempts,
+    // message sends, etc.). Returns true if the caller is still under the
+    // limit for this window. `scope` namespaces independent limiters (e.g.
+    // "login", "send-message") so the same identifier doesn't share a
+    // counter across unrelated actions.
+    static async checkRateLimit(scope: string, identifier: string, limit: number, windowSeconds: number): Promise<boolean> {
+        if (!identifier) return false;
+        const key = `ratelimit:${scope}:${this.normalizeEmail(identifier)}`;
+        const count = await this.redis().incr(key);
+        if (count === 1) {
+            await this.redis().expire(key, windowSeconds);
+        }
+        return count <= limit;
     }
 }

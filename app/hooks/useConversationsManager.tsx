@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Message from '@/types/message';
 import Conversation from '@/types/conversation';
 import { getConversationMembers } from '@/app/lib/chatActions';
@@ -12,6 +12,82 @@ export const useConversationsManager = ({
 }: UseConversationsManagerProps) => {
     const [conversationsForBar, setConversationsForBar] = useState<Conversation[]>(initialConversations);
     const pendingConversations = useRef<Set<string>>(new Set());
+    // Mirrors which conversation ids we currently know about, so
+    // updateConversationsBar can branch on membership synchronously without
+    // depending on conversationsForBar directly (which would make this
+    // callback's identity change on every update).
+    const knownConversationIds = useRef<Set<string>>(
+        new Set(initialConversations.map(c => c._id).filter((id): id is string => Boolean(id)))
+    );
+
+    useEffect(() => {
+        knownConversationIds.current = new Set(
+            conversationsForBar.map(c => c._id).filter((id): id is string => Boolean(id))
+        );
+    }, [conversationsForBar]);
+
+    // Side effects (the pending-fetch ref mutation and the async request)
+    // live in a plain function, not inside a setState updater - updater
+    // functions must be pure, and React can invoke them more than once for
+    // the same update (e.g. under StrictMode), which would otherwise fire
+    // duplicate fetches for the same new conversation.
+    const fetchAndAddConversation = useCallback(async (conversationId: string, message: Message) => {
+        try {
+            let members = [];
+            let attempts = 0;
+            const maxAttempts = 3;
+
+            // Retry logic for handling timing issues with new conversations
+            // (especially important for group chats where server might still be processing)
+            while (attempts < maxAttempts) {
+                attempts++;
+
+                // Small delay before first attempt (and longer delays for retries)
+                await new Promise(resolve => setTimeout(resolve, attempts * 100));
+
+                const result = await getConversationMembers(conversationId);
+
+                if (result.success && result.members?.length > 0) {
+                    members = result.members;
+                    break; // Success! Exit retry loop
+                }
+
+                // If last attempt failed, give up
+                if (attempts === maxAttempts) {
+                    console.warn(`Failed to fetch members for conversation ${conversationId} after ${maxAttempts} attempts`);
+                }
+            }
+
+            // Only add conversation if we successfully got members
+            // This prevents broken UI with missing participant names
+            if (members.length > 0) {
+                setConversationsForBar(prev => {
+                    // Double-check it wasn't added by another update
+                    const exists = prev.some(c => c._id === conversationId);
+                    if (exists) {
+                        // Just update members if it exists
+                        return prev.map(conv =>
+                            conv._id === conversationId
+                                ? { ...conv, members }
+                                : conv
+                        );
+                    }
+
+                    // Add new conversation with complete data
+                    const newConversation: Conversation = {
+                        _id: conversationId,
+                        members,
+                        messages: [message],
+                    };
+                    return [newConversation, ...prev];
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching conversation members:', error);
+        } finally {
+            pendingConversations.current.delete(conversationId);
+        }
+    }, []);
 
     const updateConversationsBar = useCallback(async (
         message: Message | null,
@@ -46,94 +122,35 @@ export const useConversationsManager = ({
 
         if (!message) return;
         const conversationId = message.conversationID;
+        if (!conversationId) return;
 
-        setConversationsForBar(prevConversations => {
-            const updatedConversations = [...prevConversations];
-            const conversationIndex = updatedConversations.findIndex(
-                conv => conv._id?.toUpperCase() === conversationId?.toUpperCase()
-            );
+        if (knownConversationIds.current.has(conversationId)) {
+            // Existing conversation - update messages and move to top. This
+            // is a pure computation, safe inside the updater.
+            setConversationsForBar(prevConversations => {
+                const updatedConversations = [...prevConversations];
+                const conversationIndex = updatedConversations.findIndex(
+                    conv => conv._id?.toUpperCase() === conversationId.toUpperCase()
+                );
+                if (conversationIndex === -1) return prevConversations;
 
-            if (conversationIndex > -1) {
-                // Existing conversation - update messages and move to top
                 const [conversation] = updatedConversations.splice(conversationIndex, 1);
                 if (!conversation.messages?.some(m => m._id === message._id)) {
                     conversation.messages = [...(conversation.messages || []), message];
                 }
                 updatedConversations.unshift(conversation);
                 return updatedConversations;
-            } else {
-                // New conversation - fetch members before adding to UI
-                // Check if we're already fetching this conversation
-                if (pendingConversations.current.has(conversationId!)) {
-                    return prevConversations; // Already fetching, don't duplicate
-                }
+            });
+            return;
+        }
 
-                pendingConversations.current.add(conversationId!);
-
-                // Fetch members asynchronously
-                (async () => {
-                    try {
-                        let members = [];
-                        let attempts = 0;
-                        const maxAttempts = 3;
-
-                        // Retry logic for handling timing issues with new conversations
-                        // (especially important for group chats where server might still be processing)
-                        while (attempts < maxAttempts) {
-                            attempts++;
-
-                            // Small delay before first attempt (and longer delays for retries)
-                            await new Promise(resolve => setTimeout(resolve, attempts * 100));
-
-                            const result = await getConversationMembers(conversationId!);
-
-                            if (result.success && result.members?.length > 0) {
-                                members = result.members;
-                                break; // Success! Exit retry loop
-                            }
-
-                            // If last attempt failed, give up
-                            if (attempts === maxAttempts) {
-                                console.warn(`Failed to fetch members for conversation ${conversationId} after ${maxAttempts} attempts`);
-                            }
-                        }
-
-                        // Only add conversation if we successfully got members
-                        // This prevents broken UI with missing participant names
-                        if (members.length > 0) {
-                            setConversationsForBar(prev => {
-                                // Double-check it wasn't added by another update
-                                const exists = prev.some(c => c._id === conversationId);
-                                if (exists) {
-                                    // Just update members if it exists
-                                    return prev.map(conv =>
-                                        conv._id === conversationId
-                                            ? { ...conv, members }
-                                            : conv
-                                    );
-                                }
-
-                                // Add new conversation with complete data
-                                const newConversation: Conversation = {
-                                    _id: conversationId!,
-                                    members,
-                                    messages: [message],
-                                };
-                                return [newConversation, ...prev];
-                            });
-                        }
-                    } catch (error) {
-                        console.error('Error fetching conversation members:', error);
-                    } finally {
-                        pendingConversations.current.delete(conversationId!);
-                    }
-                })();
-
-                // Don't modify conversations array yet - wait for async fetch
-                return prevConversations;
-            }
-        });
-    }, []);
+        // New conversation - fetch members before adding to UI.
+        if (pendingConversations.current.has(conversationId)) {
+            return; // Already fetching, don't duplicate
+        }
+        pendingConversations.current.add(conversationId);
+        void fetchAndAddConversation(conversationId, message);
+    }, [fetchAndAddConversation]);
 
     return {
         conversationsForBar,

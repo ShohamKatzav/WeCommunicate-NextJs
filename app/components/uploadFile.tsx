@@ -120,7 +120,7 @@ export default function UploadFile({ message, setMessage }: UploadFileProps) {
             'application/pdf'
         ];
         if (!validTypes.includes(file.type)) {
-            setError('Please select a valid file (JPEG, PNG, GIF, webp, mp3 or mpeg)');
+            setError('Please select a supported image, audio, video, PDF, Word, or Excel file');
             return;
         }
 
@@ -170,7 +170,7 @@ export default function UploadFile({ message, setMessage }: UploadFileProps) {
                     name="file"
                     ref={inputFileRef}
                     type="file"
-                    accept="image/*,audio/*"
+                    accept="image/jpeg,image/png,image/gif,image/webp,image/bmp,audio/mp3,audio/mpeg,video/x-msvideo,video/mp4,video/mpeg,video/ogg,video/webm,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/pdf"
                     required
                     disabled={isUploading}
                     onChange={() => handleSubmit()}

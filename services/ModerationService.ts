@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import Account from '@/models/Account';
 import ModerationViolation from '@/models/ModerationViolation';
 import { Types } from 'mongoose';
+import RedisService from '@/services/RedisService';
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
@@ -159,6 +160,12 @@ export default class ModerationService {
                     type: error.type
                 });
             }
+
+            // Failing open silently means an expired API key or an outage
+            // turns off moderation with no trace anywhere. Track it so
+            // there's at least a queryable signal (e.g. via redis-cli) that
+            // messages have been going through unmoderated.
+            RedisService.incrModerationFailure().catch(() => { });
 
             return { isAllowed: true };
         }
@@ -355,9 +362,15 @@ export default class ModerationService {
             const user = await Account.findById(userId);
 
             const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+            const userObjectId = new Types.ObjectId(userId);
 
-            const [allViolations, recentViolations] = await Promise.all([
-                ModerationViolation.find({ user: userId }),
+            // Count by severity in the DB instead of loading every violation
+            // document just to .filter().length three times in JS.
+            const [severityCounts, recentViolations] = await Promise.all([
+                ModerationViolation.aggregate([
+                    { $match: { user: userObjectId } },
+                    { $group: { _id: '$severity', count: { $sum: 1 } } }
+                ]),
                 ModerationViolation.countDocuments({
                     user: userId,
                     timestamp: { $gte: thirtyDaysAgo }
@@ -365,13 +378,13 @@ export default class ModerationService {
             ]);
 
             const bySeverity = {
-                low: allViolations.filter(v => v.severity === 'low').length,
-                medium: allViolations.filter(v => v.severity === 'medium').length,
-                high: allViolations.filter(v => v.severity === 'high').length
+                low: severityCounts.find(s => s._id === 'low')?.count || 0,
+                medium: severityCounts.find(s => s._id === 'medium')?.count || 0,
+                high: severityCounts.find(s => s._id === 'high')?.count || 0
             };
 
             return {
-                totalViolations: allViolations.length,
+                totalViolations: bySeverity.low + bySeverity.medium + bySeverity.high,
                 bySeverity,
                 recentViolations,
                 warningCount: user?.warningCount || 0,

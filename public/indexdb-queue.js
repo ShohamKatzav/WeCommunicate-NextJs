@@ -126,6 +126,20 @@ export async function mapQueuedId(operation, tempId, realId) {
         const transaction = db.transaction([STORE_NAME], 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
 
+        // Attach this before issuing any requests. A transaction can
+        // auto-commit as soon as it has no pending requests left - if
+        // oncomplete is assigned only after all our requests have already
+        // resolved (as it was before), the transaction may have already
+        // committed and fired that event, so this promise would never
+        // resolve and permanently stall offline sync (isSyncing never
+        // resets). Assigning it up front means it can't possibly fire
+        // before we're listening.
+        const transactionDone = new Promise((resolve, reject) => {
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+            transaction.onabort = () => reject(transaction.error);
+        });
+
         const allItems = await new Promise((resolve, reject) => {
             const request = store.getAll();
             request.onsuccess = () => resolve(request.result);
@@ -135,24 +149,18 @@ export async function mapQueuedId(operation, tempId, realId) {
         let foundAndUpdated = false;
         for (const item of allItems) {
             if (item.operation === operation && item.data.messageId === tempId) {
-
                 const updatedItem = {
                     ...item,
                     data: { messageId: realId }
                 };
-                await new Promise((resolve, reject) => {
-                    const request = store.put(updatedItem);
-                    request.onsuccess = () => resolve();
-                    request.onerror = (e) => reject(e.target.error);
-                });
-
+                store.put(updatedItem);
                 foundAndUpdated = true;
                 break;
             }
         }
 
         // Wait for the transaction to complete
-        await new Promise(resolve => transaction.oncomplete = resolve);
+        await transactionDone;
 
         return foundAndUpdated;
     } catch (error) {

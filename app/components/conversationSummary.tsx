@@ -65,11 +65,13 @@ const ConversationSummary = ({ conversation, getLastMessages }: ConversationConv
     }, [socket, loadingSocket, lastMessage?._id]);
 
     return (
-        <li
-            className="bg-white p-3 shadow-md flex items-center gap-4 hover:shadow-lg transition-shadow"
-            onClick={() => switchRoom(otherMembers)}
-        >
-            <div className="w-full text-left p-2 flex gap-3 items-center hover:bg-gray-50 dark:hover:bg-gray-700">
+        <li className="shadow-md hover:shadow-lg transition-shadow">
+            <button
+                type="button"
+                className="w-full bg-white dark:bg-gray-800 p-3 flex items-center gap-4 text-left"
+                onClick={() => switchRoom(otherMembers)}
+            >
+                <div className="w-full text-left p-2 flex gap-3 items-center hover:bg-gray-50 dark:hover:bg-gray-700">
                 <div className="w-12 h-12 rounded-full bg-linear-to-r from-amber-400 to-red-500 flex items-center justify-center">
                     {otherMembers.length > 0 ? (
                         otherMembers.map((member, index) => {
@@ -158,7 +160,8 @@ const ConversationSummary = ({ conversation, getLastMessages }: ConversationConv
 
                 </div>
             </div>
-        </li >
+            </button>
+        </li>
     );
 };
 

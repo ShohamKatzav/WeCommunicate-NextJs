@@ -16,7 +16,6 @@ interface UseMessageHandlingProps {
     setChat: (messages: Message[]) => void;
     messageToSend: Message;
     setMessageToSend: React.Dispatch<React.SetStateAction<Message>>;
-    setLastReceivedMessage: (message: Message) => void;
     updateConversationsBar: (message: Message | null, mode?: string, cleanId?: string) => Promise<void>;
 }
 
@@ -32,7 +31,6 @@ export const useMessageHandling = ({
     setChat,
     messageToSend,
     setMessageToSend,
-    setLastReceivedMessage,
     updateConversationsBar
 }: UseMessageHandlingProps) => {
 
@@ -45,9 +43,8 @@ export const useMessageHandling = ({
             ));
         }
 
-        setLastReceivedMessage(data as Message);
         updateConversationsBar(data);
-    }, [userEmail, currentConversationId, chatRef, setChat, setLastReceivedMessage, updateConversationsBar]);
+    }, [userEmail, currentConversationId, chatRef, setChat, updateConversationsBar]);
 
     const handleServerSavedMessageResponse = useCallback(async (savedMessage: any, tempId: string) => {
         const tempMessage = chatRef.current.find(
@@ -89,12 +86,16 @@ export const useMessageHandling = ({
             conversationID: currentConversationId.current || newConversationId
         };
 
-        setLastReceivedMessage(finalMessage);
         updateConversationsBar(finalMessage);
-    }, [socket, currentConversationId, chatRef, setChat, setLastReceivedMessage, updateConversationsBar]);
+    }, [socket, currentConversationId, chatRef, setChat, updateConversationsBar]);
 
     const handleSendMessage = useCallback(async () => {
-        const tempId = new Date().getTime().toString();
+        // A random id, not a timestamp - two sends in the same millisecond
+        // (or a burst of offline-queued sends flushing together) used to
+        // produce colliding temp ids, which handleServerSavedMessageResponse
+        // matches by. (See public/service-worker.js's isMongoObjectId check,
+        // which this must stay a non-ObjectId string to work with.)
+        const tempId = crypto.randomUUID();
 
         if (socket && !loadingSocket && participants.current?.length) {
             const newTempMessage: MessageDTO = {
@@ -115,9 +116,22 @@ export const useMessageHandling = ({
                     // Remove the temp message
                     setChat(chatRef.current.filter(m => m._id !== tempId));
 
+                    if (result.banned) {
+                        // Already banned before this message was even evaluated -
+                        // this response shape has no `punishment` field, only
+                        // `banned`/`message`/`bannedUntil`/`reason`.
+                        toast.error(result.message || 'Your account is banned from sending messages.', { duration: 10000 });
+                        return;
+                    }
+
+                    if (result.rateLimited) {
+                        toast.warning(result.message || "You're sending messages too quickly. Please slow down.");
+                        return;
+                    }
+
                     // Determinating message to show base on modereting result and emmiting event
                     let message = '';
-                    if (result.punishment.includes("ban")) {
+                    if (result.punishment?.includes("ban")) {
                         if (result.bannedUntil) {
                             message = `You've been temporarily banned until ${new Date(result.bannedUntil).toLocaleString()}. Reason: ${result.reason}`;
                         } else {
@@ -133,8 +147,23 @@ export const useMessageHandling = ({
                     return;
                 }
                 await handleServerSavedMessageResponse(result, tempId);
-            } catch (error) {
-                toast.info("Offline right now - I’ll send this message when you’re back online.");
+            } catch (error: any) {
+                // Distinguish a genuine network/offline failure (which the
+                // service worker queues for retry) from an actual bug or
+                // server error (which was NOT queued) - the previous blanket
+                // catch reported every failure as "you're offline", even
+                // when the message was silently lost instead.
+                const isOffline = (typeof navigator !== 'undefined' && !navigator.onLine)
+                    || error?.name === 'TypeError'
+                    || error?.message?.includes('Failed to fetch');
+
+                if (isOffline) {
+                    toast.info("Offline right now - I’ll send this message when you’re back online.");
+                } else {
+                    console.error('Failed to send message:', error);
+                    setChat(chatRef.current.filter(m => m._id !== tempId));
+                    toast.error("Something went wrong sending that message. Please try again.");
+                }
             }
         }
     }, [socket, loadingSocket, participants, messageToSend, chatRef, setChat, setMessageToSend, handleServerSavedMessageResponse]);

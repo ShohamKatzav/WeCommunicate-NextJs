@@ -1,4 +1,22 @@
 const connectionAttempts = new Map();
+const windowMs = 60000; // 1 minute
+const maxAttempts = 10;
+
+// This Map gets one entry per unique IP that ever connects and previously
+// never removed any of them, even once an IP's attempts aged out of the
+// window - on a long-running process this grows forever. Periodically prune
+// entries with nothing left in the window instead.
+setInterval(() => {
+    const now = Date.now();
+    for (const [ip, attempts] of connectionAttempts) {
+        const recent = attempts.filter(time => now - time < windowMs);
+        if (recent.length === 0) {
+            connectionAttempts.delete(ip);
+        } else {
+            connectionAttempts.set(ip, recent);
+        }
+    }
+}, 5 * 60 * 1000);
 
 export default function rateLimitMiddleware(socket, next) {
 
@@ -18,8 +36,6 @@ export default function rateLimitMiddleware(socket, next) {
     }
 
     const now = Date.now();
-    const windowMs = 60000; // 1 minute
-    const maxAttempts = 10;
 
     if (!connectionAttempts.has(ip)) {
         connectionAttempts.set(ip, []);
