@@ -4,6 +4,7 @@ import ChatUser from "@/types/chatUser";
 import { Send } from "lucide-react";
 import UploadFile from "./uploadFile";
 import useIsMobile from "../hooks/useIsMobile";
+import { MAX_MESSAGE_LENGTH } from "../config/limits";
 
 interface MessageInputProps {
     message: Message;
@@ -51,6 +52,7 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
                             value={message.text}
                             onChange={handleChange}
                             disabled={!participants.current}
+                            maxLength={MAX_MESSAGE_LENGTH}
                             aria-label="Message input"
                         />
                         <button
@@ -75,6 +77,7 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
                             value={message.text}
                             onChange={handleChange}
                             disabled={!participants.current}
+                            maxLength={MAX_MESSAGE_LENGTH}
                             aria-label="Message input"
                         />
                         <button

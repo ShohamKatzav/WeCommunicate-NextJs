@@ -1,5 +1,6 @@
 "use server"
 import { env } from '@/app/config/env';
+import { MAX_MESSAGE_LENGTH } from '@/app/config/limits';
 import connectDB from "@/app/lib/MongoDb";
 import mongoose, { Types } from "mongoose";
 import ModerationService from '@/services/ModerationService';
@@ -151,6 +152,18 @@ export const saveMessage = async (message: MessageDTO) => {
             throw new Error('Unauthorized');
         }
         message = { ...message, sender: senderEmail };
+
+        // Enforced here as well as on the inputs, because a server action is a
+        // public endpoint - the client-side maxLength is a convenience, not a
+        // limit.
+        if (message.text && message.text.length > MAX_MESSAGE_LENGTH) {
+            return JSON.parse(JSON.stringify({
+                success: false,
+                blocked: true,
+                tooLong: true,
+                message: `Messages are limited to ${MAX_MESSAGE_LENGTH} characters.`
+            }));
+        }
 
         if (!(await isTestBypass())) {
             // saveMessage was previously an unthrottled server action - 30
