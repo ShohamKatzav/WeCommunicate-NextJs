@@ -28,11 +28,15 @@ export default async function handleSocketConnection(io, socket) {
     const email = socket.data.email;
 
     try {
-        await RedisService.addUserSocket(email, socket.id);
-        const allUsers = await RedisService.getOnlineUsers();
+        // Register every listener before the first await below - the client
+        // gets its connect ack (and can start emitting) as soon as the auth
+        // middleware resolves, which races ahead of this handler if it awaits
+        // anything first. A 'join room'/'message read' emitted in that window
+        // previously arrived at a socket with no listener yet and was
+        // silently dropped - this is what broke read receipts for a client
+        // that reaches the chat page and opens a conversation quickly after
+        // connecting (e.g. an already-authenticated session).
         socket.on('update connected users', () => handleUpdateConnectedUsers(io));
-        io.emit('update connected users', allUsers);
-
         socket.on('join room', (body) => handleJoinRoom(body, socket));
         socket.on('message read', (data) => handleMessageRead(io, socket, data));
         socket.on('publish message', (message) => handlePublishMessage(io, socket, message));
@@ -48,6 +52,9 @@ export default async function handleSocketConnection(io, socket) {
         socket.on('start typing', (data) => handleStartTyping(socket, data));
         socket.on('stop typing', (data) => handleStopTyping(socket, data));
 
+        await RedisService.addUserSocket(email, socket.id);
+        const allUsers = await RedisService.getOnlineUsers();
+        io.emit('update connected users', allUsers);
     }
     catch (error) {
         console.error('Socket connection error:', error);
