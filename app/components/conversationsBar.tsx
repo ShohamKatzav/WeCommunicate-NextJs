@@ -32,7 +32,7 @@ const ConversationsBar =
                 <aside className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transition-transform duration-300`}>
                     <div className="p-4 flex items-center justify-between">
                         <h3 className="text-lg font-semibold">Chats</h3>
-                        <button onClick={() => handleOpenModal('single')} aria-label="New conversation" className="p-1 rounded-md bg-green-500 text-white">
+                        <button onClick={() => handleOpenModal('single')} aria-label="New conversation" className="p-1 rounded-md bg-green-700 text-white">
                             <Plus size={25} />
                         </button>
                     </div>
@@ -44,7 +44,7 @@ const ConversationsBar =
                                 className="w-full pl-10 pr-3 py-2  bg-gray-100 dark:bg-gray-700
                                 flex-1 p-3 rounded-lg focus:outline-none border"
                                 aria-label="Search conversations" />
-                            <div className="absolute left-3 top-2.5 text-gray-400"><Search size={16} /></div>
+                            <div className="absolute left-3 top-2.5 text-muted-foreground"><Search size={16} /></div>
                         </div>
                     </div>
 
@@ -53,8 +53,8 @@ const ConversationsBar =
                         <button
                             type="button"
                             onClick={() => handleOpenModal('group')}
-                            className="w-full flex items-center justify-center gap-2 bg-linear-to-r from-green-500 to-green-600 
-              hover:from-green-600 hover:to-green-700 text-white py-3 px-4 rounded-xl shadow-md hover:shadow-lg
+                            className="w-full flex items-center justify-center gap-2 bg-linear-to-r from-green-700 to-green-800
+              hover:from-green-800 hover:to-green-900 text-white py-3 px-4 rounded-xl shadow-md hover:shadow-lg
               transition-all duration-200 font-semibold"
                         >
                             <MessageSquareDiff size={25} />

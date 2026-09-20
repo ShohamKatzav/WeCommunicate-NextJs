@@ -1,22 +1,62 @@
 @import "tailwindcss";
 
+/* next-themes (see app/context/themeProvider.tsx) toggles a .dark class on
+   <html> rather than only following the OS - `dark:` utilities need to key
+   off that class instead of prefers-color-scheme for a manual light/dark
+   choice to actually do anything. `.dark *` (not just `.dark`) is what makes
+   `dark:` work on every descendant, not only direct children of <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Semantic tokens instead of paired light/dark utility classes on every
+   element: each surface/text/accent role is defined once per theme here, and
+   every component reaches for the role (bg-background, text-muted-foreground,
+   border-border, ...) rather than its own bg-gray-100 dark:bg-gray-900 pair.
+   A color that needs to change later - or turns out to fail contrast - is
+   fixed in exactly one of the two blocks below, not hunted across every file
+   that happened to duplicate it. Values were checked with a real WCAG
+   contrast calculation (4.5:1 text, 3:1 large text/icons/borders), not
+   picked by eye - see the dark-mode audit notes for the pairs that drove
+   specific choices (muted-foreground and success in particular are not the
+   "obvious" Tailwind shade because the obvious one fails). */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f3f4f6;
+  --foreground: #111827;
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --border: #6b7280;
+  --muted-foreground: #4b5563;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --destructive: #b91c1c;
+  --success: #15803d;
+}
+
+.dark {
+  --background: #111827;
+  --foreground: #f9fafb;
+  --card: #1f2937;
+  --card-foreground: #f9fafb;
+  --border: #6b7280;
+  --muted-foreground: #9ca3af;
+  --primary: #60a5fa;
+  --primary-foreground: #0b1220;
+  --destructive: #f87171;
+  --success: #4ade80;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-border: var(--border);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 /* The navbar is position: fixed (see app/components/bars.css), so it does not

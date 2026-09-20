@@ -44,11 +44,11 @@ const UsersRow = ({ chatUser, getLastMessages, active, isBlocked, onToggleBlock 
                     </div>
                     {
                         isBlocked ?
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                            <div className="text-xs text-muted-foreground">
                                 Blocked
                             </div> :
                             active ?
-                                <div className="text-xs text-green-600 dark:text-green-400">
+                                <div className="text-xs text-success">
                                     Online
                                 </div> :
                                 <div className="text-xs text-red-600 dark:text-red-400">
@@ -64,7 +64,7 @@ const UsersRow = ({ chatUser, getLastMessages, active, isBlocked, onToggleBlock 
                     }}
                     aria-label={isBlocked ? `Unblock ${chatUser.nickname || chatUser.email}` : `Block ${chatUser.nickname || chatUser.email}`}
                     title={isBlocked ? 'Unblock' : 'Block'}
-                    className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 shrink-0"
+                    className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 text-muted-foreground hover:text-foreground shrink-0"
                 >
                     {isBlocked ? <ShieldCheck size={18} /> : <ShieldOff size={18} />}
                 </button>

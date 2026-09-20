@@ -28,7 +28,7 @@ export default function NotFoundClient() {
                 Looks like this chat has <span className="font-semibold">ghosted</span> you 👻
             </p>
 
-            <p className="mt-2 text-sm italic text-gray-500 dark:text-gray-400">
+            <p className="mt-2 text-sm italic text-muted-foreground">
                 "Even unread messages deserve closure." — Anonymous
             </p>
 
@@ -36,7 +36,7 @@ export default function NotFoundClient() {
                 <form action="/" method="POST" onSubmit={handleBackToChat}>
                     <button
                         type="submit"
-                        className="flex items-center gap-2 px-5 py-3 bg-lime-600 hover:bg-lime-700 text-white rounded-xl font-semibold shadow-md transition-all"
+                        className="flex items-center gap-2 px-5 py-3 bg-lime-700 hover:bg-lime-800 text-white rounded-xl font-semibold shadow-md transition-all"
                     >
                         <MessageSquareHeart className="w-5 h-5" />
                         Back to chat

@@ -27,8 +27,12 @@ code {
 
 .inputButton {
   border: none;
-  background: cornflowerblue;
-  color: white;
+  /* cornflowerblue was 2.97:1 against white text, just under the 3:1 large-text
+     minimum - var(--primary) (globals.css) is the same family of blue but
+     checked to actually clear it in both themes, and follows the toggle
+     instead of staying one fixed color regardless of theme. */
+  background: var(--primary);
+  color: var(--primary-foreground);
   padding: 12px 24px;
   margin: 8px auto;
   font-size: 24px;
@@ -82,7 +86,7 @@ code {
 }
 
 .inputContainer>.errorLabel {
-  color: red;
+  color: var(--destructive);
   font-size: large;
 }
 
@@ -91,14 +95,14 @@ code {
   height: 48px;
   font-size: 0.95rem;
   border-radius: 8px;
-  border: 1px solid grey;
+  border: 1px solid var(--border);
   padding-left: 8px;
   box-sizing: border-box;
 }
 
 .inputBox::placeholder {
   font-size: 0.8rem;
-  color: #6b7280;
+  color: var(--muted-foreground);
 }
 
 @media (max-width: 640px) {

@@ -28,7 +28,7 @@ export default function ErrorClient() {
                 Our chat server just rage-quit mid-conversation. We're giving it a coffee and a pep talk ☕💬
             </p>
 
-            <p className="mt-2 text-sm italic text-gray-500 dark:text-gray-400">
+            <p className="mt-2 text-sm italic text-muted-foreground">
                 “Even servers need a mental health day.” — SysAdmin proverb
             </p>
 

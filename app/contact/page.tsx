@@ -11,8 +11,8 @@ const Contact = () => {
         {
             icon: <Phone className="w-6 h-6" />,
             title: 'Phone',
-            value: '052-3292847',
-            link: 'tel:052-3292847'
+            value: '+972 52-3292847',
+            link: 'tel:+972523292847'
         },
         {
             icon: <Linkedin className="w-6 h-6" />,
@@ -35,9 +35,9 @@ const Contact = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center">
                         <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 dark:text-white sm:text-5xl md:text-6xl">
-                            <span className="text-transparent bg-clip-text bg-linear-to-r from-emerald-400 to-cyan-600">Get in Touch</span>
+                            <span className="text-transparent bg-clip-text bg-linear-to-r from-emerald-700 to-cyan-800 dark:from-emerald-300 dark:to-cyan-400">Get in Touch</span>
                         </h1>
-                        <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-500 dark:text-gray-300">
+                        <p className="mt-4 max-w-2xl mx-auto text-xl text-muted-foreground">
                             If you have any questions or feedback, feel free to reach out!
                         </p>
                     </div>

@@ -126,10 +126,10 @@ const Login = () => {
 
   return (
     <form onSubmit={onButtonClick}>
-      <div className="mainContainer px-4">
+      <div className="mainContainer px-4 pb-16 md:pb-8">
         <div className="titleContainer">
           <h1 className="mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-3xl lg:text-6xl text-center">
-            <span className="text-transparent bg-clip-text bg-linear-to-r to-indigo-700 from-pink-400">
+            <span className="text-transparent bg-clip-text bg-linear-to-r to-indigo-800 from-pink-700 dark:to-indigo-400 dark:from-pink-300">
               Login to WeCommunicate
             </span>
           </h1>
@@ -183,7 +183,7 @@ const Login = () => {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 disabled={loading}
               >
@@ -217,7 +217,7 @@ const Login = () => {
               {loading ? "Logging in..." : "Log in"}
             </button>
           </div>
-          <p className="text-gray-500 dark:text-gray-400 justify-self-center mt-4">
+          <p className="text-muted-foreground justify-self-center mt-4">
             Not a Member? <a href="/sign-up"
               className="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Sign up!</a>
           </p>

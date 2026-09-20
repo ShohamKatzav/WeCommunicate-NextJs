@@ -139,10 +139,10 @@ const About = () => {
                 <main className="max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="text-center">
                         <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 dark:text-white sm:text-5xl md:text-6xl">
-                            <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-500 to-indigo-800">About</span><br />
-                            <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-500 to-indigo-800">We-Communicate</span>
+                            <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-indigo-800 dark:from-blue-300 dark:to-indigo-400">About</span><br />
+                            <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-indigo-800 dark:from-blue-300 dark:to-indigo-400">We-Communicate</span>
                         </h1>
-                        <p className="mt-6 max-w-2xl mx-auto text-lg text-gray-500 dark:text-gray-300">
+                        <p className="mt-6 max-w-2xl mx-auto text-lg text-muted-foreground">
                             A real-time chat app built from scratch - messaging, voice notes, offline support and more,
                             running end to end on free-tier infrastructure.
                         </p>
@@ -158,7 +158,7 @@ const About = () => {
                         <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
                             What You Can Do
                         </h2>
-                        <p className="mt-3 text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
+                        <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
                             Everything below is live in the app today.
                         </p>
                     </div>

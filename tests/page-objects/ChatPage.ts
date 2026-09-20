@@ -48,7 +48,7 @@ export default class ChatPage {
         this.dropDown = new ChatActionsDropdown(page);
         this.toastWarnings = new ToastWarnings(page);
         this.conversationForm = new ConversationForm(page);
-        this.onlineUsersCount = page.locator('div.text-green-600:has-text("Online")');
+        this.onlineUsersCount = page.locator('div.text-success:has-text("Online")');
         this.messageInput = page.getByRole('textbox', { name: 'Message input' });
         this.sendMessageButton = page.getByRole('button', { name: 'Send message' });
         this.pendingMessageIndicator = page.locator('.inline');
@@ -114,11 +114,11 @@ export default class ChatPage {
     }
 
     async getMessageReceivedByText(text: string): Promise<Locator> {
-        return await this.page.locator(`.bg-gray-500 div:has-text("${text}")`).last();
+        return await this.page.locator(`.bg-gray-600 div:has-text("${text}")`).last();
     }
 
     getMessageSentByText(text: string): Locator {
-        return this.page.locator(`.bg-green-500 div:has-text("${text}")`).last();
+        return this.page.locator(`.bg-green-700 div:has-text("${text}")`).last();
     }
     getDeleteButtonByMessageText(text: string): Locator {
         return this.page.locator(`//div[text()="${text}"]/parent::div/following-sibling::button`).last();

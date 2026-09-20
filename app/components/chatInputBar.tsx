@@ -58,10 +58,10 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
                 {message.replyTo && (
                     <div className="flex items-center justify-between gap-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-l-4 border-green-500 px-3 py-2">
                         <div className="min-w-0">
-                            <div className="text-sm font-medium text-green-600 dark:text-green-400">
+                            <div className="text-sm font-medium text-success">
                                 Replying to {message.replyTo.sender === user?.email ? "yourself" : AsShortName(message.replyTo.sender)}
                             </div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                            <div className="text-sm text-muted-foreground truncate">
                                 {message.replyTo.snippet || "Attachment"}
                             </div>
                         </div>
@@ -117,7 +117,7 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
                                 <button
                                     onClick={() => handleSendMessage()}
                                     disabled={!canSend}
-                                    className="w-full p-1.5 rounded-lg bg-green-500 text-white disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-green-600 active:scale-95 transition-all font-medium"
+                                    className="w-full p-1.5 rounded-lg bg-green-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-green-800 active:scale-95 transition-all font-medium"
                                     aria-label="Send message"
                                 >
                                     <div className="flex items-center justify-center gap-2">
@@ -148,7 +148,7 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
                             <button
                                 onClick={() => handleSendMessage()}
                                 disabled={!canSend}
-                                className="p-2 rounded-full bg-green-500 text-white shrink-0 disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-green-600 active:scale-95 transition-all"
+                                className="p-2 rounded-full bg-green-700 text-white shrink-0 disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-green-800 active:scale-95 transition-all"
                                 aria-label="Send message"
                             >
                                 <Send size={30} />

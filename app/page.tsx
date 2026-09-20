@@ -43,7 +43,7 @@ const Home = () => {
             {/* Hero */}
             <section className="max-w-4xl mx-auto text-center pt-6 pb-12">
                 <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-                    <span className="text-transparent bg-clip-text bg-linear-to-r to-indigo-700 from-pink-400">
+                    <span className="text-transparent bg-clip-text bg-linear-to-r to-indigo-800 from-pink-700 dark:to-indigo-400 dark:from-pink-300">
                         We Communicate
                     </span>
                 </h1>

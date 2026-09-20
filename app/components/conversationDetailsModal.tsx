@@ -16,7 +16,7 @@ const ConversationDetailsModal = ({ participants, setShowParticipantsModal }: Co
                     <h3 className="font-semibold text-lg">Participants</h3>
                     <button
                         onClick={() => setShowParticipantsModal(false)}
-                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                        className="text-muted-foreground hover:text-foreground"
                     >
                         ✕
                     </button>
@@ -30,12 +30,12 @@ const ConversationDetailsModal = ({ participants, setShowParticipantsModal }: Co
                                 </div>
                                 <div>
                                     <p className="text-sm font-medium dark:text-white">{AsShortName(user.email)}</p>
-                                    <p className="text-xs text-gray-500">{user.email || 'Participant'}</p>
+                                    <p className="text-xs text-muted-foreground">{user.email || 'Participant'}</p>
                                 </div>
                             </div>
                         ))
                     ) : (
-                        <p className="text-center py-4 text-gray-500">No participants found.</p>
+                        <p className="text-center py-4 text-muted-foreground">No participants found.</p>
                     )}
                 </div>
                 <div className="p-3 bg-gray-50 dark:bg-gray-900 text-right">

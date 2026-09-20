@@ -73,7 +73,13 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                 className="w-full bg-white dark:bg-gray-800 p-3 flex items-center gap-4 text-left"
                 onClick={() => switchRoom(otherMembers)}
             >
-                <div className="w-full text-left p-2 flex gap-3 items-center hover:bg-gray-50 dark:hover:bg-gray-700">
+                {/* dark:hover:bg-gray-700 (a flat, lighter gray) dropped the
+                    row's already-passing text-muted-foreground contrast to
+                    4.05:1 on hover, just under 4.5. A subtle white overlay
+                    instead - same pattern the navbar's own hover states use -
+                    barely lightens the existing dark card, so the text color
+                    keeps its normal-state contrast on hover too. */}
+                <div className="w-full text-left p-2 flex gap-3 items-center hover:bg-gray-50 dark:hover:bg-white/5">
                 <div className="w-12 h-12 rounded-full bg-linear-to-r from-amber-400 to-red-500 flex items-center justify-center">
                     {otherMembers.length > 0 ? (
                         otherMembers.map((member, index) => {
@@ -115,7 +121,7 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                         </div>
                     </div>
                     {lastMessage ?
-                        <div className="grid grid-cols-2 place-content-between text-gray-400">
+                        <div className="grid grid-cols-2 place-content-between text-muted-foreground">
                             <span>{AsShortName(lastMessage.sender)}</span>
                             <div className="justify-self-end wrap-break-word text-right">
                                 {(() => {
@@ -149,7 +155,7 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                                     });
                                 })()}
                             </div>
-                            <div className="text-sm text-gray-500 break-all col-span-2">{lastMessage.status?.includes("revoked")
+                            <div className="text-sm text-muted-foreground break-all col-span-2">{lastMessage.status?.includes("revoked")
                                 ? "Message deleted"
                                 : (lastMessage.text
                                     || (lastMessage.file?.pathname?.includes("voice-message")
@@ -158,7 +164,7 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                             </div>
                         </div>
                         :
-                        <div className="text-gray-500 text-sm italic">
+                        <div className="text-muted-foreground text-sm italic">
                             No messages yet.
                         </div>
                     }
@@ -170,7 +176,7 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                                 </div>
                             ))}
                             {searchMatch.moreCount > 0 && (
-                                <div className="not-italic text-gray-500 dark:text-gray-400">
+                                <div className="not-italic text-muted-foreground">
                                     +{searchMatch.moreCount} more match{searchMatch.moreCount === 1 ? '' : 'es'}
                                 </div>
                             )}

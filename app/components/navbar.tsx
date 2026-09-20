@@ -7,6 +7,7 @@ import { deleteUserCoockie } from '../lib/cookieActions';
 import { useUser } from "../hooks/useUser";
 import { useSocket } from "../hooks/useSocket";
 import { AsShortName } from "../utils/stringFormat";
+import ThemeToggle from "./themeToggle";
 import './bars.css';
 
 const DYNAMIC_OFFLINE_LINKS = ['chat', 'locations'];
@@ -155,8 +156,11 @@ const Navbar = () => {
                 </Link>
               </li>
             ))}
+            <li className="ml-1">
+              <ThemeToggle variant="icon" />
+            </li>
             {isUserConnected() && displayName && (
-              <li className="ml-2 hidden max-w-36 truncate rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-zinc-300 lg:block" title={displayName}>
+              <li className="ml-1 hidden max-w-36 truncate rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-zinc-300 lg:block" title={displayName}>
                 {displayName}
               </li>
             )}
@@ -192,6 +196,9 @@ const Navbar = () => {
                 </Link>
               </li>
             ))}
+            <li className="w-48 px-4 py-4">
+              <ThemeToggle variant="labelled" />
+            </li>
           </ul>
         )}
         <div

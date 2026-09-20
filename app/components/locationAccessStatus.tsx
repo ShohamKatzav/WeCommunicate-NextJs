@@ -15,7 +15,7 @@ const LocationAccessInformation = ({ information }: { information: string }) => 
     return (
         <div className="grid md:grid-cols-3 min-h-[70vh] place-items-center px-6 py-12">
             <div className="md:col-start-2 space-y-8 text-center">
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-transparent bg-clip-text bg-linear-to-r from-lime-500 to-cyan-800">
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-transparent bg-clip-text bg-linear-to-r from-lime-700 to-cyan-800 dark:from-lime-300 dark:to-cyan-400">
                     {headerText}
                 </h1>
 

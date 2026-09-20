@@ -1,11 +1,28 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Offline - WeCommunicate</title>
     <link rel="icon" href="/favicon.ico">
+    <script>
+        // This page is served straight from the service worker's cache, outside
+        // React/next-themes entirely, so it can't read the app's ThemeProvider -
+        // but it CAN read the same localStorage key next-themes writes to
+        // (see app/context/themeProvider.tsx), so a light/dark/system choice
+        // made in the app is still honoured here instead of this page always
+        // showing one hardcoded theme regardless of what was picked. Blocking
+        // script in <head>, before the stylesheet below paints anything, for
+        // the same no-flash reason the app's own theme script runs this early.
+        (function () {
+            try {
+                var stored = localStorage.getItem('theme');
+                var dark = stored === 'dark' || (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (dark) document.documentElement.classList.add('dark');
+            } catch (e) { }
+        })();
+    </script>
     <style>
         body {
             margin: 0;
@@ -40,7 +57,10 @@
         p.italic {
             font-style: italic;
             font-size: 0.875rem;
-            color: #6b7280;
+            /* #6b7280 (gray-500) was 4.21:1 against the light gradient's
+               lighter stop (#e0f2fe) - under the 4.5:1 this normal-size text
+               needs. */
+            color: #4a5565;
         }
 
         .dark p.italic {
@@ -144,18 +164,21 @@
             animation: slideDown 0.3s ease;
         }
 
+        /* -600/-700, not the lighter -400/-500 shades these are usually
+           reached for: white text on the lighter ones was as low as
+           2.5:1 here (emerald-500), well under the 4.5:1 this text needs. */
         .toast.error {
-            background-color: #ef4444;
+            background-color: #c10007;
             color: white;
         }
 
         .toast.success {
-            background-color: #10b981;
+            background-color: #007a55;
             color: white;
         }
 
         .toast.info {
-            background-color: #3b82f6;
+            background-color: #1447e6;
             color: white;
         }
 
@@ -198,8 +221,15 @@
         .redirect-message {
             margin-top: 1rem;
             font-size: 0.875rem;
-            color: #10b981;
+            /* emerald-500 (#10b981) was 2.43:1 against the light background -
+               emerald-700 clears 4.5:1 there, but is too dark to read against
+               the dark background in turn, hence the .dark override below. */
+            color: #007a55;
             font-weight: 600;
+        }
+
+        .dark .redirect-message {
+            color: #05df72;
         }
     </style>
 </head>
