@@ -36,6 +36,11 @@ export default class ChatPage {
     blockedComposerNotice: Locator;
     outboxToggle: Locator;
     retryOutboxButton: Locator;
+    bottomPromptStack: Locator;
+    notificationsPromptMessage: Locator;
+    enableNotificationsButton: Locator;
+    laterNotificationsButton: Locator;
+    dismissNotificationsButton: Locator;
 
     constructor(page: Page) {
         this.page = page;
@@ -43,7 +48,7 @@ export default class ChatPage {
         this.dropDown = new ChatActionsDropdown(page);
         this.toastWarnings = new ToastWarnings(page);
         this.conversationForm = new ConversationForm(page);
-        this.onlineUsersCount = page.locator('div.text-green-600:has-text("Online")');
+        this.onlineUsersCount = page.locator('div.text-success:has-text("Online")');
         this.messageInput = page.getByRole('textbox', { name: 'Message input' });
         this.sendMessageButton = page.getByRole('button', { name: 'Send message' });
         this.pendingMessageIndicator = page.locator('.inline');
@@ -73,6 +78,11 @@ export default class ChatPage {
         this.blockedComposerNotice = page.getByText("You can't send messages to a blocked user");
         this.outboxToggle = page.getByRole('button', { name: /pending item/ });
         this.retryOutboxButton = page.getByRole('button', { name: 'Retry now' });
+        this.bottomPromptStack = page.locator('#bottom-prompt-stack');
+        this.notificationsPromptMessage = page.getByText('Get instant alerts for new messages');
+        this.enableNotificationsButton = page.getByRole('button', { name: 'Enable' });
+        this.laterNotificationsButton = page.getByRole('button', { name: 'Later', exact: true });
+        this.dismissNotificationsButton = page.getByRole('button', { name: 'Permanently dismiss notification prompt' });
     }
 
     async navigateToChatPage(): Promise<void> {
@@ -104,11 +114,11 @@ export default class ChatPage {
     }
 
     async getMessageReceivedByText(text: string): Promise<Locator> {
-        return await this.page.locator(`.bg-gray-500 div:has-text("${text}")`).last();
+        return await this.page.locator(`.bg-gray-600 div:has-text("${text}")`).last();
     }
 
     getMessageSentByText(text: string): Locator {
-        return this.page.locator(`.bg-green-500 div:has-text("${text}")`).last();
+        return this.page.locator(`.bg-green-700 div:has-text("${text}")`).last();
     }
     getDeleteButtonByMessageText(text: string): Locator {
         return this.page.locator(`//div[text()="${text}"]/parent::div/following-sibling::button`).last();
@@ -296,16 +306,25 @@ export default class ChatPage {
 
     async shareContentViaShareTarget(fields: { title?: string; text?: string; url?: string }): Promise<void> {
         // Use Playwright's request context, not in-page fetch: production's
-        // service worker can intercept page fetch() and fail the POST, and
-        // this is closer to the OS share-sheet's full navigation POST.
+        // service worker can intercept page fetch() and fail the POST.
+        // Do not follow the 303 here - if Location ever points at Render's
+        // internal bind address, the API client would hang on localhost.
+        // The page navigation below keeps us on the public origin, which is
+        // also how the browser resolves a relative/public 303.
         const response = await this.page.request.post('/share-target', {
             multipart: {
                 title: fields.title ?? '',
                 text: fields.text ?? '',
                 url: fields.url ?? '',
             },
+            maxRedirects: 0,
         });
-        await this.page.goto(response.url(), { waitUntil: 'domcontentloaded' });
+        const location = response.headers()['location'];
+        if (!location) {
+            throw new Error(`share-target returned ${response.status()} with no Location header`);
+        }
+        const redirected = new URL(location, this.page.url());
+        await this.page.goto(`${redirected.pathname}${redirected.search}`, { waitUntil: 'domcontentloaded' });
     }
 
     async attachGeneratedJpeg(): Promise<number> {

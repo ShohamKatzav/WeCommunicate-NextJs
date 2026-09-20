@@ -13,6 +13,7 @@ import { TbClockQuestion } from "react-icons/tb";
 import { Check, CheckCheck, Reply } from "lucide-react";
 import { toast } from "sonner";
 import FullscreenMediaViewer from './fullscreenMediaViewer';
+import AudioPlayer from './audioPlayer';
 import { AsShortName } from "../utils/stringFormat";
 
 interface MessageBubbleProps {
@@ -38,8 +39,17 @@ const MessageBubble = ({ message, onReply }: MessageBubbleProps) => {
   const isOwnMessage = message.sender === user?.email;
   const sender = isOwnMessage ? "You" : AsShortName(message.sender);
   const dateToDisplay = new Date(message.date!).toLocaleString();
-  const messageStyle = `max-w-[80%] md:max-w-[60%] px-3.5 py-2 md:px-4 md:py-3 overflow-hidden 
-  ${isOwnMessage ? "bg-green-500 rounded-br-3xl" : "bg-gray-500 rounded-bl-3xl"
+  // green-500/gray-500 (the previous values) were too light for the white
+  // text on top of them - as low as 1.79:1 for the sender label, well under
+  // the 4.5:1 text needs. -600/-700 are dark enough that plain white text
+  // clears 4.5:1 everywhere in the bubble (sender label, body, timestamp),
+  // so nothing inside it needs its own lighter/translucent shade to "look"
+  // secondary - font-size and weight do that job instead. Bubble colours
+  // stay fixed across both site themes (like the navbar/footer) rather than
+  // following light/dark, the same way most chat apps don't reflow message
+  // colours when you flip the app's theme.
+  const messageStyle = `max-w-[80%] md:max-w-[60%] px-3.5 py-2 md:px-4 md:py-3 overflow-hidden
+  ${isOwnMessage ? "bg-green-700 rounded-br-3xl" : "bg-gray-600 rounded-bl-3xl"
     } rounded-tl-3xl rounded-tr-xl text-white wrap-break-word mb-3 md:mb-6
     ${deleted ? "gap-1 flex text-lg md:text-2xl" : "gap-6"}`;
   // Own messages sit on the left and received ones on the right - which is also
@@ -109,7 +119,7 @@ const MessageBubble = ({ message, onReply }: MessageBubbleProps) => {
         data-testid={message.sender === user?.email ? "sent-message" : "received-message"}
         ref={messageRef}
       >
-        <div className="text-sm md:text-lg text-gray-200 mb-1">{sender}</div>
+        <div className="text-sm md:text-lg text-white mb-1">{sender}</div>
 
         {message.replyTo && (
           <div className="border-l-2 border-white/80 bg-black/15 rounded-r-md pl-2 pr-2 py-1 mb-1.5 text-sm md:text-base text-white/95 wrap-break-word">
@@ -144,14 +154,10 @@ const MessageBubble = ({ message, onReply }: MessageBubbleProps) => {
 
           {(message.file?.contentType.includes("audio") || message.file?.pathname?.includes("voice-message"))
             && message.file && (
-              // An unsized <audio> keeps its intrinsic ~300px width, which is
-              // wider than a bubble gets on a phone - and the bubble clips
-              // overflow, so the controls were cut off mid-player. Fluid up to
-              // the width of a voice note, never wider than the bubble.
-              <audio controls preload="metadata" className="w-full max-w-[320px]">
-                <source src={message.file.url} type={message.file.contentType?.startsWith("video/webm") ? "audio/webm" : message.file.contentType} />
-                Your browser does not support the audio element.
-              </audio>
+              <AudioPlayer
+                src={message.file.url}
+                type={message.file.contentType?.startsWith("video/webm") ? "audio/webm" : message.file.contentType}
+              />
             )}
 
           {message.file?.contentType.includes("video")
@@ -191,7 +197,7 @@ const MessageBubble = ({ message, onReply }: MessageBubbleProps) => {
             )}
         </>
         }
-        <div className={`text-xs md:text-sm mt-1 text-right flex items-center justify-end gap-1 ${isOwnMessage ? "text-white/85" : "text-gray-200"}`}>
+        <div className="text-xs md:text-sm mt-1 text-right flex items-center justify-end gap-1 text-white">
           {dateToDisplay}
           {
             isPending && <TbClockQuestion color="red" size={38} className="inline p-2" />
@@ -199,7 +205,7 @@ const MessageBubble = ({ message, onReply }: MessageBubbleProps) => {
           {isOwnMessage && !isPending && (
             isRead
               ? <CheckCheck size={18} strokeWidth={2.75} className="shrink-0 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.55)]" aria-label="Read" />
-              : <Check size={18} strokeWidth={2.5} className="shrink-0 text-white/90 drop-shadow-[0_1px_1px_rgba(0,0,0,0.45)]" aria-label="Sent" />
+              : <Check size={18} strokeWidth={2.5} className="shrink-0 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.45)]" aria-label="Sent" />
           )}
         </div>
       </div>

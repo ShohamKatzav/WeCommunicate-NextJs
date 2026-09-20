@@ -85,7 +85,7 @@ const ChatHeader = ({
                 <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start">
                         <h1 className="text-xl xl:text-3xl font-bold mb-1 truncate">
-                            <span className="bg-clip-text bg-linear-to-r from-blue-500 to-purple-600 text-transparent">
+                            <span className="bg-clip-text bg-linear-to-r from-blue-600 to-purple-700 dark:from-blue-300 dark:to-purple-400 text-transparent">
                                 {"Welcome " + (user?.nickname || AsShortName(user?.email as string))}
                             </span>
                         </h1>
@@ -109,7 +109,7 @@ const ChatHeader = ({
                         ) : (
 
                             participants.current && (
-                                <div className="flex items-center gap-1 text-xs text-gray-500">
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                     <span className={`w-1.5 h-1.5 rounded-full ${onlineCount > 0 ? 'bg-green-500' : 'bg-gray-500'}`}></span>
                                     {participants.current.length > 1 ? `${onlineCount} of ${participants.current.length} members online` :
                                             `${onlineCount > 0 ? `${participants.current[0]?.nickname || AsShortName(participants.current[0]?.email as string)} online` :
@@ -120,7 +120,7 @@ const ChatHeader = ({
                         )}
 
                         {!participants.current && (
-                            <div className="text-xs text-green-500 font-medium">Select a chat to start</div>
+                            <div className="text-xs text-success font-medium">Select a chat to start</div>
                         )}
 
                         {disappearingLabel && (

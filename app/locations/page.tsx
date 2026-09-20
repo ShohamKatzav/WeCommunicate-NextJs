@@ -152,7 +152,7 @@ function Locations() {
   return isLoaded ? (
     <section className="mx-auto w-full max-w-6xl px-3 pb-8 pt-2 sm:px-4">
       <h1 className="mb-4 text-center text-2xl font-extrabold text-gray-900 dark:text-white sm:text-4xl lg:text-5xl">
-        <span className="text-transparent bg-clip-text bg-linear-to-r to-blue-900 from-teal-400">Friends&apos; locations</span>
+        <span className="text-transparent bg-clip-text bg-linear-to-r to-blue-900 from-teal-700 dark:to-blue-400 dark:from-teal-300">Friends&apos; locations</span>
       </h1>
 
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white/70 shadow-xs dark:border-gray-700 dark:bg-gray-900/60">

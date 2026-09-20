@@ -66,7 +66,7 @@ export default function DisappearingMessagesModal({ conversationId, onClose, onS
                         </div>
                         <button
                             onClick={onClose}
-                            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                            className="text-muted-foreground hover:text-foreground transition-colors"
                             disabled={saving}
                         >
                             <X className="w-5 h-5" />

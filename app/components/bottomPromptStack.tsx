@@ -10,6 +10,14 @@ import { useEffect, useRef } from "react";
 // give up exactly that much room (see .viewport-between-bars in globals.css) and
 // page content can add it to its bottom spacing. Nothing important ends up
 // underneath a prompt, on a phone or on a desktop window.
+//
+// The stack itself only ever holds one visible prompt at a time: each prompt
+// component calls usePromptSlot to join a shared queue (BottomPromptProvider,
+// mounted around this in layout.tsx) and only renders its own markup when it
+// is at the front of it. That is what keeps --bottom-prompt-height bounded to
+// a single slim bar's height no matter how many prompts want attention -
+// stacking full cards the way this used to is exactly the "costs a real
+// fraction of the screen" problem this stack exists to avoid.
 
 export const BOTTOM_PROMPT_STACK_ID = "bottom-prompt-stack";
 
@@ -45,13 +53,22 @@ export default function BottomPromptStack({ children }: { children?: React.React
     }, []);
 
     return (
-        // pointer-events-none so the empty width beside a narrow prompt does not
-        // swallow clicks meant for the page underneath; each prompt turns them
-        // back on for itself.
+        // pointer-events-none so the empty height while nothing is queued does
+        // not swallow clicks meant for the page underneath; the single visible
+        // prompt (PromptBar) turns them back on for itself. aria-live rather
+        // than role="alert": a prompt appearing is worth announcing, but none
+        // of these are urgent enough to interrupt whatever the screen reader
+        // is already saying.
+        // pb-[env(safe-area-inset-bottom)] keeps the bar above the home
+        // indicator/gesture bar in an installed PWA (standalone display mode)
+        // without changing anything in the browser, where that env() is 0.
         <div
             id={BOTTOM_PROMPT_STACK_ID}
             ref={stackRef}
-            className="fixed inset-x-0 bottom-[var(--footer-height)] z-[17] flex flex-col items-center gap-2 px-2 pb-2 pointer-events-none sm:px-4"
+            role="region"
+            aria-label="Notifications"
+            aria-live="polite"
+            className="fixed inset-x-0 bottom-[var(--footer-height)] z-[17] pb-[env(safe-area-inset-bottom)] pointer-events-none"
         >
             {children}
         </div>

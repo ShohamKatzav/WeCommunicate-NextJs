@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import ClientProviders from "./context/clientProviders";
+import ThemeProvider from "./context/themeProvider";
+import { BottomPromptProvider } from "./context/bottomPromptProvider";
 import InstallPrompt from "./components/InstallPrompt";
 import BottomPromptStack from "./components/bottomPromptStack";
 import OfflineHandler from "./components/offlineHandler";
@@ -31,7 +33,14 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#fff",
+  // A pure-CSS fallback for a visitor who never touches the toggle: the
+  // status bar/PWA chrome still follows the OS with zero JS. ThemeColorSync
+  // (themeProvider.tsx) layers an explicit override on top of this once
+  // someone actually picks light or dark rather than "system".
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f3f4f6" },
+    { media: "(prefers-color-scheme: dark)", color: "#111827" },
+  ],
 };
 
 export default function RootLayout({
@@ -49,25 +58,43 @@ export default function RootLayout({
     // actually renders in Geist rather than merely downloading it.
     "font-[family-name:var(--font-geist-sans)]",
     // A flat surface one step off white, not white and not a gradient: cards
-    // are bg-white, so they need the page behind them to differ everywhere,
+    // are bg-card, so they need the page behind them to differ everywhere,
     // and a gradient on <body> tiles (and visibly seams) on any page whose
-    // content is shorter than the viewport.
-    "bg-gray-100 text-gray-900",
-    "dark:bg-gray-900 dark:text-gray-50",
+    // content is shorter than the viewport. bg-background/text-foreground
+    // are the semantic tokens defined in globals.css (light and dark values
+    // in one place, see the comment there) rather than a paired bg-gray-100
+    // dark:bg-gray-900 utility class.
+    "bg-background text-foreground",
   ].join(" ");
 
   return (
-    <html lang="en">
+    // suppressHydrationWarning is specifically for next-themes: its blocking
+    // script (see themeProvider.tsx) sets the resolved theme's class on this
+    // element before React hydrates, so server and client legitimately
+    // disagree about this one attribute for one frame. Scoped to <html> only
+    // - it does not suppress mismatches anywhere else in the tree.
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="apple-touch-icon" href="/icon.png" />
       </head>
       <body className={bodyClassName}>
-        <OfflineHandler>
-          <ClientProviders>{children}</ClientProviders>
-        </OfflineHandler>
-        <BottomPromptStack>
-          <InstallPrompt />
-        </BottomPromptStack>
+        <ThemeProvider>
+          {/* One provider around both branches: PushNotificationManager (deep
+              inside ClientProviders' children, wherever a page mounts it) and
+              InstallPrompt (a direct child of BottomPromptStack below) need to
+              share the same prompt queue, but they are siblings in the DOM, not
+              ancestor/descendant - portaling into BottomPromptStack moves where
+              a prompt renders, not where it sits in the component tree that
+              context flows through. */}
+          <BottomPromptProvider>
+            <OfflineHandler>
+              <ClientProviders>{children}</ClientProviders>
+            </OfflineHandler>
+            <BottomPromptStack>
+              <InstallPrompt />
+            </BottomPromptStack>
+          </BottomPromptProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

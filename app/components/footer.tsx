@@ -81,7 +81,7 @@ const Footer = () => {
                     </div>
 
                     <div>
-                        <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+                        <h2 className="text-xs font-semibold tracking-widest text-zinc-400 uppercase">
                             Explore
                         </h2>
                         <ul className="mt-4 space-y-2.5">
@@ -99,7 +99,7 @@ const Footer = () => {
                     </div>
 
                     <div>
-                        <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+                        <h2 className="text-xs font-semibold tracking-widest text-zinc-400 uppercase">
                             Account
                         </h2>
                         <ul className="mt-4 space-y-2.5">
@@ -148,7 +148,7 @@ const Footer = () => {
                     </div>
 
                     <div>
-                        <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+                        <h2 className="text-xs font-semibold tracking-widest text-zinc-400 uppercase">
                             Connect
                         </h2>
                         <div className="mt-4 flex flex-wrap gap-2">
@@ -182,7 +182,7 @@ const Footer = () => {
                     </div>
                 </div>
 
-                <div className="mt-10 flex flex-col gap-2 border-t border-white/10 pt-6 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
+                <div className="mt-10 flex flex-col gap-2 border-t border-white/10 pt-6 text-xs text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
                     <p>&copy; {year} WeCommunicate. Built by Shoham Katzav.</p>
                     <p>A real-time chat app running on free-tier infrastructure.</p>
                 </div>

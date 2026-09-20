@@ -261,11 +261,11 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
 
     return (
         <form onSubmit={handleSubmit}>
-            <div className="mainContainer px-3 md:p-4 grid md:grid-cols-3">
+            <div className="mainContainer px-3 pb-[calc(4rem+var(--bottom-prompt-height))] md:p-4 md:pb-[calc(2rem+var(--bottom-prompt-height))] grid md:grid-cols-3">
                 <div className='md:col-start-2 flex flex-col gap-3 md:gap-4'>
                     <div className="titleContainer">
                         <h1 className="mb-0 md:mb-0 text-3xl font-extrabold text-gray-900 dark:text-white md:text-4xl lg:text-5xl text-center">
-                            <span className="text-transparent bg-clip-text bg-linear-to-r to-indigo-700 from-pink-400">
+                            <span className="text-transparent bg-clip-text bg-linear-to-r to-indigo-800 from-pink-700 dark:to-indigo-400 dark:from-pink-300">
                                 {step === 'email' && mode === 'forgot' ? 'Reset Your Password' :
                                     step === 'email' && mode === 'sign-up' ? 'Create Your Account on WeCommunicate' :
                                         step === 'otp' ? 'Verify OTP' :
@@ -344,7 +344,7 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                                     </label>
                                 )}
 
-                                <div className="hidden md:flex items-center justify-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                <div className="hidden md:flex items-center justify-center gap-1.5 text-xs text-muted-foreground mt-2">
                                     <Shield size={14} />
                                     <span>Secure & private</span>
                                 </div>
@@ -427,7 +427,7 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                                         <button
                                             type="button"
                                             onClick={() => setShowNewPassword(!showNewPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                             aria-label={showNewPassword ? "Hide password" : "Show password"}
                                             tabIndex={-1}
                                             disabled={loading}
@@ -460,7 +460,7 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                                         <button
                                             type="button"
                                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                             aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                                             tabIndex={-1}
                                             disabled={loading}
@@ -497,13 +497,13 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                             </button>
                         </div>
                         {mode === 'forgot' &&
-                            <p className="text-gray-500 dark:text-gray-400 justify-self-center mt-4">
+                            <p className="text-muted-foreground justify-self-center mt-4">
                                 Remember your password? <a href="/login"
                                     className="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Back to Login</a>
                             </p>
                         }
                         {mode === 'sign-up' &&
-                            <p className="text-gray-500 dark:text-gray-400 justify-self-center mt-4">
+                            <p className="text-muted-foreground justify-self-center mt-4">
                                 Already have an account? <a href="/login"
                                     className="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Sign in</a>
                             </p>

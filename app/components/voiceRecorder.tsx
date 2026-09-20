@@ -50,7 +50,7 @@ const VoiceRecorder = ({ participants, onRecorded, onStatusChange }: VoiceRecord
                     type="button"
                     onClick={stopAndSend}
                     aria-label="Send voice message"
-                    className="p-2 rounded-full bg-green-500 text-white hover:bg-green-600 shrink-0"
+                    className="p-2 rounded-full bg-green-700 text-white hover:bg-green-800 shrink-0"
                 >
                     <Send size={20} />
                 </button>
@@ -60,7 +60,7 @@ const VoiceRecorder = ({ participants, onRecorded, onStatusChange }: VoiceRecord
 
     if (status === 'uploading') {
         return (
-            <div className="flex items-center gap-2 flex-1 px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
+            <div className="flex items-center gap-2 flex-1 px-3 py-2 text-sm text-muted-foreground">
                 <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-r-transparent" />
                 Sending voice message...
             </div>

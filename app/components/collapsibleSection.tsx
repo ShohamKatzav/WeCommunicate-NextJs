@@ -22,12 +22,12 @@ export default function CollapsibleSection({ title, teaser, children, defaultOpe
                     <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                         {title}
                     </h2>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    <p className="mt-1 text-sm text-muted-foreground">
                         {teaser}
                     </p>
                 </div>
                 <ChevronDown
-                    className="w-5 h-5 shrink-0 text-gray-400 transition-transform duration-200 group-open:rotate-180"
+                    className="w-5 h-5 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
                     aria-hidden="true"
                 />
             </summary>

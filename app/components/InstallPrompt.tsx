@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Download } from "lucide-react";
+import PromptBar from "./promptBar";
+import { usePromptDismissal } from "../hooks/usePromptDismissal";
+import { usePromptSlot } from "../hooks/usePromptSlot";
+
+const PROMPT_ID = "install";
 
 interface BeforeInstallPromptEvent extends Event {
     prompt: () => Promise<void>;
@@ -10,8 +16,9 @@ interface BeforeInstallPromptEvent extends Event {
 export default function InstallPrompt() {
     const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
     const [showInstallButton, setShowInstallButton] = useState(false);
-    const [dismissed, setDismissed] = useState(false);
     const [isInstalled, setIsInstalled] = useState(false);
+    const { suppressed, dismiss } = usePromptDismissal(PROMPT_ID);
+
     useEffect(() => {
         const isStandalone =
             window.matchMedia("(display-mode: standalone)").matches ||
@@ -59,32 +66,22 @@ export default function InstallPrompt() {
         setShowInstallButton(false);
     };
 
-    if (!showInstallButton || dismissed || isInstalled) return null;
+    const wantsToShow = showInstallButton && suppressed === false && !isInstalled;
+    const { isCurrent, queuedBehind } = usePromptSlot(PROMPT_ID, wantsToShow);
+
+    if (!isCurrent) return null;
 
     return (
         // Positioning belongs to BottomPromptStack, which reserves room for this
         // instead of letting it float over the composer.
-        <div className="pointer-events-auto w-full max-w-md">
-            <div className="w-full">
-                <div className="relative flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/95 p-2 text-white shadow-lg backdrop-blur-sm">
-                    <button
-                        onClick={() => setDismissed(true)}
-                        className="absolute -right-2 -top-2 inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-600 bg-slate-800 text-xs text-slate-100 hover:bg-slate-700"
-                        aria-label="Dismiss install prompt"
-                    >
-                        x
-                    </button>
-                    <div className="min-w-0 flex-1 pl-1">
-                        <p className="truncate text-xs text-slate-200 sm:text-sm">Install WeCommunicate for faster access</p>
-                    </div>
-                    <button
-                        onClick={handleInstallClick}
-                        className="shrink-0 rounded-md bg-cyan-400 px-3 py-2 text-xs font-semibold text-slate-900 transition hover:bg-cyan-300 sm:px-4 sm:text-sm"
-                    >
-                        Install
-                    </button>
-                </div>
-            </div>
-        </div>
+        <PromptBar
+            icon={<Download className="h-5 w-5 text-cyan-300" />}
+            message="Install WeCommunicate for faster access"
+            primaryAction={{ label: "Install", onClick: handleInstallClick }}
+            onDismiss={dismiss}
+            dismissLabel="Dismiss install prompt"
+            queuedCount={queuedBehind}
+            accentClassName="bg-slate-900/95 text-white backdrop-blur-sm"
+        />
     );
 }

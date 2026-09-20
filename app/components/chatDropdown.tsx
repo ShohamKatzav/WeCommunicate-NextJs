@@ -153,7 +153,7 @@ const ChatDropdown = ({
                     <hr className="my-0 border-stone-200 dark:border-gray-700" />
                     <button
                         onClick={() => setShowDeleteModal(true)}
-                        className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-100 dark:hover:bg-gray-700"
+                        className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-destructive hover:bg-red-100 dark:hover:bg-gray-700"
                     >
                         <MdDeleteForever size={18} /> Delete Conversation
                     </button>

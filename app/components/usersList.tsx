@@ -87,7 +87,7 @@ export default function UsersListClient({
             `}>
             <aside className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg transition-transform duration-300`}>
                 <div className="flex-1 overflow-y-auto touch-pan-y max-h-[calc(var(--app-inner-height,100vh)-20vh)] xl:max-h-none">
-                    <div className="px-3 py-2 text-xs text-green-600 dark:text-green-400 font-semibold">
+                    <div className="px-3 py-2 text-xs text-success font-semibold">
                         Active now
                     </div>
                     {onlineUsers.length > 0 ?
@@ -102,13 +102,13 @@ export default function UsersListClient({
                             />
                         ))
                         :
-                        <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+                        <div className="text-center text-muted-foreground py-8">
                             <Users size={32} className="mx-auto pb-2 opacity-50" />
                             <p className="text-sm">No active users</p>
                         </div>
                     }
 
-                    <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 font-semibold mt-3">
+                    <div className="px-3 py-2 text-xs text-muted-foreground font-semibold mt-3">
                         Others
                     </div>
                     {offlineUsers.length > 0 ?
@@ -123,7 +123,7 @@ export default function UsersListClient({
                             />
                         ))
                         :
-                        <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+                        <div className="text-center text-muted-foreground py-8">
                             <Users size={32} className="mx-auto pb-2 opacity-50" />
                             <p className="text-sm">No inactive users</p>
                         </div>
