@@ -14,6 +14,7 @@ export interface IAccount extends Document {
     bannedUntil?: Date;
     warningCount?: number;
     lastWarningDate?: Date;
+    blocked?: Schema.Types.ObjectId[];
 }
 
 const AccountSchema = new Schema<IAccount>({
@@ -62,6 +63,16 @@ const AccountSchema = new Schema<IAccount>({
     lastWarningDate: {
         type: Date,
         required: false
+    },
+    // Accounts *this* account has blocked - one-directional per entry, but
+    // checked both ways when deciding whether two users can message each
+    // other (see AccountRepository.isBlockedEitherWay). Scoped to 1:1
+    // conversations only - group chats aren't filtered by this.
+    blocked: {
+        type: [Schema.Types.ObjectId],
+        ref: 'Account',
+        required: false,
+        default: []
     }
 
 });

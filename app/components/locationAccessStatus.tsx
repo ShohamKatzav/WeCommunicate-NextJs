@@ -23,7 +23,7 @@ const LocationAccessInformation = ({ information }: { information: string }) => 
                     To use one of our newest features - sharing and viewing your friends&apos; locations - please allow access to location services in your browser settings.
                 </p>
 
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-6 shadow-md space-y-4">
+                <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-300 dark:border-gray-700 space-y-4">
                     <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                         Learn how to enable location access:
                     </p>

@@ -3,6 +3,7 @@ import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Message from "@/types/message";
 import MessageBubble from "./messageBubble";
 import MoreMessagesLoader from "./moreMessagesLoader";
+import OfflineOutbox from "./offlineOutbox";
 import ChatUser from "@/types/chatUser";
 import { HiOutlineChatBubbleLeftRight } from "react-icons/hi2";
 
@@ -68,6 +69,7 @@ const ChatWindow = ({ messages, participants, isMobile, onReply, conversationId,
         <div
             className={`flex min-h-0 flex-1 flex-col overflow-hidden bg-linear-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-3 xl:p-4 ${!participants.current ?
                 "flex items-center justify-center" : ""}`}>
+            <OfflineOutbox />
             {
                 participants.current ?
                     (<div className="flex min-h-0 flex-1 flex-col bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">

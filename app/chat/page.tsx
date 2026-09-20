@@ -4,6 +4,7 @@ import { Types } from 'mongoose';
 import connectDB from "@/app/lib/MongoDb";
 import ConversationRepository from "@/repositories/ConversationRepository";
 import { getUsernames } from '@/app/lib/accountActions';
+import { getBlockedUserIds } from '@/app/lib/blockActions';
 import User from '@/types/user';
 import jwt from 'jsonwebtoken';
 import ChatClient from './chatClient';
@@ -13,11 +14,13 @@ export default async function ChatPage() {
 
     const initialUsers = await getUsernames();
     const initialConversationsWithMessages = await getConversations(env.NEXT_PUBLIC_MESSAGES_PER_PAGE);
+    const blockedResult = await getBlockedUserIds();
 
     return (
         <ChatClient
             initialUsers={initialUsers}
             initialConversationsWithMessages={initialConversationsWithMessages}
+            initialBlockedUserIds={blockedResult.blockedIds}
         />
     );
 }

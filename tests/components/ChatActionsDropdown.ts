@@ -1,4 +1,4 @@
-import { Locator, Page } from "@playwright/test";
+import { expect, Locator, Page } from "@playwright/test";
 
 
 export default class ChatActionsDropdown {
@@ -10,7 +10,10 @@ export default class ChatActionsDropdown {
     private clearHistoryButton: Locator;
     private deleteConversationButton: Locator;
     private confirmDeletionButton: Locator;
+    private disappearingMessagesButton: Locator;
     conversationDetailsModal: Locator;
+    disappearingMessagesHeading: Locator;
+    disappearingMessagesSaveButton: Locator;
 
     constructor(page: Page) {
         this.page = page;
@@ -24,7 +27,10 @@ export default class ChatActionsDropdown {
         // text, not just the actual dropdown menu item.
         this.deleteConversationButton = page.getByRole('button', { name: 'Delete Conversation', exact: true });
         this.confirmDeletionButton = page.getByRole('button', { name: 'Delete', exact: true });
+        this.disappearingMessagesButton = page.getByRole('button', { name: 'Disappearing Messages' });
         this.conversationDetailsModal = page.locator('#conversation-details-modal');
+        this.disappearingMessagesHeading = page.getByRole('heading', { name: 'Disappearing Messages' });
+        this.disappearingMessagesSaveButton = page.getByRole('button', { name: 'Save' });
     }
 
     async openConversationDetails(): Promise<void> {
@@ -47,5 +53,26 @@ export default class ChatActionsDropdown {
 
     async deletionModalClosed(): Promise<boolean> {
         return await this.deleteConversationButton.isHidden();
+    }
+
+    async openDisappearingMessages(): Promise<void> {
+        await this.dropdownButton.click();
+        await this.disappearingMessagesButton.click();
+        await this.disappearingMessagesHeading.waitFor({ state: 'visible' });
+    }
+
+    getDisappearingDurationOption(label: string): Locator {
+        return this.page.getByRole('radio', { name: label });
+    }
+
+    async setDisappearingDuration(label: string): Promise<void> {
+        if (!(await this.disappearingMessagesHeading.isVisible().catch(() => false))) {
+            await this.openDisappearingMessages();
+        }
+        const option = this.getDisappearingDurationOption(label);
+        await expect(option).toBeEnabled({ timeout: 10000 });
+        await option.click();
+        await this.disappearingMessagesSaveButton.click();
+        await this.disappearingMessagesHeading.waitFor({ state: 'hidden' });
     }
 }

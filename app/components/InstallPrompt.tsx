@@ -62,8 +62,10 @@ export default function InstallPrompt() {
     if (!showInstallButton || dismissed || isInstalled) return null;
 
     return (
-        <div className="fixed inset-x-0 bottom-2 z-[8] px-2 sm:px-4 md:bottom-3 md:z-40">
-            <div className="mx-auto w-full max-w-md">
+        // Positioning belongs to BottomPromptStack, which reserves room for this
+        // instead of letting it float over the composer.
+        <div className="pointer-events-auto w-full max-w-md">
+            <div className="w-full">
                 <div className="relative flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/95 p-2 text-white shadow-lg backdrop-blur-sm">
                     <button
                         onClick={() => setDismissed(true)}

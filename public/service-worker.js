@@ -41,6 +41,22 @@ async function cachePut(cacheName, req, res) {
     await cache.put(req, res.clone());
 }
 
+// Broadcasts the current queue to every open tab so the offline outbox UI
+// (useOfflineOutbox.tsx) stays live without polling - called after anything
+// that adds to or removes from the queue. Errors here shouldn't break the
+// actual queue operation that triggered them, so this never throws.
+async function notifyQueueChanged() {
+    try {
+        const queue = await getDeleteQueue();
+        const clients = await self.clients.matchAll({ includeUncontrolled: true });
+        clients.forEach(client => {
+            client.postMessage({ type: 'QUEUE_CHANGED', queue });
+        });
+    } catch (error) {
+        console.error('Failed to notify clients of queue change:', error);
+    }
+}
+
 // Install
 self.addEventListener('install', event => {
     event.waitUntil(
@@ -185,6 +201,9 @@ async function processQueue() {
     }
     finally {
         isSyncing = false;
+        // Once per call rather than after every removeFromQueue - the queue
+        // only actually needs re-broadcasting once processing settles.
+        await notifyQueueChanged();
     }
 }
 
@@ -343,6 +362,8 @@ self.addEventListener('fetch', async event => {
                             });
                         }
 
+                        await notifyQueueChanged();
+
                         return new Response(JSON.stringify({
                             queued: true,
                             offline: true,
@@ -400,6 +421,16 @@ self.addEventListener('fetch', async event => {
 
 
 self.addEventListener('message', async event => {
+    if (event.data?.type === 'GET_QUEUE') {
+        // Answers the offline outbox UI's initial snapshot request on mount
+        // (useOfflineOutbox.tsx) - after that it just listens for the
+        // broadcast QUEUE_CHANGED messages notifyQueueChanged() sends.
+        const port = event.ports[0];
+        const queue = await getDeleteQueue();
+        if (port) port.postMessage({ queue });
+        return;
+    }
+
     if (event.data.type === 'SYNC_QUEUE') {
         await processQueue();
         if ('sync' in self.registration) {

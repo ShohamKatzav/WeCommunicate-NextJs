@@ -71,6 +71,34 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
     });
 
     /**
+    * The IndexedDB queue used to be invisible, so failed/offline sends just
+    * vanished. The amber tray is the user-facing outbox for that queue.
+    */
+    customTest('@Offline mode - Pending outbox lists queued messages until they sync', async ({ context, authPage }) => {
+        const { recipient } = OFFLINE_TESTS_DATA.SEND_TEST;
+        const queuedText = `outbox-${Date.now()}`;
+        const chat = authPage.getChatPage();
+        const recipientShortName = recipient.split('@')[0];
+
+        await chat.ensureConversation(recipientShortName);
+        await expect(chat.messageInput).toBeVisible({ timeout: 10000 });
+
+        await context.setOffline(true);
+        await chat.sendMessage(queuedText, false);
+        await expect(chat.toastWarnings.messageSendingOfflineWarning).toBeVisible();
+        await expect(chat.outboxToggle).toBeVisible({ timeout: 10000 });
+        await expect(chat.outboxToggle).toContainText('1 pending item');
+
+        await chat.outboxToggle.click();
+        await expect(chat.getOutboxItem(queuedText)).toBeVisible();
+        await expect(chat.retryOutboxButton).toBeVisible();
+
+        await chat.reconnectAndVerifySync(context);
+        await expect(chat.getSentMessageByText(queuedText)).toBeVisible();
+        await expect(chat.outboxToggle).toHaveCount(0, { timeout: 10000 });
+    });
+
+    /**
     * Test: Deleting a message while offline should queue deletion and process when reconnected
     *
     * Flow:

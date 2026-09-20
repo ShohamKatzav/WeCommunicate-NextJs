@@ -86,13 +86,22 @@ export default class MessageRepository {
                 }
             }
 
+            // Disappearing messages: only applied at send time, from
+            // whatever the conversation's setting is right now - changing
+            // the setting later never retroactively affects already-sent
+            // messages (see disappearingMessagesSeconds' own schema comment).
+            const expiresAt = conversation.disappearingMessagesSeconds
+                ? new Date(Date.now() + conversation.disappearingMessagesSeconds * 1000)
+                : undefined;
+
             const newMessage = await Message.create({
                 date,
                 sender,
                 text,
                 file: newFileId,
                 conversation: conversation._id,
-                replyTo: replyToSnapshot
+                replyTo: replyToSnapshot,
+                expiresAt
             });
             await Conversation.updateOne(
                 { _id: conversation._id },

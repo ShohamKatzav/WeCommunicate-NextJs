@@ -119,6 +119,22 @@ export default class ConversationRepository {
         }
     }
 
+    // Scoped to members only - the caller (conversationActions.ts) verifies
+    // membership before calling this, but the query filter is kept here too
+    // as a second line of defence against a non-member changing a
+    // conversation they can't otherwise see.
+    static async SetDisappearingMessages(conversationId: string, memberID: Types.ObjectId, seconds: number) {
+        try {
+            return await Conversation.updateOne(
+                { _id: conversationId, members: memberID },
+                { $set: { disappearingMessagesSeconds: seconds } }
+            );
+        } catch (err) {
+            console.error('Failed to set disappearing messages:', err);
+            throw err;
+        }
+    }
+
     static async DeleteConversation(member: string, conversationId: string) {
         try {
             const convo = await Conversation.findById(conversationId);

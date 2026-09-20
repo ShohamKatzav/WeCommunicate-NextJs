@@ -56,7 +56,7 @@ const ConversationsList =
             <>
                 {
                     initialConversations?.length < 1 &&
-                    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md flex items-center gap-4 hover:shadow-lg transition-shadow">
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-gray-300 dark:border-gray-700 flex items-center gap-4 hover:shadow-lg transition-shadow">
                         <p className="text-gray-600 dark:text-gray-400 text-center">No recent conversations available.</p>
                     </div>
                 }

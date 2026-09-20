@@ -180,6 +180,23 @@ export const saveMessage = async (message: MessageDTO) => {
             }
         }
 
+        // Scoped to 1:1 conversations only - group-chat blocking would mean
+        // silently dropping a message for just one recipient while everyone
+        // else in the group sees it, which is its own can of worms and out
+        // of scope here. A neutral rejection, not "you're blocked" - telling
+        // a blocked sender exactly why can escalate exactly the harassment
+        // this feature exists to stop.
+        if (message.participantID?.length === 1) {
+            const isBlocked = await AccountRepository.isBlockedEitherWay(userID, message.participantID[0]);
+            if (isBlocked) {
+                return JSON.parse(JSON.stringify({
+                    success: false,
+                    blocked: true,
+                    message: 'This message could not be delivered.'
+                }));
+            }
+        }
+
         const banStatus = await ModerationService.isUserBanned(userID);
         if (banStatus.isBanned) {
             return JSON.parse(JSON.stringify({

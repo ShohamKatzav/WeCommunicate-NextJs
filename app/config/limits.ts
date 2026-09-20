@@ -32,3 +32,12 @@ export const REPLY_SNIPPET_LENGTH = 120;
 // forgotten open mic would fill up the free-tier blob storage/bandwidth
 // quota with one very long recording.
 export const MAX_VOICE_MESSAGE_SECONDS = 60;
+
+// Selectable disappearing-messages durations, in seconds - 0 means off.
+// Shared between the picker UI and the server action's own validation (only
+// these exact values are accepted, not an arbitrary client-supplied number).
+export const DISAPPEARING_MESSAGES_OPTIONS = [
+    { label: 'Off', seconds: 0 },
+    { label: '24 hours', seconds: 24 * 60 * 60 },
+    { label: '7 days', seconds: 7 * 24 * 60 * 60 },
+] as const;

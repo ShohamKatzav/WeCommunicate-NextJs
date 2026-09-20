@@ -1,10 +1,13 @@
 import ChatUser from "@/types/chatUser";
 import { SetStateAction, useEffect, useState } from "react";
 import { HiChatBubbleLeftRight, HiUsers } from "react-icons/hi2";
+import { Timer } from "lucide-react";
 import { AsShortName } from "../utils/stringFormat";
 import { useUser } from "../hooks/useUser";
 import ChatDropdown from "./chatDropdown";
 import Message from "@/types/message";
+import { getDisappearingMessagesSetting } from "../lib/conversationActions";
+import { DISAPPEARING_MESSAGES_OPTIONS } from "../config/limits";
 
 interface ChatHeaderProps {
     setMobileChatsSidebarOpen: (value: SetStateAction<boolean>) => void;
@@ -34,10 +37,31 @@ const ChatHeader = ({
     const { user } = useUser();
 
     const [onlineCount, setOnlineCount] = useState(0);
+    // Without this the disappearing-messages setting is invisible once set -
+    // you'd have to reopen the dropdown to remember whether this conversation
+    // is on a timer. Kept in sync on save via onDisappearingMessagesChange
+    // below, so it never shows a stale value.
+    const [disappearingSeconds, setDisappearingSeconds] = useState(0);
 
     useEffect(() => {
         getOnlineParticipantsInRoom();
     }, [participants.current, activeSocketUsers, conversationId]);
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            if (!conversationId) {
+                if (!cancelled) setDisappearingSeconds(0);
+                return;
+            }
+            const result = await getDisappearingMessagesSetting(conversationId);
+            if (!cancelled) setDisappearingSeconds(result.success ? result.seconds : 0);
+        })();
+        return () => { cancelled = true; };
+    }, [conversationId]);
+
+    const disappearingLabel = DISAPPEARING_MESSAGES_OPTIONS
+        .find(option => option.seconds === disappearingSeconds && option.seconds !== 0)?.label;
 
     const getOnlineParticipantsInRoom = () => {
         if (!participants.current) return [];
@@ -98,6 +122,16 @@ const ChatHeader = ({
                         {!participants.current && (
                             <div className="text-xs text-green-500 font-medium">Select a chat to start</div>
                         )}
+
+                        {disappearingLabel && (
+                            <span
+                                className="flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400"
+                                title={`New messages disappear after ${disappearingLabel}`}
+                            >
+                                <Timer size={12} aria-hidden="true" />
+                                {disappearingLabel}
+                            </span>
+                        )}
                     </div>
                 </div>
 
@@ -117,7 +151,8 @@ const ChatHeader = ({
                             setChat={setChat}
                             conversationId={conversationId}
                             participants={participants}
-                            updateConversationsBar={updateConversationsBar} />
+                            updateConversationsBar={updateConversationsBar}
+                            onDisappearingMessagesChange={setDisappearingSeconds} />
                     }
                 </div>
             </div>

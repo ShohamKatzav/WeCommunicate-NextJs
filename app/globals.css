@@ -19,8 +19,50 @@
   }
 }
 
+/* The navbar is position: fixed (see app/components/bars.css), so it does not
+   reserve space in flow. The space above page content is reserved instead by
+   --content-top-offset, applied in exactly one place (the navbar wrapper's
+   margin-bottom) so a view that needs to cancel it can. On a desktop window
+   the extra over the navbar's own height reads as breathing room; on a phone
+   that same surplus is most of the screen's usable height, so there it is
+   only enough to keep content off the bar.
+   The site footer is in document flow (and omitted on /chat), so
+   --footer-height stays 0. It remains a named token because the chat shell,
+   bottom prompts and page padding all still read it. */
+:root {
+  --navbar-height: 64px;
+  --footer-height: 0px;
+  --content-top-offset: 160px;
+  /* Overwritten at runtime by BottomPromptStack while a prompt is on screen. */
+  --bottom-prompt-height: 0px;
+}
+
+@media screen and (max-width: 768px) {
+  :root {
+    --navbar-height: 72px;
+    --footer-height: 0px;
+    --content-top-offset: calc(var(--navbar-height) + 0.75rem);
+  }
+}
+
+/* For a view that fills the gap the fixed navbar leaves behind (the chat
+   shell): cancels the surplus above so it starts flush under the navbar
+   instead of leaving a strip of page background above its own header, and
+   stops short of any bottom prompt, which would otherwise cover the
+   message composer rather than sitting below it. */
+.viewport-between-bars {
+  margin-top: calc(var(--navbar-height) - var(--content-top-offset));
+  height: calc(100dvh - var(--navbar-height) - var(--footer-height) - var(--bottom-prompt-height));
+}
+
+/* The page background lives on <body> in app/layout.tsx so the light and dark
+   surfaces sit next to each other in one place. Deliberately not set here:
+   this rule is unlayered, so it outranks Tailwind's @layer utilities, and the
+   `background` shorthand resets background-image - which silently flattened
+   the page to pure white and left every white card with no edge against it.
+   font-family is left out for the same cascade reason: declaring Arial here beat
+   --font-sans, so the Geist faces layout.tsx loads and preloads were downloaded
+   on every page and then never actually used to render anything. */
 body {
-  background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }

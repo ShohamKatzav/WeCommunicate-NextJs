@@ -165,6 +165,60 @@ export default class AccountRepository {
         }
     }
 
+    static async blockUser(blockerID: string, blockedID: string) {
+        try {
+            return await Account.updateOne(
+                { _id: blockerID },
+                { $addToSet: { blocked: new Types.ObjectId(blockedID) } }
+            );
+        } catch (err) {
+            console.error('Failed to block user:', err);
+            throw err;
+        }
+    }
+
+    static async unblockUser(blockerID: string, blockedID: string) {
+        try {
+            return await Account.updateOne(
+                { _id: blockerID },
+                { $pull: { blocked: new Types.ObjectId(blockedID) } }
+            );
+        } catch (err) {
+            console.error('Failed to unblock user:', err);
+            throw err;
+        }
+    }
+
+    static async getBlockedIds(userID: string): Promise<string[]> {
+        try {
+            const account: any = await Account.findById(userID).select('blocked').lean();
+            return (account?.blocked || []).map((id: Types.ObjectId) => id.toString());
+        } catch (err) {
+            console.error('Failed to get blocked users:', err);
+            throw err;
+        }
+    }
+
+    // Checked in both directions - if either side has blocked the other,
+    // messaging between them is stopped. Used to gate 1:1 sends (see
+    // chatActions.saveMessage and socket/handlers.js's handlePublishMessage).
+    static async isBlockedEitherWay(idA: string, idB: string): Promise<boolean> {
+        try {
+            const objA = new Types.ObjectId(idA);
+            const objB = new Types.ObjectId(idB);
+            const count = await Account.countDocuments({
+                $or: [
+                    { _id: objA, blocked: objB },
+                    { _id: objB, blocked: objA }
+                ]
+            });
+            return count > 0;
+        } catch (err) {
+            console.error('Failed to check block status:', err);
+            throw err;
+        }
+    }
+
     static async getAllUsersWithStatus() {
         try {
             const users = await Account.find()

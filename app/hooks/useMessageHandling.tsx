@@ -145,6 +145,17 @@ export const useMessageHandling = ({
                         return;
                     }
 
+                    if (!result.punishment) {
+                        // A block with no moderation punishment attached -
+                        // e.g. blocked user-to-user messaging (see
+                        // chatActions.saveMessage's isBlockedEitherWay
+                        // check). Without this, the temp message above was
+                        // already removed from chat with no toast at all,
+                        // so it would just silently vanish.
+                        toast.error(result.message || "Couldn't send that message.");
+                        return;
+                    }
+
                     // Determinating message to show base on modereting result and emmiting event
                     let message = '';
                     if (result.punishment?.includes("ban")) {

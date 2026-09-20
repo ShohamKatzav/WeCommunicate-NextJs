@@ -14,6 +14,8 @@ interface UsersListClientProps {
     getLastMessages: (participantFromList: ChatUser[]) => Promise<void>;
     conversationId?: string | undefined;
     isMobileUsersSidebarOpen: boolean;
+    blockedUserIds: string[];
+    onToggleBlock: (targetUserId: string, shouldBlock: boolean) => Promise<void>;
 }
 
 export default function UsersListClient({
@@ -22,6 +24,8 @@ export default function UsersListClient({
     getLastMessages,
     conversationId,
     isMobileUsersSidebarOpen,
+    blockedUserIds,
+    onToggleBlock,
 }: UsersListClientProps) {
 
     const { user } = useUser();
@@ -88,7 +92,14 @@ export default function UsersListClient({
                     </div>
                     {onlineUsers.length > 0 ?
                         onlineUsers.sort((a, b) => (a.email ?? "").localeCompare(b.email ?? "")).map((chatUser: ChatUser) => (
-                            <UserRow key={`on-${chatUser.email}`} chatUser={chatUser} getLastMessages={getLastMessages} active={true} />
+                            <UserRow
+                                key={`on-${chatUser.email}`}
+                                chatUser={chatUser}
+                                getLastMessages={getLastMessages}
+                                active={true}
+                                isBlocked={blockedUserIds.includes(chatUser._id)}
+                                onToggleBlock={onToggleBlock}
+                            />
                         ))
                         :
                         <div className="text-center text-gray-500 dark:text-gray-400 py-8">
@@ -102,7 +113,14 @@ export default function UsersListClient({
                     </div>
                     {offlineUsers.length > 0 ?
                         offlineUsers.sort((a, b) => (a.email ?? "").localeCompare(b.email ?? "")).map((chatUser: ChatUser) => (
-                            <UserRow key={`off-${chatUser.email}`} chatUser={chatUser} getLastMessages={getLastMessages} active={false} />
+                            <UserRow
+                                key={`off-${chatUser.email}`}
+                                chatUser={chatUser}
+                                getLastMessages={getLastMessages}
+                                active={false}
+                                isBlocked={blockedUserIds.includes(chatUser._id)}
+                                onToggleBlock={onToggleBlock}
+                            />
                         ))
                         :
                         <div className="text-center text-gray-500 dark:text-gray-400 py-8">

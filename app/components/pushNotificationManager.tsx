@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { FiBell, FiX } from 'react-icons/fi';
 import { FaCheckCircle } from 'react-icons/fa';
 import urlBase64ToUint8Array from '@/app/utils/urlBase64ToUint8Array'
 import { subscribeUser, unsubscribeUser } from '@/app/lib/pushActions'
 import { useUser } from '../hooks/useUser';
 import useIsMobile from '../hooks/useIsMobile';
+import { BOTTOM_PROMPT_STACK_ID } from './bottomPromptStack';
 
 // Push notifications are triggered server-side (see saveMessage in
 // chatActions.ts) right after a message is persisted, rather than from
@@ -25,6 +27,9 @@ export default function PushNotificationManager() {
     const [isSupported, setIsSupported] = useState<boolean | null>(null)
     const [subscription, setSubscription] = useState<PushSubscription | null>(null)
     const [showSoftAsk, setShowSoftAsk] = useState(false);
+    // Looked up after mount because the stack is rendered by the root layout and
+    // there is no DOM to portal into while this renders on the server.
+    const [promptStack, setPromptStack] = useState<HTMLElement | null>(null);
 
     async function registerServiceWorker() {
         try {
@@ -93,6 +98,10 @@ export default function PushNotificationManager() {
         }
     }, [loadingUser]);
 
+    useEffect(() => {
+        setPromptStack(document.getElementById(BOTTOM_PROMPT_STACK_ID));
+    }, []);
+
 
     if (isSupported === null) {
         // Not yet determined - render nothing rather than flash the wrong
@@ -101,15 +110,17 @@ export default function PushNotificationManager() {
     }
 
     if (!isSupported) {
-        return <p className="text-center text-sm text-gray-500 dark:text-gray-400 p-2">Push notifications are not supported in this browser.</p>
+        // Nothing to offer and nothing the reader can do about it (Safari only
+        // exposes push to an installed PWA), so this says nothing rather than
+        // permanently occupying a prompt slot that shortens the chat.
+        return null;
     }
 
-    return (
-        <div className="relative">
+    const banner = (
+        <>
             {subscription ? (
                 <div
-                    className={`fixed p-3 shadow-md rounded-lg flex items-center bg-green-600 text-white transition-all duration-300 transform md:max-w-xs z-[10] md:z-[100]
-                        ${isMobile ? 'bottom-4 right-2' : 'bottom-4 left-4'}`}
+                    className="pointer-events-auto w-full max-w-md p-3 shadow-md rounded-lg flex items-center bg-green-600 text-white transition-all duration-300"
                 >
                     <FaCheckCircle className="w-5 h-5 mr-3 flex-shrink-0" />
                     <span className='text-sm font-medium'>Notifications Enabled</span>
@@ -123,11 +134,7 @@ export default function PushNotificationManager() {
             ) : (
                 showSoftAsk && (
                     <div
-                        className={`fixed p-4 shadow-2xl rounded-lg bg-blue-600 text-white transition-all duration-300 transform z-[10] md:z-[100]
-                            ${isMobile
-                                ? 'bottom-1 left-2 right-2'
-                                : 'bottom-4 left-4 md:max-w-md'
-                            }`}
+                        className="pointer-events-auto w-full max-w-md p-4 shadow-2xl rounded-lg bg-blue-600 text-white transition-all duration-300"
                         role="alert"
                     >
                         <div className="hidden md:flex md:items-start md:justify-between">
@@ -194,6 +201,12 @@ export default function PushNotificationManager() {
                     </div>
                 )
             )}
-        </div>
-    )
+        </>
+    );
+
+    // Rendered into the shared bottom stack rather than here: this component is
+    // mounted inside the chat's flex row (it registers the service worker from
+    // there), so anything it returned in place became a phantom column beside
+    // the conversation.
+    return promptStack ? createPortal(banner, promptStack) : null;
 }
