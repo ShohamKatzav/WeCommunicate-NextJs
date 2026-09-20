@@ -2,8 +2,6 @@ name: Playwright Tests
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
@@ -12,20 +10,59 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
     - uses: actions/checkout@v7
 
+    # bounceapp/render-action is unmaintained (still declares Node 20) and
+    # Render has no official wait action. Poll the public API instead: same
+    # secrets, no extra deploy, no Node-runtime warning.
     - name: Wait for Render Deployment
-      uses: bounceapp/render-action@0.12.0
-      with:
-        render-token: ${{ secrets.RENDER_API_KEY }}
-        service-id: ${{ secrets.RENDER_SERVICE_ID }}
-        retries: 40
-        wait: 15000
+      env:
+        RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        COMMIT_SHA: ${{ github.sha }}
+      run: |
+        set -euo pipefail
+        retries=40
+        wait_seconds=15
+        api="https://api.render.com/v1/services/${RENDER_SERVICE_ID}/deploys?limit=20"
 
-    - uses: pnpm/action-setup@v4
+        echo "Waiting for Render deploy of ${COMMIT_SHA}"
+
+        for i in $(seq 1 "$retries"); do
+          payload="$(curl -fsS \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
+            -H "Accept: application/json" \
+            "$api")"
+
+          status="$(printf '%s' "$payload" | jq -r --arg sha "$COMMIT_SHA" '
+            [.[] | .deploy | select(.commit.id == $sha)] | first | .status // empty
+          ')"
+
+          if [ -z "$status" ]; then
+            echo "[$i/$retries] No deploy for this commit yet."
+          else
+            echo "[$i/$retries] Deploy status: $status"
+            case "$status" in
+              live)
+                echo "Render deploy is live."
+                exit 0
+                ;;
+              build_failed|update_failed|canceled|pre_deploy_failed|deactivated)
+                echo "Render deploy ended with status: $status"
+                exit 1
+                ;;
+            esac
+          fi
+
+          sleep "$wait_seconds"
+        done
+
+        echo "Timed out waiting for Render deploy of ${COMMIT_SHA}"
+        exit 1
+
+    - uses: pnpm/action-setup@v6
       with:
         version: 10.25.0
 
@@ -117,22 +154,24 @@ jobs:
         PY
 
     - name: Persist Allure report history
-      if: always() && github.event_name != 'pull_request'
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_branch: gh-pages
-        publish_dir: tests/playwright-report/allure-report
-        force_orphan: true
-
-    - name: Post Allure Report link
-      if: always() && github.event_name == 'pull_request'
-      uses: thollander/actions-comment-pull-request@v2
-      with:
-        message: |
-          ### 📊 Test Report Generated
-          The Allure report is available in the `playwright-report` workflow artifact.
-        comment_tag: allure_report_link
+      if: always()
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        set -euo pipefail
+        REPORT_DIR=tests/playwright-report/allure-report
+        test -f "$REPORT_DIR/index.html"
+        workdir="$(mktemp -d)"
+        cp -R "$REPORT_DIR"/. "$workdir/"
+        cd "$workdir"
+        git init
+        git checkout --orphan gh-pages
+        git add -A
+        git -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "Allure report ${{ github.run_number }}"
+        git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+        git push --force origin HEAD:gh-pages
 
     - uses: actions/upload-artifact@v7
       if: always()
@@ -144,7 +183,6 @@ jobs:
 
   publish-report:
     needs: test
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
