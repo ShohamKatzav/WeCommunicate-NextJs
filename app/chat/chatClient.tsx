@@ -10,6 +10,7 @@ import Conversation from '@/types/conversation';
 import Message from '@/types/message';
 import FileDTO from '@/types/FileDTO';
 import { getSharedContent } from '../lib/shareActions';
+import { blockUser, unblockUser } from '../lib/blockActions';
 import ChatInputBar from '../components/chatInputBar';
 import ChatWindow from '../components/chatWindow';
 import Loading from '../components/loading';
@@ -27,9 +28,10 @@ import { useSocketEvents } from '../hooks/useSocketEvents';
 interface ChatClientProps {
     initialUsers: ChatUser[];
     initialConversationsWithMessages: Conversation[];
+    initialBlockedUserIds: string[];
 }
 
-const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClientProps) => {
+const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlockedUserIds }: ChatClientProps) => {
     const { socket, loadingSocket } = useSocket();
     const { user, loadingUser } = useUser();
     const isMobile = useIsMobile();
@@ -39,6 +41,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
     const [isMobileChatsSidebarOpen, setMobileChatsSidebarOpen] = useState(false);
     const [isMobileUsersSidebarOpen, setMobileUsersSidebarOpen] = useState(false);
     const [newConversationMode, setNewConversationMode] = useState('single');
+    const [blockedUserIds, setBlockedUserIds] = useState<string[]>(initialBlockedUserIds);
 
     // Content handed off from the PWA share target (app/share-target/route.ts,
     // see ?shared= below) - held here until the user actually picks who to
@@ -190,6 +193,32 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
         }));
     };
 
+    // Optimistic - reverted if the server call fails, since a wrong "blocked"
+    // state left showing would mean a message actually still sends (or vice
+    // versa) without the UI reflecting it.
+    const handleToggleBlock = async (targetUserId: string, shouldBlock: boolean) => {
+        setBlockedUserIds(prev =>
+            shouldBlock ? [...prev, targetUserId] : prev.filter(id => id !== targetUserId)
+        );
+        const result = shouldBlock ? await blockUser(targetUserId) : await unblockUser(targetUserId);
+        if (!result.success) {
+            setBlockedUserIds(prev =>
+                shouldBlock ? prev.filter(id => id !== targetUserId) : [...prev, targetUserId]
+            );
+            toast.error(result.error || `Failed to ${shouldBlock ? 'block' : 'unblock'} user`);
+            return;
+        }
+        // Presence is only ever recomputed server-side on connect/disconnect
+        // (see socket/handlers.js's handleUpdateConnectedUsers) - a block
+        // relationship changing doesn't fire either of those, so without
+        // this nudge, a blocked user who's already online would keep seeing
+        // the blocker's presence until their next reconnect. Reuses the
+        // socket's own existing 'update connected users' refresh request
+        // rather than a new event - the server recomputes and re-broadcasts
+        // to every connected socket, correctly updating everyone's view.
+        socket?.emit('update connected users');
+    };
+
     // Modal handlers
     const handleOpenModal = (mode: string) => {
         setNewConversationMode(mode);
@@ -226,7 +255,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
     }
 
     return (
-        <div className="h-[calc(100dvh-5rem)] xl:h-[calc(100dvh-80px)] xl:mb-20 flex overflow-hidden bg-linear-to-br bg-white dark:from-gray-900 dark:to-gray-800">
+        <div className="viewport-between-bars flex overflow-hidden bg-linear-to-br bg-white dark:from-gray-900 dark:to-gray-800">
             <PushNotificationManager />
 
             <ConversationsBar
@@ -260,13 +289,14 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
                 />
 
                 {participants.current && (
-                    <div className="shrink-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-3 xl:p-4 xl:pb-24 shadow-lg z-15">
+                    <div className="shrink-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-3 xl:p-4 shadow-lg z-15">
                         <ChatInputBar
                             message={messageToSend}
                             setMessage={setMessageToSend}
                             participants={participants}
                             handleSendMessage={handleSendMessage}
                             handleTyping={handleTyping}
+                            isBlocked={participants.current.length === 1 && blockedUserIds.includes(participants.current[0]._id)}
                         />
                     </div>
                 )}
@@ -278,6 +308,8 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
                 conversationId={currentConversationId.current}
                 isMobileUsersSidebarOpen={isMobileUsersSidebarOpen}
                 initialUsers={initialUsers}
+                blockedUserIds={blockedUserIds}
+                onToggleBlock={handleToggleBlock}
             />
 
             {isMobileChatsSidebarOpen && (

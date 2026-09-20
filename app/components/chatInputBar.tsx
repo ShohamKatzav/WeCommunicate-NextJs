@@ -16,13 +16,17 @@ interface MessageInputProps {
     participants: RefObject<ChatUser[] | null | undefined>;
     handleSendMessage: (overrideFile?: FileDTO) => Promise<void>;
     handleTyping: () => void;
+    isBlocked: boolean;
 }
 
-const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, handleTyping }: MessageInputProps) => {
+const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, handleTyping, isBlocked }: MessageInputProps) => {
     const isMobile = useIsMobile();
     const { user } = useUser();
     const [isRecordingVoice, setIsRecordingVoice] = useState(false);
-    const canSend = (message.text?.trim() || message.file) && participants.current;
+    // The server rejects a blocked 1:1 send regardless (see
+    // chatActions.saveMessage) - disabling here too avoids the confusing
+    // "I hit send and it just vanished with a vague error" experience.
+    const canSend = (message.text?.trim() || message.file) && participants.current && !isBlocked;
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && canSend) {
@@ -46,6 +50,11 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
     return (
         <div className="w-full xl:w-[75%] xl:place-self-center">
             <div className={`flex flex-col gap-2 ${isMobile ? 'px-3' : ''}`}>
+                {isBlocked && (
+                    <div className="rounded-lg bg-gray-100 dark:bg-gray-700 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 text-center">
+                        {"You can't send messages to a blocked user. Unblock them from the users list to continue."}
+                    </div>
+                )}
                 {message.replyTo && (
                     <div className="flex items-center justify-between gap-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-l-4 border-green-500 px-3 py-2">
                         <div className="min-w-0">

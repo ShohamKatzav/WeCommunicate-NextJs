@@ -1,9 +1,16 @@
 import type { NextConfig } from "next";
 
+// React's development build needs eval() for debugging features such as
+// reconstructing a callstack from another environment, and refuses with a
+// console error without it. Production React never calls eval(), so this stays
+// out of the deployed policy - allowing it there would hand an injected script
+// the easiest possible way to run arbitrary code.
+const DEV_SCRIPT_SOURCES = process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'";
+
 const CSP_DIRECTIVES = [
     "default-src 'self'",
     // Scripts: Your app logic, Google Maps libraries
-    "script-src 'self' https://maps.googleapis.com https://maps.gstatic.com 'unsafe-inline'",
+    `script-src 'self' https://maps.googleapis.com https://maps.gstatic.com 'unsafe-inline'${DEV_SCRIPT_SOURCES}`,
 
     // Styles: Your CSS, Google Fonts stylesheets
     "style-src 'self' 'unsafe-inline' https://maps.googleapis.com https://fonts.googleapis.com",

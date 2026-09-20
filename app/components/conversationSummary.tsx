@@ -151,7 +151,10 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                             </div>
                             <div className="text-sm text-gray-500 break-all col-span-2">{lastMessage.status?.includes("revoked")
                                 ? "Message deleted"
-                                : (lastMessage.text || "sent file " + lastMessage.file?.pathname)}
+                                : (lastMessage.text
+                                    || (lastMessage.file?.pathname?.includes("voice-message")
+                                        ? "Voice message"
+                                        : "sent file " + lastMessage.file?.pathname))}
                             </div>
                         </div>
                         :

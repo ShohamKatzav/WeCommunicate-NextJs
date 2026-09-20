@@ -53,7 +53,7 @@ const Contact = () => {
                             href={method.link}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="group bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 transform hover:scale-105 transition-all duration-200 flex items-center space-x-4"
+                            className="group bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700 p-6 transform hover:scale-105 transition-all duration-200 flex items-center space-x-4"
                         >
                             <div className="shrink-0">
                                 <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-full group-hover:bg-blue-200 dark:group-hover:bg-blue-800 transition-colors duration-200">
@@ -74,7 +74,7 @@ const Contact = () => {
 
                 {/* GitHub Section */}
                 <div className="mt-16 max-w-4xl mx-auto">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700 p-8 text-center">
                         <div className="mx-auto w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mb-6">
                             <Github className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                         </div>

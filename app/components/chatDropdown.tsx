@@ -2,11 +2,13 @@ import { RefObject, useState, useRef, useEffect } from "react";
 import { HiOutlineEllipsisHorizontalCircle, HiOutlineUsers } from "react-icons/hi2";
 import { RiHistoryLine, RiLogoutBoxRLine } from "react-icons/ri";
 import { MdDeleteForever } from "react-icons/md";
+import { Timer } from "lucide-react";
 import useIsMobile from "../hooks/useIsMobile";
 import Message from "@/types/message";
 import ChatUser from "@/types/chatUser";
 import { cleanHistory, deleteConversation } from "../lib/conversationActions";
 import DeleteConversationModal from "./deleteConversationModal";
+import DisappearingMessagesModal from "./disappearingMessagesModal";
 import { toast } from "sonner";
 import ConversationDetailsModal from "./conversationDetailsModal";
 
@@ -17,6 +19,7 @@ interface ChatDropdownProps {
     conversationId: string;
     participants: RefObject<ChatUser[] | null | undefined>;
     updateConversationsBar: (message: Message | null, mode?: string, cleanId?: string) => Promise<void>;
+    onDisappearingMessagesChange?: (seconds: number) => void;
 }
 
 const ChatDropdown = ({
@@ -25,7 +28,8 @@ const ChatDropdown = ({
     setChat,
     conversationId,
     participants,
-    updateConversationsBar
+    updateConversationsBar,
+    onDisappearingMessagesChange
 }: ChatDropdownProps) => {
 
     const isMobile = useIsMobile();
@@ -34,6 +38,7 @@ const ChatDropdown = ({
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showParticipantsModal, setShowParticipantsModal] = useState(false);
+    const [showDisappearingMessagesModal, setShowDisappearingMessagesModal] = useState(false);
 
     // Close dropdown when delete modal open/close
     useEffect(() => {
@@ -136,6 +141,17 @@ const ChatDropdown = ({
                     </button>
                     <hr className="my-0 border-stone-200 dark:border-gray-700" />
                     <button
+                        onClick={() => {
+                            setShowDisappearingMessagesModal(true);
+                            setShowDropdown(false);
+                        }}
+                        disabled={!conversationId}
+                        className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <Timer size={18} /> Disappearing Messages
+                    </button>
+                    <hr className="my-0 border-stone-200 dark:border-gray-700" />
+                    <button
                         onClick={() => setShowDeleteModal(true)}
                         className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-100 dark:hover:bg-gray-700"
                     >
@@ -155,6 +171,13 @@ const ChatDropdown = ({
                 <ConversationDetailsModal
                     participants={participants}
                     setShowParticipantsModal={setShowParticipantsModal}
+                />
+            )}
+            {showDisappearingMessagesModal && conversationId && (
+                <DisappearingMessagesModal
+                    conversationId={conversationId}
+                    onClose={() => setShowDisappearingMessagesModal(false)}
+                    onSaved={onDisappearingMessagesChange}
                 />
             )}
         </div>

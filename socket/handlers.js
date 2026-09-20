@@ -22,6 +22,24 @@ async function isModerator(email) {
     return Boolean(account?.isModerator);
 }
 
+// Mirrors AccountRepository.isBlockedEitherWay (TypeScript, used by
+// chatActions.saveMessage) - duplicated here rather than imported because
+// this file works with models directly, not repositories, and the check is
+// small. If either side has blocked the other, messaging between them stops.
+async function isBlockedEitherWay(emailA, emailB) {
+    if (!emailA || !emailB) return false;
+    const [accountA, accountB] = await Promise.all([
+        Account.findOne({ email: emailA }).select('_id blocked').lean(),
+        Account.findOne({ email: emailB }).select('_id blocked').lean()
+    ]);
+    if (!accountA || !accountB) return false;
+    const idA = accountA._id.toString();
+    const idB = accountB._id.toString();
+    const blockedByA = (accountA.blocked || []).some(id => id.toString() === idB);
+    const blockedByB = (accountB.blocked || []).some(id => id.toString() === idA);
+    return blockedByA || blockedByB;
+}
+
 export default async function handleSocketConnection(io, socket) {
     // The authenticated identity comes from authMiddleware, which verifies
     // the JWT - never from client-supplied handshake headers.
@@ -53,8 +71,11 @@ export default async function handleSocketConnection(io, socket) {
         socket.on('stop typing', (data) => handleStopTyping(socket, data));
 
         await RedisService.addUserSocket(email, socket.id);
-        const allUsers = await RedisService.getOnlineUsers();
-        io.emit('update connected users', allUsers);
+        // Routed through the same per-viewer filtering as every other
+        // presence update (see handleUpdateConnectedUsers) - a raw
+        // io.emit here would leak a blocker's presence to this newly
+        // connected socket even though every other update correctly hides it.
+        await handleUpdateConnectedUsers(io);
     }
     catch (error) {
         console.error('Socket connection error:', error);
@@ -106,9 +127,47 @@ async function handleMessageRead(io, socket, data) {
     }
 }
 
+// Presence is broadcast per-viewer, not as one global list to everyone -
+// someone who has blocked you shouldn't reveal their online status to you
+// (deliberately still one-directional: you blocking them doesn't hide your
+// own presence from them, only theirs from you, matching how the message
+// block itself already only rejects sends, not visibility of the blocker).
+// One query for however many users are online, not one per viewer.
 async function handleUpdateConnectedUsers(io) {
-    const fresh = await RedisService.getOnlineUsers();
-    io.emit('update connected users', fresh);
+    const allOnline = await RedisService.getOnlineUsers();
+    const sockets = await io.fetchSockets();
+    if (sockets.length === 0) return;
+
+    if (allOnline.length === 0) {
+        sockets.forEach(s => s.emit('update connected users', allOnline));
+        return;
+    }
+
+    const onlineEmails = allOnline.map(u => u.email);
+    const accounts = await Account.find({ email: { $in: onlineEmails } })
+        .select('email blocked')
+        .lean();
+    const emailById = new Map(accounts.map(a => [a._id.toString(), a.email.toLowerCase()]));
+
+    // targetEmail -> set of emails that have blocked them.
+    const blockersOf = new Map();
+    for (const account of accounts) {
+        for (const blockedId of account.blocked || []) {
+            const targetEmail = emailById.get(blockedId.toString());
+            if (!targetEmail) continue; // the account they blocked isn't online right now
+            if (!blockersOf.has(targetEmail)) blockersOf.set(targetEmail, new Set());
+            blockersOf.get(targetEmail).add(account.email.toLowerCase());
+        }
+    }
+
+    for (const s of sockets) {
+        const viewerEmail = s.data.email?.toLowerCase();
+        const blockers = viewerEmail ? blockersOf.get(viewerEmail) : undefined;
+        const filtered = blockers
+            ? allOnline.filter(u => !blockers.has(u.email?.toLowerCase()))
+            : allOnline;
+        s.emit('update connected users', filtered);
+    }
 }
 
 async function handlePublishMessage(io, socket, message) {
@@ -125,6 +184,20 @@ async function handlePublishMessage(io, socket, message) {
         member => member.email?.toLowerCase() === socket.data.email?.toLowerCase()
     );
     if (!isMember) return;
+
+    // Real-time fan-out is the last line of defence against a client that
+    // emits 'publish message' directly instead of going through the
+    // saveMessage server action (which already rejects blocked 1:1 sends
+    // before they're ever persisted) - defense in depth, not the primary
+    // enforcement point. 1:1 only, same scope as saveMessage's own check.
+    if (conversation.members.length === 2) {
+        const otherMember = conversation.members.find(
+            member => member.email?.toLowerCase() !== socket.data.email?.toLowerCase()
+        );
+        if (otherMember && await isBlockedEitherWay(message.sender, otherMember.email)) {
+            return;
+        }
+    }
 
     for (const member of conversation.members) {
         if (member.email.toUpperCase() === message.sender.toUpperCase()) continue;

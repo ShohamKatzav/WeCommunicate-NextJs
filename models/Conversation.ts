@@ -4,6 +4,7 @@ interface IConversation extends Document {
     members?: Schema.Types.ObjectId[];
     messages?: Schema.Types.ObjectId[];
     deletedBy?: Schema.Types.ObjectId[];
+    disappearingMessagesSeconds?: number;
 }
 
 const ConversationSchema = new Schema<IConversation>({
@@ -22,6 +23,13 @@ const ConversationSchema = new Schema<IConversation>({
         ref: 'Account',
         required: false,
         default: []
+    },
+    // 0/undefined = off. Applied to new messages only, at send time (see
+    // MessageRepository.SaveMessage) - changing this never retroactively
+    // schedules or cancels expiry for messages already sent.
+    disappearingMessagesSeconds: {
+        type: Number,
+        required: false
     }
 });
 

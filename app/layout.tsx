@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import ClientProviders from "./context/clientProviders";
 import InstallPrompt from "./components/InstallPrompt";
+import BottomPromptStack from "./components/bottomPromptStack";
 import OfflineHandler from "./components/offlineHandler";
 import "./globals.css";
 
@@ -42,9 +43,17 @@ export default function RootLayout({
     geistSans.variable,
     geistMono.variable,
     "antialiased",
-    "bg-gradient-to-b from-gray-50 via-white to-gray-100",
-    "text-gray-900",
-    "dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 dark:text-gray-50",
+    // next/font defines --font-geist-sans on this element, not on :root, so the
+    // theme's font-sans resolves to nothing and the `font-sans` utility falls
+    // through to the generic stack. Pointing at the variable directly is what
+    // actually renders in Geist rather than merely downloading it.
+    "font-[family-name:var(--font-geist-sans)]",
+    // A flat surface one step off white, not white and not a gradient: cards
+    // are bg-white, so they need the page behind them to differ everywhere,
+    // and a gradient on <body> tiles (and visibly seams) on any page whose
+    // content is shorter than the viewport.
+    "bg-gray-100 text-gray-900",
+    "dark:bg-gray-900 dark:text-gray-50",
   ].join(" ");
 
   return (
@@ -53,10 +62,12 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon.png" />
       </head>
       <body className={bodyClassName}>
-        <InstallPrompt />
         <OfflineHandler>
           <ClientProviders>{children}</ClientProviders>
         </OfflineHandler>
+        <BottomPromptStack>
+          <InstallPrompt />
+        </BottomPromptStack>
       </body>
     </html>
   );

@@ -260,11 +260,11 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
         step === 'otp' ? handleVerifyOTP : handleResetPassword;
 
     return (
-        <form onSubmit={handleSubmit} className="h-full">
-            <div className="mainContainer px-3 md:p-4 grid md:grid-cols-3 h-full min-h-0">
-                <div className='md:col-start-2 grid grid-rows-2 md:grid-rows-3 gap-0 h-full min-h-0'>
-                    <div className={`titleContainer ${generalError || successMessage ? 'row-span-2' : 'row-span-1'} md:row-span-1 md:mb-0`}>
-                        <h1 className="mb-0 md:mb-0 text-3xl font-extrabold text-gray-900 dark:text-white md:text-3xl lg:text-6xl text-center">
+        <form onSubmit={handleSubmit}>
+            <div className="mainContainer px-3 md:p-4 grid md:grid-cols-3">
+                <div className='md:col-start-2 flex flex-col gap-3 md:gap-4'>
+                    <div className="titleContainer">
+                        <h1 className="mb-0 md:mb-0 text-3xl font-extrabold text-gray-900 dark:text-white md:text-4xl lg:text-5xl text-center">
                             <span className="text-transparent bg-clip-text bg-linear-to-r to-indigo-700 from-pink-400">
                                 {step === 'email' && mode === 'forgot' ? 'Reset Your Password' :
                                     step === 'email' && mode === 'sign-up' ? 'Create Your Account on WeCommunicate' :
@@ -283,14 +283,14 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                                 </div>
                             </div>
                         )}
-                        <p className="text-center text-gray-600 dark:text-gray-400 mt-0 md:mt-1 md:text-3xl text-wrap mb-2 md:mb-3">
+                        <p className="text-center text-gray-600 dark:text-gray-400 mt-0 md:mt-1 md:text-xl text-wrap mb-2 md:mb-3">
                             {step === 'email' ? `Enter your ${channel === 'sms' ? 'phone number' : 'email'} to receive a verification code` :
                                 step === 'otp' ? `Enter the 6-digit code sent to your ${channel === 'sms' ? 'phone' : 'email'}` :
                                     'Create a new password for your account'}
                         </p>
                     </div>
 
-                    <div className={`inputContainer row-span-1 ${generalError || successMessage ? 'row-start-4' : 'row-start-3'} md:row-start-2 -mt-3 space-y-1 md:grid grid-cols-5 p-1 md:mt-0`}>
+                    <div className="inputContainer space-y-1 md:grid grid-cols-5 p-1">
                         {step === 'email' && (
                             <div className="md:col-start-2 md:col-span-3">
                                 <div className="hidden md:flex justify-center mb-3">
@@ -299,8 +299,29 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                                     </div>
                                 </div>
 
-                                <div className="mb-3 flex rounded-lg bg-gray-100 p-1 dark:bg-gray-700">
-                                    {(['email', 'sms'] as const).map(option => <button key={option} type="button" onClick={() => { setChannel(option); if (option === 'sms') setEmail(sanitizePhoneInput(email)); }} className={`flex-1 rounded-md py-2 text-sm font-medium ${channel === option ? 'bg-white text-indigo-700 shadow dark:bg-gray-600 dark:text-white' : ''}`}>{option === 'email' ? 'Email' : 'SMS'}</button>)}
+                                <div
+                                    className="mb-3 flex rounded-lg border border-gray-300 bg-gray-200 p-1 dark:border-gray-500 dark:bg-gray-800"
+                                    role="group"
+                                    aria-label="Verification method"
+                                >
+                                    {(['email', 'sms'] as const).map(option => (
+                                        <button
+                                            key={option}
+                                            type="button"
+                                            aria-pressed={channel === option}
+                                            onClick={() => {
+                                                setChannel(option);
+                                                if (option === 'sms') setEmail(sanitizePhoneInput(email));
+                                            }}
+                                            className={`flex-1 rounded-md border py-2 text-sm font-medium transition-colors ${
+                                                channel === option
+                                                    ? 'border-indigo-500 bg-white text-indigo-700 shadow-sm dark:border-indigo-400 dark:bg-gray-900 dark:text-indigo-300'
+                                                    : 'border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
+                                            }`}
+                                        >
+                                            {option === 'email' ? 'Email' : 'SMS'}
+                                        </button>
+                                    ))}
                                 </div>
                                 {mode === 'sign-up' && <input id="nickname" value={nickname} onChange={ev => setNickname(ev.target.value)} placeholder="Choose a nickname" className="inputBox mb-3 w-full" maxLength={40} required />}
                                 <label htmlFor="email" className="sr-only">Email or phone number</label>
@@ -461,7 +482,7 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                         )}
                     </div>
 
-                    <div className={`${generalError || successMessage ? 'row-start-5' : 'row-start-4'} row-span-1 md:row-start-3 grid`}>
+                    <div className="grid">
                         <div className="inputContainer flex flex-col items-center justify-self-center">
                             <button
                                 className="inputButton disabled:opacity-50 disabled:cursor-not-allowed w-full max-w-sm md:w-3xs mx-auto block"

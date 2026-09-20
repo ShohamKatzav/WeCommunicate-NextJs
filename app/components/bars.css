@@ -1,10 +1,30 @@
-/* Footer.css */
+/* Heights come from --navbar-height / --footer-height (app/globals.css) because
+   the space reserved for these bars is calculated from them elsewhere -
+   hard-coding them twice is how the navbar and its spacer drifted apart. */
 .footer {
   color: #fff;
-  position: fixed;
-  left: 0;
-  bottom: 0;
   width: 100%;
+  /* Eats leftover space in .page-shell so short pages (login, forgot
+     password, OTP) still park the footer on the bottom of the viewport. */
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
+/* min-height, not height: long pages must be allowed to grow. Unlayered so
+   it can't lose to a utility the way the previous Tailwind arbitrary
+   min-h-[calc(...)] did, which left the footer sitting in the middle of
+   login with a strip of page background below it. */
+.page-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - var(--content-top-offset));
+}
+
+/* Content stays its natural height so OTP/login forms don't stretch to
+   fill the shell and shove the footer off-screen. The footer's
+   margin-top: auto takes the leftover space instead. */
+.page-shell > :first-child {
+  flex: 0 0 auto;
 }
 
 .navbar {
@@ -13,27 +33,19 @@
   left: 0;
   top: 0;
   width: 100%;
-  height: 64px;
-  min-height: 64px;
+  height: var(--navbar-height);
+  min-height: var(--navbar-height);
   z-index: 100;
 }
 
+/* This wrapper holds nothing but the fixed navbar, so its own height is 0 and
+   this margin is the entire reason page content clears the bar. */
 .container {
-  margin-bottom: 8rem;
-}
-
-.footer p {
-  margin: 0;
+  margin-bottom: var(--content-top-offset);
 }
 
 @media screen and (max-width: 768px) {
-  .navbar {
-    height: 72px;
-    min-height: 72px;
-  }
-
   .container {
-    margin-bottom: 6rem;
     padding: 0 20px;
   }
 

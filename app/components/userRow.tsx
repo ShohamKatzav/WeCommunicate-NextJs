@@ -1,3 +1,4 @@
+import { ShieldOff, ShieldCheck } from "lucide-react";
 import ChatUser from "@/types/chatUser";
 import { AsShortName } from "../utils/stringFormat";
 import { useSocket } from "../hooks/useSocket";
@@ -6,9 +7,11 @@ interface ListProps {
     chatUser: ChatUser;
     getLastMessages: (participantFromList: ChatUser[]) => Promise<void>;
     active?: boolean;
+    isBlocked: boolean;
+    onToggleBlock: (targetUserId: string, shouldBlock: boolean) => Promise<void>;
 }
 
-const UsersRow = ({ chatUser, getLastMessages, active }: ListProps) => {
+const UsersRow = ({ chatUser, getLastMessages, active, isBlocked, onToggleBlock }: ListProps) => {
 
     const { socket } = useSocket();
 
@@ -40,15 +43,31 @@ const UsersRow = ({ chatUser, getLastMessages, active }: ListProps) => {
                         {chatUser.nickname || AsShortName(chatUser.email || '')}
                     </div>
                     {
-                        active ?
-                            <div className="text-xs text-green-600 dark:text-green-400">
-                                Online
+                        isBlocked ?
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                                Blocked
                             </div> :
-                            <div className="text-xs text-red-600 dark:text-red-400">
-                                Offline
-                            </div>
+                            active ?
+                                <div className="text-xs text-green-600 dark:text-green-400">
+                                    Online
+                                </div> :
+                                <div className="text-xs text-red-600 dark:text-red-400">
+                                    Offline
+                                </div>
                     }
                 </div>
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleBlock(chatUser._id, !isBlocked);
+                    }}
+                    aria-label={isBlocked ? `Unblock ${chatUser.nickname || chatUser.email}` : `Block ${chatUser.nickname || chatUser.email}`}
+                    title={isBlocked ? 'Unblock' : 'Block'}
+                    className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 shrink-0"
+                >
+                    {isBlocked ? <ShieldCheck size={18} /> : <ShieldOff size={18} />}
+                </button>
             </div>
         </div></>)
 }

@@ -13,12 +13,18 @@ export default class Navbar {
 
     constructor(page: Page) {
         this.page = page;
-        this.links = page.locator('.nav-links');
-        this.chatLink = page.locator('a:has-text("Chat")');
-        this.locationsLink = page.locator('a:has-text("Locations")');
-        this.aboutLink = page.locator('a:has-text("About")');
-        this.contactLink = page.locator('a:has-text("Contact")');
-        this.logOutLink = page.locator('a:has-text("Log Out")');
+        const navbar = page.locator('nav.navbar');
+        this.links = navbar.locator('.nav-links');
+        // Navbar renders these link labels lowercase ("chat", "log out", ...)
+        // and only capitalizes them visually via a CSS `capitalize` class,
+        // which doesn't change the accessible name - so `exact: true` with a
+        // capitalized string never matched. A case-insensitive, anchored
+        // regex keeps the exact-match intent without depending on casing.
+        this.chatLink = navbar.getByRole('link', { name: /^chat$/i });
+        this.locationsLink = navbar.getByRole('link', { name: /^locations$/i });
+        this.aboutLink = navbar.getByRole('link', { name: /^about$/i });
+        this.contactLink = navbar.getByRole('link', { name: /^contact$/i });
+        this.logOutLink = navbar.getByRole('link', { name: /^log out$/i });
     }
 
     async logout(): Promise<void> {

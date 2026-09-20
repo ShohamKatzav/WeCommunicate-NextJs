@@ -35,13 +35,19 @@ const MessageBubble = ({ message, onReply }: MessageBubbleProps) => {
     message.status?.includes("revoked") ?? false
   );
 
-  const sender = message.sender === user?.email ? "You" : AsShortName(message.sender);
+  const isOwnMessage = message.sender === user?.email;
+  const sender = isOwnMessage ? "You" : AsShortName(message.sender);
   const dateToDisplay = new Date(message.date!).toLocaleString();
-  const messageStyle = `self-start max-w-[80%] md:max-w-[60%] px-3.5 py-2 md:px-4 md:py-3 overflow-hidden 
-  ${message.sender === user?.email ? "bg-green-500 rounded-br-3xl justify-self-start"
-      : "bg-gray-500 rounded-bl-3xl col-start-2 md:col-start-3 justify-self-end"
+  const messageStyle = `max-w-[80%] md:max-w-[60%] px-3.5 py-2 md:px-4 md:py-3 overflow-hidden 
+  ${isOwnMessage ? "bg-green-500 rounded-br-3xl" : "bg-gray-500 rounded-bl-3xl"
     } rounded-tl-3xl rounded-tr-xl text-white wrap-break-word mb-3 md:mb-6
     ${deleted ? "gap-1 flex text-lg md:text-2xl" : "gap-6"}`;
+  // Own messages sit on the left and received ones on the right - which is also
+  // the side each bubble's squared-off corner points at. The side has to be set
+  // on this row, because the bubble itself only ever carried justify-self and
+  // col-start, and neither does anything unless the parent is a grid: every
+  // bubble was landing on the left regardless of sender.
+  const messageRowStyle = `flex items-center ${isOwnMessage ? "justify-start" : "justify-end"}`;
 
 
   useEffect(() => {
@@ -74,25 +80,26 @@ const MessageBubble = ({ message, onReply }: MessageBubbleProps) => {
   };
 
   if (deleted) {
-    const deletedMessageText = message.sender === user?.email ? 'You deleted this message' :
+    const deletedMessageText = isOwnMessage ? 'You deleted this message' :
       'This message was deleted';
     return (
-      <div
-        className={messageStyle}
-        data-testid={message.sender === user?.email ? "sent-message" : "received-message"}
-      >
-        <IoBan size={isMobile ? 25 : 30} />
-        {deletedMessageText}
-      </div >
+      <div className={messageRowStyle}>
+        <div
+          className={messageStyle}
+          data-testid={isOwnMessage ? "sent-message" : "received-message"}
+        >
+          <IoBan size={isMobile ? 25 : 30} />
+          {deletedMessageText}
+        </div >
+      </div>
     )
   }
 
   const isPending = !message._id?.match(/^[a-f0-9]{24}$/);
-  const isOwnMessage = message.sender === user?.email;
   const isRead = message.status === 'read';
 
   return (
-    <div className="flex items-center">
+    <div className={messageRowStyle}>
       <div onClick={() => {
         if (isMobile) setShowActions(prev => !prev);
       }}
@@ -105,11 +112,11 @@ const MessageBubble = ({ message, onReply }: MessageBubbleProps) => {
         <div className="text-sm md:text-lg text-gray-200 mb-1">{sender}</div>
 
         {message.replyTo && (
-          <div className="border-l-2 border-gray-200/70 pl-2 mb-1.5 text-sm md:text-base text-gray-200/80 wrap-break-word">
+          <div className="border-l-2 border-white/80 bg-black/15 rounded-r-md pl-2 pr-2 py-1 mb-1.5 text-sm md:text-base text-white/95 wrap-break-word">
             <div className="font-medium">
               {message.replyTo.sender === user?.email ? "You" : AsShortName(message.replyTo.sender)}
             </div>
-            <div className="line-clamp-2">{message.replyTo.snippet || "Attachment"}</div>
+            <div className="line-clamp-2 opacity-90">{message.replyTo.snippet || "Attachment"}</div>
           </div>
         )}
 
@@ -135,15 +142,20 @@ const MessageBubble = ({ message, onReply }: MessageBubbleProps) => {
               />
             )}
 
-          {message.file?.contentType.includes("audio")
+          {(message.file?.contentType.includes("audio") || message.file?.pathname?.includes("voice-message"))
             && message.file && (
-              <audio controls>
-                <source src={message.file.url} type={message.file.contentType} />
+              // An unsized <audio> keeps its intrinsic ~300px width, which is
+              // wider than a bubble gets on a phone - and the bubble clips
+              // overflow, so the controls were cut off mid-player. Fluid up to
+              // the width of a voice note, never wider than the bubble.
+              <audio controls preload="metadata" className="w-full max-w-[320px]">
+                <source src={message.file.url} type={message.file.contentType?.startsWith("video/webm") ? "audio/webm" : message.file.contentType} />
                 Your browser does not support the audio element.
               </audio>
             )}
 
           {message.file?.contentType.includes("video")
+            && !message.file?.pathname?.includes("voice-message")
             && message.file && (
               <video
                 width="320"
@@ -160,6 +172,7 @@ const MessageBubble = ({ message, onReply }: MessageBubbleProps) => {
           {(!message.file?.contentType.includes("image")) &&
             (!message.file?.contentType.includes("audio")) &&
             (!message.file?.contentType.includes("video")) &&
+            !message.file?.pathname?.includes("voice-message") &&
             message.file?.downloadUrl && (
               <div className="text-lg md:text-2xl">
                 <div>Has sent a document</div>
@@ -178,15 +191,15 @@ const MessageBubble = ({ message, onReply }: MessageBubbleProps) => {
             )}
         </>
         }
-        <div className="text-xs md:text-sm text-gray-200 mt-1 text-right flex items-center justify-end gap-1">
+        <div className={`text-xs md:text-sm mt-1 text-right flex items-center justify-end gap-1 ${isOwnMessage ? "text-white/85" : "text-gray-200"}`}>
           {dateToDisplay}
           {
             isPending && <TbClockQuestion color="red" size={38} className="inline p-2" />
           }
           {isOwnMessage && !isPending && (
             isRead
-              ? <CheckCheck size={16} className="text-blue-300" aria-label="Read" />
-              : <Check size={16} aria-label="Sent" />
+              ? <CheckCheck size={18} strokeWidth={2.75} className="shrink-0 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.55)]" aria-label="Read" />
+              : <Check size={18} strokeWidth={2.5} className="shrink-0 text-white/90 drop-shadow-[0_1px_1px_rgba(0,0,0,0.45)]" aria-label="Sent" />
           )}
         </div>
       </div>
@@ -203,7 +216,7 @@ const MessageBubble = ({ message, onReply }: MessageBubbleProps) => {
         </button>
       )}
 
-      {message.sender === user?.email && (
+      {isOwnMessage && (
         <button onClick={deleteMessageHandler}
           ref={deleteButtonRef}
           className='flex'

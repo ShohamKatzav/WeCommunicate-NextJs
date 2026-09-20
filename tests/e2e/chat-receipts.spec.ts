@@ -42,7 +42,9 @@ customTest.describe('Delivery and read receipts', () => {
         await (await pOManager2.getChatPage().selectUser(firstUserShortName)).click();
         await pOManager2.getChatPage().sendMessage(textToSend);
 
+        await expect(authPage.getChatPage().getConversationRow(secondUserShortName)).toContainText(textToSend);
         await (await authPage.getChatPage().selectUser(secondUserShortName)).click();
+        await expect(authPage.getChatPage().getReceivedMessageByText(textToSend)).toBeVisible();
         await expect(authPage.getChatPage().unreadDivider).toBeVisible();
 
         await authPage.getChatPage().leaveChatRoom();

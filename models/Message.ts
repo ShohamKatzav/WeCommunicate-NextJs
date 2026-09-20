@@ -16,6 +16,7 @@ interface IMessage extends Document {
     file?: Schema.Types.ObjectId;
     conversation: Schema.Types.ObjectId;
     replyTo?: IReplyTo;
+    expiresAt?: Date;
 }
 
 const MessageSchema = new Schema<IMessage>({
@@ -62,6 +63,23 @@ const MessageSchema = new Schema<IMessage>({
         },
         required: false,
         _id: false
+    },
+    // Set at send time from the conversation's disappearingMessagesSeconds
+    // setting (see Conversation.ts) - undefined means "never expires".
+    // Deletion itself is handled entirely by Atlas's TTL monitor via the
+    // index below, not application code: no cron/server timer needed, so
+    // Render's free-tier spin-down can't interfere with it. That monitor
+    // only sweeps roughly once a minute, so expiry is approximate, not
+    // instant - don't rely on it for anything tighter than that.
+    //
+    // Known gap: this only deletes the Message document. The FileModel doc
+    // and the actual blob storage object for an expired message's
+    // attachment are orphaned - cleaning those up needs a separate pass
+    // (e.g. a scheduled job diffing FileModel against still-referenced
+    // files) that's out of scope here.
+    expiresAt: {
+        type: Date,
+        required: false
     }
 });
 
@@ -74,5 +92,11 @@ const MessageSchema = new Schema<IMessage>({
 // "offline"), so it was dropped in favor of a regex scan over this
 // already-narrowed set.
 MessageSchema.index({ conversation: 1, date: 1 });
+
+// TTL index: expireAfterSeconds: 0 means "delete at expiresAt", not
+// "expiresAt seconds after insertion" - the actual expiry instant is
+// computed at send time (see expiresAt's own comment) and stored directly.
+// Documents without expiresAt are never touched by this index.
+MessageSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 export default models?.Message || model<IMessage>('Message', MessageSchema);

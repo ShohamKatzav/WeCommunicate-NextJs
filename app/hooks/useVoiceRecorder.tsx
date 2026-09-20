@@ -119,8 +119,14 @@ export const useVoiceRecorder = ({ onRecorded }: UseVoiceRecorderProps) => {
                 // matches the bare MIME type, not codec parameters, so
                 // uploading with the codecs suffix still attached gets
                 // rejected by Vercel Blob as an unrecognized content type.
+                // Chrome (especially headless / fake devices) can still
+                // report video/webm for an audio-only stream - coerce that
+                // so the bubble renders an audio player, not a video tag.
                 const recordedMimeType = (recorder.mimeType || mimeType || 'audio/webm').split(';')[0];
-                void uploadAndSend(recordedMimeType);
+                const uploadMimeType = recordedMimeType.startsWith('video/webm')
+                    ? 'audio/webm'
+                    : recordedMimeType;
+                void uploadAndSend(uploadMimeType);
             };
 
             mediaRecorderRef.current = recorder;

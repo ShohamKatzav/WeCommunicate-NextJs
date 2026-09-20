@@ -33,6 +33,9 @@ export default class ChatPage {
     replyPreview: Locator;
     shareToHeader: Locator;
     lastSentAudio: Locator;
+    blockedComposerNotice: Locator;
+    outboxToggle: Locator;
+    retryOutboxButton: Locator;
 
     constructor(page: Page) {
         this.page = page;
@@ -67,6 +70,9 @@ export default class ChatPage {
         this.replyPreview = page.getByText(/^Replying to /);
         this.shareToHeader = page.getByRole('heading', { name: 'Share to...' });
         this.lastSentAudio = page.getByTestId('sent-message').locator('audio').last();
+        this.blockedComposerNotice = page.getByText("You can't send messages to a blocked user");
+        this.outboxToggle = page.getByRole('button', { name: /pending item/ });
+        this.retryOutboxButton = page.getByRole('button', { name: 'Retry now' });
     }
 
     async navigateToChatPage(): Promise<void> {
@@ -289,20 +295,17 @@ export default class ChatPage {
     }
 
     async shareContentViaShareTarget(fields: { title?: string; text?: string; url?: string }): Promise<void> {
-        const redirectedUrl = await this.page.evaluate(async (payload) => {
-            const formData = new FormData();
-            Object.entries(payload).forEach(([key, value]) => {
-                if (value) formData.append(key, value);
-            });
-            const res = await fetch('/share-target', {
-                method: 'POST',
-                body: formData,
-                redirect: 'follow',
-            });
-            return res.url;
-        }, fields);
-
-        await this.page.goto(redirectedUrl, { waitUntil: 'networkidle' });
+        // Use Playwright's request context, not in-page fetch: production's
+        // service worker can intercept page fetch() and fail the POST, and
+        // this is closer to the OS share-sheet's full navigation POST.
+        const response = await this.page.request.post('/share-target', {
+            multipart: {
+                title: fields.title ?? '',
+                text: fields.text ?? '',
+                url: fields.url ?? '',
+            },
+        });
+        await this.page.goto(response.url(), { waitUntil: 'domcontentloaded' });
     }
 
     async attachGeneratedJpeg(): Promise<number> {
@@ -340,6 +343,55 @@ export default class ChatPage {
             input.dispatchEvent(new Event('change', { bubbles: true }));
             return blob.size;
         });
+    }
+
+    getUserRow(username: string): Locator {
+        const capitalizedUsername = username.charAt(0).toUpperCase() + username.slice(1);
+        return this.page.locator('div.p-3.rounded-lg.cursor-pointer').filter({
+            has: this.page.locator('div.font-medium', { hasText: capitalizedUsername })
+        }).first();
+    }
+
+    getBlockButton(username: string): Locator {
+        return this.getUserRow(username).getByRole('button', { name: /^Block / });
+    }
+
+    getUnblockButton(username: string): Locator {
+        return this.getUserRow(username).getByRole('button', { name: /^Unblock / });
+    }
+
+    private waitForServerAction(): Promise<unknown> {
+        return this.page.waitForResponse((response) =>
+            response.request().method() === 'POST' &&
+            Boolean(response.request().headers()['next-action']),
+            { timeout: 15000 }
+        );
+    }
+
+    async blockUser(username: string): Promise<void> {
+        const row = this.getUserRow(username);
+        await expect(row).toBeVisible({ timeout: 10000 });
+        await row.scrollIntoViewIfNeeded();
+        const serverAction = this.waitForServerAction();
+        await this.getBlockButton(username).click();
+        await serverAction;
+        await expect(this.getUnblockButton(username)).toBeVisible({ timeout: 10000 });
+        await expect(row.getByText('Blocked')).toBeVisible();
+    }
+
+    async unblockUserIfBlocked(username: string): Promise<void> {
+        const unblock = this.getUnblockButton(username);
+        if (await unblock.count() === 0) return;
+        await this.getUserRow(username).scrollIntoViewIfNeeded();
+        if (!(await unblock.isVisible().catch(() => false))) return;
+        const serverAction = this.waitForServerAction();
+        await unblock.click();
+        await serverAction.catch(() => { });
+        await expect(this.getBlockButton(username)).toBeVisible({ timeout: 10000 });
+    }
+
+    getOutboxItem(text: string): Locator {
+        return this.page.getByText(`Message: "${text}"`);
     }
 
 }

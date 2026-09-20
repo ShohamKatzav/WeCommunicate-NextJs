@@ -15,10 +15,19 @@ export default function ClientProviders({ children }: { children: React.ReactNod
                 <Navbar />
                 <NotificationProvider>
                     <Toaster richColors position="top-center" />
-                    <div className="pt-16 pb-24 md:pt-8 md:pb-20 min-h-0">{children}</div>
+                    {/* No padding-top: clearing the fixed navbar is the job of
+                        --content-top-offset (app/globals.css), and having a
+                        second spacer here is what made the reserved space add
+                        up to more than twice the navbar's height. .page-shell
+                        (bars.css) fills the leftover viewport; the footer
+                        then uses margin-top: auto so short pages still park
+                        it on the bottom edge. */}
+                    <div className="page-shell">
+                        <div>{children}</div>
+                        <Footer />
+                    </div>
                 </NotificationProvider>
             </SocketProvider>
-            <Footer />
         </UserProvider>
     );
 }

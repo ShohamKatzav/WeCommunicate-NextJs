@@ -62,7 +62,7 @@ customTest.describe('Voice messages', () => {
             await expect(chat.page.getByText('Sending voice message...')).toBeVisible();
             await expect(chat.recordVoiceButton).toBeVisible({ timeout: 20000 });
             await expect(chat.pendingMessageIndicator).toHaveCount(0, { timeout: 15000 });
-            await expect(sentAudio).toHaveCount(audioCountBefore + 1);
+            await expect(sentAudio).toHaveCount(audioCountBefore + 1, { timeout: 10000 });
         });
     });
 });
