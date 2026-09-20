@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
 import { randomUUID } from 'crypto';
+import { env } from '@/app/config/env';
 import { extractUserIDFromCoockie } from '@/app/lib/cookieActions';
 import { MAX_MESSAGE_LENGTH } from '@/app/config/limits';
 import RedisService from '@/services/RedisService';
+
+// Route handlers run inside Render's Node process, where request.url is the
+// internal bind address (https://localhost:10000/...). A 303 built from that
+// sends the OS share sheet (and Playwright) to a host that doesn't exist on
+// the public internet. NEXT_PUBLIC_BASE_ADDRESS is the canonical public origin.
+function redirectInApp(path: string) {
+    return NextResponse.redirect(new URL(path, env.NEXT_PUBLIC_BASE_ADDRESS), 303);
+}
 
 // Matches the client-side upload cap (uploadFile.tsx) - a share arrives as a
 // single server-side POST, so there's no per-chunk client validation to lean
@@ -27,14 +36,14 @@ export async function POST(request: NextRequest) {
         userID = null;
     }
     if (typeof userID !== 'string') {
-        return NextResponse.redirect(new URL('/login', request.url), 303);
+        return redirectInApp('/login');
     }
 
     let formData: FormData;
     try {
         formData = await request.formData();
     } catch {
-        return NextResponse.redirect(new URL('/chat', request.url), 303);
+        return redirectInApp('/chat');
     }
 
     const title = formData.get('title')?.toString().trim() || '';
@@ -71,5 +80,5 @@ export async function POST(request: NextRequest) {
     const token = randomUUID();
     await RedisService.storeSharedContent(token, { userID, text: combinedText, file });
 
-    return NextResponse.redirect(new URL(`/chat?shared=${token}`, request.url), 303);
+    return redirectInApp(`/chat?shared=${token}`);
 }

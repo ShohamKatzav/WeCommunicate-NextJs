@@ -261,7 +261,7 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
 
     return (
         <form onSubmit={handleSubmit}>
-            <div className="mainContainer px-3 pb-16 md:p-4 md:pb-8 grid md:grid-cols-3">
+            <div className="mainContainer px-3 pb-[calc(4rem+var(--bottom-prompt-height))] md:p-4 md:pb-[calc(2rem+var(--bottom-prompt-height))] grid md:grid-cols-3">
                 <div className='md:col-start-2 flex flex-col gap-3 md:gap-4'>
                     <div className="titleContainer">
                         <h1 className="mb-0 md:mb-0 text-3xl font-extrabold text-gray-900 dark:text-white md:text-4xl lg:text-5xl text-center">

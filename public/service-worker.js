@@ -21,6 +21,7 @@ const NEVER_CACHE = [
     '/locations',
     '/login',
     '/moderator',
+    '/share-target',
     '/sign-up',
 ];
 
@@ -214,6 +215,14 @@ self.addEventListener('fetch', async event => {
 
     // Do not catch my SW
     if (url.pathname === '/service-worker.js') {
+        return;
+    }
+
+    // The OS share sheet POSTs here as a full-page navigation. Let the
+    // browser follow the 303 to /chat?shared= itself - if the SW intercepts
+    // and fetch()-follows that redirect, the document URL can stay on
+    // /share-target and chat never sees the token it needs to consume.
+    if (url.pathname === '/share-target') {
         return;
     }
 
