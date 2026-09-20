@@ -256,6 +256,36 @@ export const deleteMessage = async (id: string, type: string = "message") => {
     }
 }
 
+export const searchMessages = async (searchTerm: string) => {
+    const trimmedTerm = typeof searchTerm === 'string' ? searchTerm.trim() : '';
+    if (!trimmedTerm) {
+        return { success: true, results: [] };
+    }
+    try {
+        await connectDB();
+        const userID = await extractUserIDFromCoockie();
+        if (typeof userID !== 'string') {
+            return { success: false, results: [] };
+        }
+
+        if (!(await isTestBypass())) {
+            // Search runs a $text scan across every conversation the user is
+            // in on each call - cheap per call, but still worth capping so a
+            // client can't hammer it on every keystroke.
+            const allowedToSearch = await RedisService.checkRateLimit('search-messages', userID, 30, 60);
+            if (!allowedToSearch) {
+                return { success: false, results: [], rateLimited: true, message: 'Searching too quickly - please slow down.' };
+            }
+        }
+
+        const results = await MessageRepository.SearchMessages(Types.ObjectId.createFromHexString(userID), trimmedTerm);
+        return JSON.parse(JSON.stringify({ success: true, results }));
+    } catch (err) {
+        console.error('Failed to search messages:', err);
+        return { success: false, results: [] };
+    }
+}
+
 export const getConversationMembers = async (conversationId: string) => {
     try {
         await connectDB();

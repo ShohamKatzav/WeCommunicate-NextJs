@@ -5,14 +5,16 @@ import { useSocket } from "../hooks/useSocket";
 import ChatUser from "@/types/chatUser";
 import Conversation from "@/types/conversation";
 import Message from "@/types/message";
+import MessageSearchResult from "@/types/messageSearchResult";
 import { AsShortName } from "../utils/stringFormat";
 
 interface ConversationConversationSummaryProps {
     conversation: Conversation;
     getLastMessages: (participantsFromList: ChatUser[]) => Promise<void>;
+    searchMatch?: MessageSearchResult;
 }
 
-const ConversationSummary = ({ conversation, getLastMessages }: ConversationConversationSummaryProps) => {
+const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: ConversationConversationSummaryProps) => {
 
     const [otherMembers, setOtherMembers] = useState<ChatUser[]>([]);
     const [lastMessage, setLastMessage] = useState<Message | undefined>(
@@ -157,6 +159,20 @@ const ConversationSummary = ({ conversation, getLastMessages }: ConversationConv
                             No messages yet.
                         </div>
                     }
+                    {searchMatch && (
+                        <div className="text-sm text-green-700 dark:text-green-400 space-y-0.5">
+                            {searchMatch.matches.map((match, index) => (
+                                <div key={index} className="break-all italic">
+                                    {AsShortName(match.sender)}: {match.text}
+                                </div>
+                            ))}
+                            {searchMatch.moreCount > 0 && (
+                                <div className="not-italic text-gray-500 dark:text-gray-400">
+                                    +{searchMatch.moreCount} more match{searchMatch.moreCount === 1 ? '' : 'es'}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                 </div>
             </div>

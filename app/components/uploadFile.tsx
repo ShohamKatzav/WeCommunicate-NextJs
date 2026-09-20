@@ -15,6 +15,69 @@ interface UploadFileProps {
     setMessage: Dispatch<SetStateAction<Message>>;
 }
 
+// Below this, whatever compression buys isn't worth the extra decode/encode
+// work - a photo already this small is usually already-compressed or a
+// screenshot, not a multi-MB camera photo.
+const COMPRESSION_SKIP_THRESHOLD_BYTES = 200 * 1024;
+// GIF/BMP are deliberately excluded - drawing a GIF onto a canvas only
+// captures its first frame, silently destroying the animation.
+const COMPRESSIBLE_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const MAX_IMAGE_DIMENSION = 1920;
+const JPEG_QUALITY = 0.8;
+
+// Resizes and re-encodes an image client-side before it ever reaches blob
+// storage - mobile camera photos are routinely 3-6000px and several MB,
+// which costs real money against the free-tier blob storage/bandwidth quota.
+// Falls back to the original file on any failure (unsupported browser,
+// corrupted image, etc.) rather than blocking the send.
+async function compressImageIfWorthwhile(file: File): Promise<File> {
+    if (!COMPRESSIBLE_IMAGE_TYPES.has(file.type)) return file;
+    if (file.size <= COMPRESSION_SKIP_THRESHOLD_BYTES) return file;
+    if (typeof createImageBitmap !== 'function') return file;
+
+    try {
+        // 'from-image' bakes the file's EXIF rotation into the decoded
+        // bitmap - canvas re-encoding otherwise strips EXIF entirely, which
+        // is what makes portrait phone photos come out sideways.
+        const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+
+        const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(bitmap.width, bitmap.height));
+        const targetWidth = Math.round(bitmap.width * scale);
+        const targetHeight = Math.round(bitmap.height * scale);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            bitmap.close();
+            return file;
+        }
+        ctx.drawImage(bitmap, 0, 0, targetWidth, targetHeight);
+        bitmap.close();
+
+        // PNG can carry transparency canvas would flatten to black if
+        // re-encoded as JPEG, so only PNG stays PNG - everything else
+        // (including WebP, which JPEG usually beats for compression here)
+        // becomes JPEG.
+        const outputType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+        const compressedBlob = await new Promise<Blob | null>(resolve =>
+            canvas.toBlob(resolve, outputType, outputType === 'image/jpeg' ? JPEG_QUALITY : undefined)
+        );
+
+        if (!compressedBlob || compressedBlob.size >= file.size) return file;
+
+        const compressedName = outputType === file.type
+            ? file.name
+            : file.name.replace(/\.[^.]+$/, '') + '.jpg';
+
+        return new File([compressedBlob], compressedName, { type: outputType });
+    } catch (err) {
+        console.error('Image compression failed, uploading original:', err);
+        return file;
+    }
+}
+
 export default function UploadFile({ message, setMessage }: UploadFileProps) {
 
     const inputFileRef = useRef<HTMLInputElement>(null);
@@ -109,7 +172,7 @@ export default function UploadFile({ message, setMessage }: UploadFileProps) {
             return;
         }
 
-        const file = inputFileRef.current.files[0];
+        let file = inputFileRef.current.files[0];
         // Optional: Validate file type and size
         const validTypes = [
             'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp',
@@ -132,6 +195,11 @@ export default function UploadFile({ message, setMessage }: UploadFileProps) {
 
         try {
             setIsUploading(true);
+
+            if (file.type.startsWith('image/')) {
+                file = await compressImageIfWorthwhile(file);
+            }
+
             const newBlob = await upload(file.name, file, {
                 access: 'public',
                 handleUploadUrl: '/api/send-file',

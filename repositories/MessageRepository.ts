@@ -2,9 +2,12 @@ import Message from "../models/Message";
 import FileModel from "../models/FileModel";
 import Conversation from "../models/Conversation";
 import ConversationRepository from "./ConversationRepository";
+import CleanHistoryRepository from "./CleanHistoryRepository";
 import { Schema, Types } from 'mongoose';
 import MessageDTO from '@/types/messageDTO';
+import MessageSearchResult from '@/types/messageSearchResult';
 import { extractUsersEmailFromCoockie } from "@/app/lib/cookieActions";
+import { MAX_SEARCH_MATCHES_SCANNED, MAX_SEARCH_RESULTS, MAX_MATCHES_PER_CONVERSATION, REPLY_SNIPPET_LENGTH } from '@/app/config/limits';
 
 type ChatQuery = {
     date?: {
@@ -36,7 +39,7 @@ export default class MessageRepository {
 
     static async SaveMessage(data: MessageDTO, userID: string) {
         try {
-            const { date, sender, participantID, text, file } = data;
+            const { date, sender, participantID, text, file, replyTo } = data;
             const participantIDArray = Array.isArray(participantID) ? participantID : [];
 
             const memberIDs = [
@@ -56,12 +59,40 @@ export default class MessageRepository {
                 });
                 newFileId = newFile._id;
             }
+
+            // Only the referenced message's id is trusted from the client -
+            // sender/snippet are re-derived from the DB record itself, and
+            // only if that message actually belongs to this conversation.
+            // Otherwise a client could fabricate a reply quote attributing
+            // arbitrary fake text to another user (or reach into a
+            // conversation it isn't part of).
+            let replyToSnapshot;
+            if (replyTo?.messageId && Types.ObjectId.isValid(replyTo.messageId)) {
+                const repliedMessage: any = await Message.findOne({
+                    _id: replyTo.messageId,
+                    conversation: conversation._id,
+                    status: { $ne: 'revoked' }
+                }).select('sender text file').populate('file', 'pathname').lean();
+
+                if (repliedMessage) {
+                    replyToSnapshot = {
+                        messageId: repliedMessage._id,
+                        sender: repliedMessage.sender,
+                        snippet: repliedMessage.text
+                            ? repliedMessage.text.slice(0, REPLY_SNIPPET_LENGTH)
+                            : (repliedMessage.file ? `sent file ${(repliedMessage.file as any).pathname}` : ''),
+                        hasFile: !!repliedMessage.file
+                    };
+                }
+            }
+
             const newMessage = await Message.create({
                 date,
                 sender,
                 text,
                 file: newFileId,
-                conversation: conversation._id
+                conversation: conversation._id,
+                replyTo: replyToSnapshot
             });
             await Conversation.updateOne(
                 { _id: conversation._id },
@@ -82,6 +113,85 @@ export default class MessageRepository {
             return await Message.countDocuments(query);
         } catch (err) {
             console.error('Failed to count messages:', err);
+            throw err;
+        }
+    }
+
+    // Scoped to the caller's own conversations server-side (never trusts a
+    // conversation id from the client) - otherwise this would let any logged
+    // in user full-text search everyone else's messages too.
+    static async SearchMessages(userID: Types.ObjectId, searchTerm: string): Promise<MessageSearchResult[]> {
+        try {
+            const memberConversations = await Conversation.find({
+                members: userID,
+                deletedBy: { $nin: [userID] }
+            }).select('_id').lean();
+
+            if (memberConversations.length === 0) return [];
+            const conversationIds = memberConversations.map(c => c._id);
+
+            const cleanHistoryRecords = await CleanHistoryRepository.findAllForUser(userID);
+            const cleanHistoryMap = new Map(
+                cleanHistoryRecords.map(record => [record.conversation.toString(), record.date])
+            );
+
+            // A $text index only matches whole (stemmed) words, so "offli"
+            // would never match "offline" - wrong for search-as-you-type,
+            // where the user is mid-word on every keystroke. A case-insensitive
+            // substring regex matches what people actually expect here, at
+            // the cost of not being index-accelerated on `text` itself - the
+            // conversation scoping above (backed by the conversation+date
+            // index) already narrows this to a single user's own messages,
+            // which is a small enough set for a regex scan to be fine.
+            // Escaped because this is user input going straight into a
+            // RegExp - unescaped, it's both a regex-injection and a ReDoS risk.
+            const escapedTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+            const matches = await Message.find({
+                conversation: { $in: conversationIds },
+                status: { $ne: 'revoked' },
+                text: { $regex: escapedTerm, $options: 'i' }
+            })
+                .sort({ date: -1 })
+                .limit(MAX_SEARCH_MATCHES_SCANNED)
+                .select('text date sender conversation')
+                .lean();
+
+            // Grouped by conversation (up to MAX_MATCHES_PER_CONVERSATION
+            // matches each, most recent first, since `matches` is already
+            // sorted newest-first) - the UI opens a conversation, not a
+            // single message, but a conversation with several matches
+            // should still show more than just one of them.
+            const matchesByConversation = new Map<string, any[]>();
+            const totalCountByConversation = new Map<string, number>();
+            for (const msg of matches) {
+                const conversationID = msg.conversation.toString();
+                const cleanTime = cleanHistoryMap.get(conversationID);
+                if (cleanTime && new Date(msg.date) <= new Date(cleanTime)) continue;
+
+                let list = matchesByConversation.get(conversationID);
+                if (!list) {
+                    if (matchesByConversation.size >= MAX_SEARCH_RESULTS) continue;
+                    list = [];
+                    matchesByConversation.set(conversationID, list);
+                }
+                if (list.length < MAX_MATCHES_PER_CONVERSATION) {
+                    list.push(msg);
+                }
+                totalCountByConversation.set(conversationID, (totalCountByConversation.get(conversationID) || 0) + 1);
+            }
+
+            return Array.from(matchesByConversation.entries()).map(([conversationID, msgs]) => ({
+                conversationID,
+                matches: msgs.map(msg => ({
+                    text: msg.text,
+                    date: msg.date,
+                    sender: msg.sender
+                })),
+                moreCount: (totalCountByConversation.get(conversationID) || 0) - msgs.length
+            }));
+        } catch (err) {
+            console.error('Failed to search messages:', err);
             throw err;
         }
     }

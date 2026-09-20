@@ -1,10 +1,12 @@
 import { Dispatch, RefObject, SetStateAction } from "react";
 import Message from "@/types/message";
 import ChatUser from "@/types/chatUser";
-import { Send } from "lucide-react";
+import { Send, X } from "lucide-react";
 import UploadFile from "./uploadFile";
 import useIsMobile from "../hooks/useIsMobile";
 import { MAX_MESSAGE_LENGTH } from "../config/limits";
+import { AsShortName } from "../utils/stringFormat";
+import { useUser } from "../hooks/useUser";
 
 interface MessageInputProps {
     message: Message;
@@ -16,6 +18,7 @@ interface MessageInputProps {
 
 const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, handleTyping }: MessageInputProps) => {
     const isMobile = useIsMobile();
+    const { user } = useUser();
     const canSend = (message.text?.trim() || message.file) && participants.current;
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -29,9 +32,33 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
         handleTyping();
     };
 
+    const cancelReply = () => {
+        setMessage(prev => ({ ...prev, replyTo: undefined }));
+    };
+
     return (
         <div className="w-full xl:w-[75%] xl:place-self-center">
             <div className={`flex flex-col gap-2 ${isMobile ? 'px-3' : ''}`}>
+                {message.replyTo && (
+                    <div className="flex items-center justify-between gap-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-l-4 border-green-500 px-3 py-2">
+                        <div className="min-w-0">
+                            <div className="text-sm font-medium text-green-600 dark:text-green-400">
+                                Replying to {message.replyTo.sender === user?.email ? "yourself" : AsShortName(message.replyTo.sender)}
+                            </div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                                {message.replyTo.snippet || "Attachment"}
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={cancelReply}
+                            aria-label="Cancel reply"
+                            className="shrink-0 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
+                        >
+                            <X size={18} />
+                        </button>
+                    </div>
+                )}
                 {/* Rendered once regardless of the mobile/desktop layout
                     below - a staged (not-yet-sent) upload's state lives
                     inside UploadFile itself, so having two separate

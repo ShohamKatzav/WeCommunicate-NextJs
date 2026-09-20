@@ -130,7 +130,12 @@ export const useChatRoom = ({
             ...prev,
             text: draftText,
             participantID: roomParticipants?.map(p => p._id!),
-            conversationID: currentConversationId.current
+            conversationID: currentConversationId.current,
+            // A reply preview references a message in the conversation being
+            // left - carrying it into the newly opened room would either
+            // silently get dropped server-side (the referenced message won't
+            // belong to this conversation) or, worse, land on the wrong one.
+            replyTo: undefined
         }));
 
         setMobileChatsSidebarOpen(false);
