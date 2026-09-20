@@ -54,6 +54,11 @@ customTest.describe('Navigation Functionality', () => {
         await expect(page).toHaveURL(/\/login$/);
     });
 
+    customTest('Navigation to secured share-target page without login', async ({ page }) => {
+        await page.goto('/share-target');
+        await expect(page).toHaveURL(/\/login$/);
+    });
+
     customTest('Navigation to secured chat page with fake token', async ({ browser, baseURL }) => {
         const context = await browser.newContext();
         const domain = new URL(baseURL || 'https://localhost:3000').hostname;

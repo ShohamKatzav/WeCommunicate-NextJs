@@ -30,7 +30,11 @@ export async function POST(request: Request): Promise<NextResponse> {
                 return {
                     allowedContentTypes: [
                         'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp',
-                        'audio/mp3', 'audio/mpeg',
+                        // audio/mp3+audio/mpeg cover general audio file uploads; audio/webm
+                        // and audio/mp4/audio/aac are what voiceRecorder.tsx's MediaRecorder
+                        // actually produces (webm+opus almost everywhere, mp4 on Safari/iOS -
+                        // rejecting either here would make recording succeed but sending fail).
+                        'audio/mp3', 'audio/mpeg', 'audio/webm', 'audio/mp4', 'audio/aac',
                         'video/x-msvideo', 'video/mp4', 'video/mpeg', 'video/ogg', 'video/webm',
                         'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                         'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

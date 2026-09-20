@@ -46,6 +46,23 @@ customTest.describe('Chat Messages Functionality', () => {
             const srcRegex = new RegExp(baseName);
             await expect(authPage.getChatPage().lastSentImage).toHaveAttribute('src', srcRegex);
         });
+
+        customTest('Large photos are compressed client-side before upload', async ({ authPage, loginData }) => {
+            // Vercel Blob client uploads need a public HTTPS origin. Localhost
+            // is rejected; this runs in CI against Render, or locally via ngrok.
+            customTest.skip(!process.env.CI, 'Vercel Blob uploads need a public HTTPS origin (CI or ngrok)');
+
+            await authPage.getLoginPage().navigateToLoginPage();
+            const anotherLoginData = dataSet.find(user => user.username !== loginData.username);
+            const secondUserShortName = anotherLoginData?.username.split('@')[0] || '';
+            await (await authPage.getChatPage().selectUser(secondUserShortName)).click();
+
+            await authPage.getChatPage().attachGeneratedJpeg();
+            await expect(authPage.getChatPage().sendMessageButton).toBeEnabled({ timeout: 15000 });
+            await authPage.getChatPage().sendMessageButton.click();
+            await expect(authPage.getChatPage().pendingMessageIndicator).toHaveCount(0);
+            await expect(authPage.getChatPage().lastSentImage).toBeVisible();
+        });
     });
 
 });

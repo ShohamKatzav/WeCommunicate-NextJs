@@ -3,6 +3,7 @@ import { Socket } from 'socket.io-client';
 import Message from '@/types/message';
 import MessageDTO from '@/types/messageDTO';
 import ChatUser from '@/types/chatUser';
+import FileDTO from '@/types/FileDTO';
 import { saveMessage, revalidateChatRoute } from '@/app/lib/chatActions';
 import { toast } from "sonner";
 
@@ -92,7 +93,13 @@ export const useMessageHandling = ({
         updateConversationsBar(finalMessage);
     }, [socket, currentConversationId, chatRef, setChat, updateConversationsBar]);
 
-    const handleSendMessage = useCallback(async () => {
+    // `overrideFile` lets a caller send a file that was only just produced
+    // (e.g. voiceRecorder.tsx, right after its upload finishes) without
+    // waiting on a setMessageToSend->re-render round trip first - reading it
+    // back off `messageToSend` immediately after setting it would still see
+    // the stale pre-update closure value, since this callback's identity
+    // only refreshes on the next render.
+    const handleSendMessage = useCallback(async (overrideFile?: FileDTO) => {
         // A random id, not a timestamp - two sends in the same millisecond
         // (or a burst of offline-queued sends flushing together) used to
         // produce colliding temp ids, which handleServerSavedMessageResponse
@@ -106,7 +113,7 @@ export const useMessageHandling = ({
                 date: new Date(),
                 sender: messageToSend.sender || "",
                 text: messageToSend.text?.trim(),
-                file: messageToSend?.file || undefined,
+                file: overrideFile || messageToSend?.file || undefined,
                 participantID: messageToSend.participantID || [],
                 conversationID: messageToSend.conversationID || "",
                 replyTo: messageToSend.replyTo
