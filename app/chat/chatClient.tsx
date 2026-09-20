@@ -5,6 +5,7 @@ import { useSocket } from '../hooks/useSocket';
 import useIsMobile from '../hooks/useIsMobile';
 import ChatUser from '@/types/chatUser';
 import Conversation from '@/types/conversation';
+import Message from '@/types/message';
 import ChatInputBar from '../components/chatInputBar';
 import ChatWindow from '../components/chatWindow';
 import Loading from '../components/loading';
@@ -115,6 +116,23 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
         }
     }, [initialConversationsWithMessages, currentConversationId, setChat, updateConversationsBar]);
 
+    // The quote preview is built from the client's own already-rendered copy
+    // of the message being replied to - the server re-derives the
+    // authoritative sender/snippet from the DB when the reply is actually
+    // saved (see MessageRepository.SaveMessage), so this is only ever used
+    // for the sender's own optimistic preview, never trusted as-is.
+    const handleReply = (message: Message) => {
+        setMessageToSend(prev => ({
+            ...prev,
+            replyTo: {
+                messageId: message._id!,
+                sender: message.sender!,
+                snippet: message.text || (message.file ? `sent file ${message.file.pathname}` : ''),
+                hasFile: !!message.file
+            }
+        }));
+    };
+
     // Modal handlers
     const handleOpenModal = (mode: string) => {
         setNewConversationMode(mode);
@@ -163,6 +181,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
                     messages={chat}
                     participants={participants}
                     isMobile={isMobile}
+                    onReply={handleReply}
                 />
 
                 {participants.current && (

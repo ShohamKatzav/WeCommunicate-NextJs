@@ -10,9 +10,10 @@ interface ChatWindowProps {
     messages: Message[];
     participants: React.RefObject<ChatUser[] | null | undefined>;
     isMobile: boolean;
+    onReply: (message: Message) => void;
 }
 
-const ChatWindow = ({ messages, participants, isMobile }: ChatWindowProps) => {
+const ChatWindow = ({ messages, participants, isMobile, onReply }: ChatWindowProps) => {
     const [loadNew, setLoadNew] = useState(true);
     const chatBox = useRef<HTMLDivElement | null>(null);
 
@@ -59,11 +60,11 @@ const ChatWindow = ({ messages, participants, isMobile }: ChatWindowProps) => {
                                         // items - an index key would then reattach a bubble's
                                         // state (deleted, playback position, etc.) to whatever
                                         // message now happens to occupy that index.
-                                        <MessageBubble key={message._id || `msg-${index}`} message={message} />)
+                                        <MessageBubble key={message._id || `msg-${index}`} message={message} onReply={onReply} />)
                                     }
                                 </div>
                                 {(messages?.length === parseInt(process.env.NEXT_PUBLIC_MESSAGES_PER_PAGE!) || loadNew) &&
-                                    <MoreMessagesLoader oldMessages={messages} participants={participants.current} />
+                                    <MoreMessagesLoader oldMessages={messages} participants={participants.current} onReply={onReply} />
                                 }
                             </div>
                         </div>

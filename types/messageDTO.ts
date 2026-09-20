@@ -1,4 +1,5 @@
 import FileDTO from "./FileDTO";
+import ReplyTo from "./replyTo";
 
 export default interface MessageDTO {
     _id?: string;
@@ -8,4 +9,8 @@ export default interface MessageDTO {
     file?: FileDTO;
     participantID: string[];
     conversationID: string;
+    // Only `messageId` is trusted server-side - SaveMessage re-derives
+    // sender/snippet/hasFile from the DB so a client can't fabricate a quote
+    // (fake sender + fake text) that looks like it came from someone else.
+    replyTo?: ReplyTo;
 }

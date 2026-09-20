@@ -10,16 +10,17 @@ import useIsMobile from '@/app/hooks/useIsMobile';
 import { TiDeleteOutline } from "react-icons/ti";
 import { IoBan } from "react-icons/io5";
 import { TbClockQuestion } from "react-icons/tb";
-import { Check, CheckCheck } from "lucide-react";
+import { Check, CheckCheck, Reply } from "lucide-react";
 import { toast } from "sonner";
 import FullscreenMediaViewer from './fullscreenMediaViewer';
 import { AsShortName } from "../utils/stringFormat";
 
 interface MessageBubbleProps {
   message: Message;
+  onReply?: (message: Message) => void;
 }
 
-const MessageBubble = ({ message }: MessageBubbleProps) => {
+const MessageBubble = ({ message, onReply }: MessageBubbleProps) => {
 
   const { user } = useUser();
   const { socket } = useSocket();
@@ -91,7 +92,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
   const isRead = message.status === 'read';
 
   return (
-    <div className={message.sender === user?.email ? "flex" : ''}>
+    <div className="flex items-center">
       <div onClick={() => {
         if (isMobile) setShowActions(prev => !prev);
       }}
@@ -102,6 +103,15 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
         ref={messageRef}
       >
         <div className="text-sm md:text-lg text-gray-200 mb-1">{sender}</div>
+
+        {message.replyTo && (
+          <div className="border-l-2 border-gray-200/70 pl-2 mb-1.5 text-sm md:text-base text-gray-200/80 wrap-break-word">
+            <div className="font-medium">
+              {message.replyTo.sender === user?.email ? "You" : AsShortName(message.replyTo.sender)}
+            </div>
+            <div className="line-clamp-2">{message.replyTo.snippet || "Attachment"}</div>
+          </div>
+        )}
 
         {message.text && (
           <div className="text-lg md:text-2xl wrap-break-word">{message.text}</div>
@@ -180,6 +190,19 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
           )}
         </div>
       </div>
+      {onReply && !isPending && (
+        <button onClick={() => onReply(message)}
+          className='flex'
+          aria-label="Reply to message">
+          <Reply
+            onMouseEnter={() => !isMobile && setHover(true)}
+            onMouseLeave={() => !isMobile && setHover(false)}
+            className={showActions || hover ? 'block' : 'hidden'}
+            size={28}
+          />
+        </button>
+      )}
+
       {message.sender === user?.email && (
         <button onClick={deleteMessageHandler}
           ref={deleteButtonRef}

@@ -10,9 +10,10 @@ import MessageBubble from "./messageBubble";
 interface LoadMoreProps {
   oldMessages: Message[];
   participants: ChatUser[];
+  onReply: (message: Message) => void;
 }
 
-export default function MoreMessagesLoader({ oldMessages, participants }: LoadMoreProps) {
+export default function MoreMessagesLoader({ oldMessages, participants, onReply }: LoadMoreProps) {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [page, setPage] = useState(1);
@@ -134,12 +135,12 @@ export default function MoreMessagesLoader({ oldMessages, participants }: LoadMo
     <>
       <div ref={container}>
         {uniqueLoadedMessages.slice(newMessagesCount).map((message, index) =>
-          <MessageBubble key={message._id || `old-${index}`} message={message} />
+          <MessageBubble key={message._id || `old-${index}`} message={message} onReply={onReply} />
         )}
       </div>
       <div>
         {uniqueLoadedMessages.slice(0, newMessagesCount).map((message, index) =>
-          <MessageBubble key={message._id || `new-${index}`} message={message} />
+          <MessageBubble key={message._id || `new-${index}`} message={message} onReply={onReply} />
         )}
       </div>
 
