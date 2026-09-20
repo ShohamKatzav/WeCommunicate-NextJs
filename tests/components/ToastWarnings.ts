@@ -8,6 +8,9 @@ export default class ToastWarnings {
     messageDeletingOfflineWarning: Locator;
     messageCleaningHistoryOfflineWarning: Locator;
     conversationDeletingOfflineWarning: Locator;
+    notificationsEnabledToast: Locator;
+    notificationsDisabledToast: Locator;
+    notificationsEnableFailedToast: Locator;
 
     constructor(page: Page) {
         this.page = page;
@@ -15,6 +18,9 @@ export default class ToastWarnings {
         this.messageDeletingOfflineWarning = page.getByText('The message will be deleted when the connection is restored').first();
         this.messageCleaningHistoryOfflineWarning = page.getByText('I’ll clear your chat history when you’re back online').first();
         this.conversationDeletingOfflineWarning = page.getByText('I’ll delete this conversation once the connection is restored').first();
+        this.notificationsEnabledToast = page.getByText('Notifications enabled').first();
+        this.notificationsDisabledToast = page.getByText('Notifications turned off').first();
+        this.notificationsEnableFailedToast = page.getByText("Couldn't enable notifications").first();
     }
 
 }

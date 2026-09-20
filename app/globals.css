@@ -33,7 +33,10 @@
   --navbar-height: 64px;
   --footer-height: 0px;
   --content-top-offset: 160px;
-  /* Overwritten at runtime by BottomPromptStack while a prompt is on screen. */
+  /* Overwritten at runtime by BottomPromptStack while a prompt is on screen.
+     The stack only ever shows one slim prompt bar at a time (see
+     usePromptSlot.tsx), so this never grows past a single bar's height no
+     matter how many prompts are queued behind it. */
   --bottom-prompt-height: 0px;
 }
 

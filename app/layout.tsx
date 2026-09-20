@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import ClientProviders from "./context/clientProviders";
+import { BottomPromptProvider } from "./context/bottomPromptProvider";
 import InstallPrompt from "./components/InstallPrompt";
 import BottomPromptStack from "./components/bottomPromptStack";
 import OfflineHandler from "./components/offlineHandler";
@@ -62,12 +63,21 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon.png" />
       </head>
       <body className={bodyClassName}>
-        <OfflineHandler>
-          <ClientProviders>{children}</ClientProviders>
-        </OfflineHandler>
-        <BottomPromptStack>
-          <InstallPrompt />
-        </BottomPromptStack>
+        {/* One provider around both branches: PushNotificationManager (deep
+            inside ClientProviders' children, wherever a page mounts it) and
+            InstallPrompt (a direct child of BottomPromptStack below) need to
+            share the same prompt queue, but they are siblings in the DOM, not
+            ancestor/descendant - portaling into BottomPromptStack moves where
+            a prompt renders, not where it sits in the component tree that
+            context flows through. */}
+        <BottomPromptProvider>
+          <OfflineHandler>
+            <ClientProviders>{children}</ClientProviders>
+          </OfflineHandler>
+          <BottomPromptStack>
+            <InstallPrompt />
+          </BottomPromptStack>
+        </BottomPromptProvider>
       </body>
     </html>
   );
