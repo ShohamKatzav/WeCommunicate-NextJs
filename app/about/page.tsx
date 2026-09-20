@@ -261,7 +261,7 @@ const About = () => {
                         </p>
                         <Link
                             href="/contact"
-                            className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transform hover:scale-105 transition-all duration-200"
+                            className="inline-block bg-primary text-primary-foreground hover:opacity-90 font-semibold py-3 px-8 rounded-lg transform hover:scale-105 transition-all duration-200"
                         >
                             Get in Touch
                         </Link>

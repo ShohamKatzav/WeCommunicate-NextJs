@@ -59,7 +59,7 @@ const Home = () => {
                         lopsided even though the flex row itself was centered. */}
                     <Link
                         href="/login"
-                        className="w-full sm:w-64 text-center inline-block bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-200"
+                        className="w-full sm:w-64 text-center inline-block bg-primary text-primary-foreground hover:opacity-90 text-lg font-semibold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-200"
                     >
                         Log in
                     </Link>
