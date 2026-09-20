@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Message from "@/types/message";
 import MessageBubble from "./messageBubble";
 import MoreMessagesLoader from "./moreMessagesLoader";
@@ -11,11 +11,18 @@ interface ChatWindowProps {
     participants: React.RefObject<ChatUser[] | null | undefined>;
     isMobile: boolean;
     onReply: (message: Message) => void;
+    conversationId: string;
+    firstUnreadMessageId?: string;
 }
 
-const ChatWindow = ({ messages, participants, isMobile, onReply }: ChatWindowProps) => {
+const ChatWindow = ({ messages, participants, isMobile, onReply, conversationId, firstUnreadMessageId }: ChatWindowProps) => {
     const [loadNew, setLoadNew] = useState(true);
     const chatBox = useRef<HTMLDivElement | null>(null);
+    const dividerRef = useRef<HTMLDivElement | null>(null);
+    // Distinguishes "just switched to a different conversation" from "a
+    // message changed within the one already open" - only the former should
+    // ever land on the unread divider instead of the bottom.
+    const previousConversationId = useRef<string>("");
 
     const handleScroll = () => {
         const el = chatBox.current;
@@ -27,9 +34,23 @@ const ChatWindow = ({ messages, participants, isMobile, onReply }: ChatWindowPro
     }
 
     useLayoutEffect(() => {
-        if (chatBox.current)
+        const roomChanged = previousConversationId.current !== conversationId;
+        previousConversationId.current = conversationId;
+
+        // Land on where the user left off instead of the very bottom, but
+        // only on the initial view of a conversation that has one - once
+        // you're already looking at it, every other message change (a new
+        // message, an edit, a delete) still snaps to the bottom exactly as
+        // before.
+        if (roomChanged && firstUnreadMessageId && dividerRef.current) {
+            dividerRef.current.scrollIntoView({ block: 'center' });
+            return;
+        }
+
+        if (chatBox.current) {
             chatBox.current.scrollTop = chatBox.current.scrollHeight;
-    }, [messages]);
+        }
+    }, [messages, conversationId, firstUnreadMessageId]);
 
     useEffect(() => {
         const currentChatBox = chatBox?.current;
@@ -60,7 +81,16 @@ const ChatWindow = ({ messages, participants, isMobile, onReply }: ChatWindowPro
                                         // items - an index key would then reattach a bubble's
                                         // state (deleted, playback position, etc.) to whatever
                                         // message now happens to occupy that index.
-                                        <MessageBubble key={message._id || `msg-${index}`} message={message} onReply={onReply} />)
+                                        <Fragment key={message._id || `msg-${index}`}>
+                                            {message._id === firstUnreadMessageId && (
+                                                <div ref={dividerRef} data-testid="unread-divider" className="flex items-center gap-2 my-3">
+                                                    <div className="flex-1 h-px bg-red-300 dark:bg-red-700" />
+                                                    <span className="text-xs font-medium text-red-500 dark:text-red-400">Unread messages</span>
+                                                    <div className="flex-1 h-px bg-red-300 dark:bg-red-700" />
+                                                </div>
+                                            )}
+                                            <MessageBubble message={message} onReply={onReply} />
+                                        </Fragment>)
                                     }
                                 </div>
                                 {(messages?.length === parseInt(process.env.NEXT_PUBLIC_MESSAGES_PER_PAGE!) || loadNew) &&

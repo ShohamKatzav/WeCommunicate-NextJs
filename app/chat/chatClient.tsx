@@ -1,11 +1,15 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { useUser } from '../hooks/useUser';
 import { useSocket } from '../hooks/useSocket';
 import useIsMobile from '../hooks/useIsMobile';
 import ChatUser from '@/types/chatUser';
 import Conversation from '@/types/conversation';
 import Message from '@/types/message';
+import FileDTO from '@/types/FileDTO';
+import { getSharedContent } from '../lib/shareActions';
 import ChatInputBar from '../components/chatInputBar';
 import ChatWindow from '../components/chatWindow';
 import Loading from '../components/loading';
@@ -36,6 +40,22 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
     const [isMobileUsersSidebarOpen, setMobileUsersSidebarOpen] = useState(false);
     const [newConversationMode, setNewConversationMode] = useState('single');
 
+    // Content handed off from the PWA share target (app/share-target/route.ts,
+    // see ?shared= below) - held here until the user actually picks who to
+    // share it with, since picking a conversation (getLastMessages) resets
+    // messageToSend and would otherwise wipe it out if applied too early.
+    const [pendingSharedContent, setPendingSharedContent] = useState<{ text?: string; file?: FileDTO } | null>(null);
+    // Distinguishes the creation modal actually being used to pick a share
+    // recipient (groupCreation -> onParticipantsSelected) from it being
+    // cancelled - only the former should apply pendingSharedContent.
+    const sharePickedRef = useRef(false);
+    // getSharedContent is single-use (the token is deleted from Redis on
+    // first read) - guards against firing it twice for the same token
+    // (React Strict Mode's double effect invocation in development, or any
+    // other re-run before the query param is cleared).
+    const hasConsumedShareRef = useRef(false);
+    const searchParams = useSearchParams();
+
     const { conversationsForBar, updateConversationsBar } = useConversationsManager({
         initialConversations: initialConversationsWithMessages,
     });
@@ -51,7 +71,8 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
         getLastMessages,
         handleLeaveRoom,
         handleTyping,
-        isLocalTypingRef
+        isLocalTypingRef,
+        firstUnreadMessageId
     } = useChatRoom({
         socket,
         userEmail: user?.email,
@@ -104,6 +125,42 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
         }));
     }, [socket, user?.email, setMessageToSend]);
 
+    // Pick up content handed off by a PWA share (Android "Share to
+    // WeCommunicate" from another app) - the redirect target is /chat?shared=
+    // <token>, single-use and short-lived server-side (see shareActions.ts).
+    useEffect(() => {
+        // Wait for the user context's own initial load (UserProvider's
+        // getUserObJFromCoockie, also a server action) to settle before
+        // firing a second server action here - calling one during that
+        // same initial-mount window was, empirically, causing the whole
+        // client tree to spuriously remount partway through (losing
+        // whatever state either call had just set), even though neither
+        // call touches the other's data.
+        if (loadingUser) return;
+
+        const token = searchParams?.get('shared');
+        if (!token || hasConsumedShareRef.current) return;
+        hasConsumedShareRef.current = true;
+
+        (async () => {
+            const result = await getSharedContent(token);
+            // Strip the query param either way, via the raw History API
+            // rather than next/navigation's router.replace() - that
+            // triggers a client-side re-navigation this app doesn't need
+            // for a same-page cleanup, and stacks a redundant history entry.
+            window.history.replaceState(null, '', '/chat');
+
+            if (!result.success) {
+                toast.error("That shared content couldn't be found - it may have expired.");
+                return;
+            }
+            setPendingSharedContent({ text: result.text, file: result.file });
+            setNewConversationMode('single');
+            setChatCreationModalOpen(true);
+            document.body.classList.add('overflow-hidden');
+        })();
+    }, [loadingUser]);
+
     // Clean up conversations with empty messages
     useEffect(() => {
         const messages = initialConversationsWithMessages.find(
@@ -140,10 +197,26 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
         document.body.classList.add("overflow-hidden");
     };
 
-    const handleCloseModal = () => {
+    // Fires only when the creation modal closes via an actual pick
+    // (ChatCreationForm's groupCreation), never via Cancel - see
+    // sharePickedRef's own comment.
+    const handleParticipantsPicked = () => {
+        sharePickedRef.current = true;
+    };
+
+    const handleCloseModal = async () => {
         if (participants.current) {
-            getLastMessages(participants.current);
+            await getLastMessages(participants.current);
+            if (pendingSharedContent && sharePickedRef.current) {
+                setMessageToSend(prev => ({
+                    ...prev,
+                    text: pendingSharedContent.text || prev.text,
+                    file: pendingSharedContent.file || prev.file
+                }));
+            }
         }
+        setPendingSharedContent(null);
+        sharePickedRef.current = false;
         setChatCreationModalOpen(false);
         document.body.classList.remove("overflow-hidden");
     };
@@ -182,6 +255,8 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
                     participants={participants}
                     isMobile={isMobile}
                     onReply={handleReply}
+                    conversationId={currentConversationId.current}
+                    firstUnreadMessageId={firstUnreadMessageId}
                 />
 
                 {participants.current && (
@@ -222,6 +297,8 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages }: ChatClie
             <ChatCreationForm
                 isOpen={isChatCreationModalOpen}
                 onClose={handleCloseModal}
+                onParticipantsSelected={handleParticipantsPicked}
+                title={pendingSharedContent ? 'Share to...' : undefined}
                 participants={participants}
                 conversationId={currentConversationId}
                 setChat={setChat}

@@ -8,6 +8,8 @@ import { getUsernames } from "../lib/accountActions";
 interface ChatCreationProps {
     isOpen: boolean;
     onClose: () => void;
+    onParticipantsSelected?: () => void;
+    title?: string;
     participants: RefObject<ChatUser[] | null | undefined>;
     conversationId: RefObject<string | null | undefined>;
     setChat: (newChat: Message[]) => void;
@@ -18,6 +20,8 @@ interface ChatCreationProps {
 const ChatCreationForm =
     ({ isOpen,
         onClose,
+        onParticipantsSelected,
+        title,
         participants,
         conversationId,
         setChat,
@@ -65,6 +69,7 @@ const ChatCreationForm =
             conversationId.current = '';
             setChat([]);
             setSelectedParticipants([]);
+            onParticipantsSelected?.();
             onClose();
         };
 
@@ -72,8 +77,9 @@ const ChatCreationForm =
             <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-3">
                 <div className="bg-white rounded-lg shadow-lg p-6 w-96 h-96 max-w-full flex flex-col">
                     {
-                        conversationMode === 'group' ? <h2 className="text-3xl font-bold mb-4">Create a new group</h2> :
-                            <h2 className="text-3xl font-bold mb-4">Select a friend</h2>
+                        title ? <h2 className="text-3xl font-bold mb-4">{title}</h2> :
+                            conversationMode === 'group' ? <h2 className="text-3xl font-bold mb-4">Create a new group</h2> :
+                                <h2 className="text-3xl font-bold mb-4">Select a friend</h2>
                     }
                     <div className="flex flex-col flex-1 min-h-0">
                         {

@@ -24,6 +24,15 @@ export default class ChatPage {
     noConversationSelectedHeader: Locator;
     newConversationButton: Locator;
     groupChatButton: Locator;
+    searchInput: Locator;
+    unreadDivider: Locator;
+    recordVoiceButton: Locator;
+    cancelVoiceButton: Locator;
+    sendVoiceMessageButton: Locator;
+    cancelReplyButton: Locator;
+    replyPreview: Locator;
+    shareToHeader: Locator;
+    lastSentAudio: Locator;
 
     constructor(page: Page) {
         this.page = page;
@@ -49,9 +58,15 @@ export default class ChatPage {
         this.noConversationSelectedHeader = page.getByRole('heading', { name: 'No conversation selected' });
         this.newConversationButton = page.getByRole('button', { name: 'New conversation' });
         this.groupChatButton = page.locator('.flex').getByRole('button', { name: 'Create Group' });
-
-
-
+        this.searchInput = page.getByRole('textbox', { name: 'Search conversations' });
+        this.unreadDivider = page.getByTestId('unread-divider');
+        this.recordVoiceButton = page.getByRole('button', { name: 'Record voice message' });
+        this.cancelVoiceButton = page.getByRole('button', { name: 'Cancel voice message' });
+        this.sendVoiceMessageButton = page.getByRole('button', { name: 'Send voice message' });
+        this.cancelReplyButton = page.getByRole('button', { name: 'Cancel reply' });
+        this.replyPreview = page.getByText(/^Replying to /);
+        this.shareToHeader = page.getByRole('heading', { name: 'Share to...' });
+        this.lastSentAudio = page.getByTestId('sent-message').locator('audio').last();
     }
 
     async navigateToChatPage(): Promise<void> {
@@ -231,6 +246,100 @@ export default class ChatPage {
 
     async getSentMessagesCount(): Promise<number> {
         return await this.getSentMessagesLocator().count();
+    }
+
+    getReceivedMessageByText(text: string): Locator {
+        return this.page.getByTestId('received-message').filter({ hasText: text }).last();
+    }
+
+    getSentReceipt(text: string): Locator {
+        return this.getSentMessageByText(text).locator('[aria-label="Sent"]');
+    }
+
+    getReadReceipt(text: string): Locator {
+        return this.getSentMessageByText(text).locator('[aria-label="Read"]');
+    }
+
+    getReplyButtonForSentMessage(text: string): Locator {
+        return this.getSentMessageByText(text).locator('xpath=..').getByRole('button', { name: 'Reply to message' });
+    }
+
+    getReplyButtonForReceivedMessage(text: string): Locator {
+        return this.getReceivedMessageByText(text).locator('xpath=..').getByRole('button', { name: 'Reply to message' });
+    }
+
+    async replyToSentMessage(text: string): Promise<void> {
+        await this.getSentMessageByText(text).hover();
+        await this.getReplyButtonForSentMessage(text).click();
+        await expect(this.replyPreview).toBeVisible();
+    }
+
+    async replyToReceivedMessage(text: string): Promise<void> {
+        await this.getReceivedMessageByText(text).hover();
+        await this.getReplyButtonForReceivedMessage(text).click();
+        await expect(this.replyPreview).toBeVisible();
+    }
+
+    async searchConversations(query: string): Promise<void> {
+        await this.searchInput.fill(query);
+    }
+
+    getSearchMatch(text: string): Locator {
+        return this.page.locator('div.text-green-700, div.text-green-400').filter({ hasText: text });
+    }
+
+    async shareContentViaShareTarget(fields: { title?: string; text?: string; url?: string }): Promise<void> {
+        const redirectedUrl = await this.page.evaluate(async (payload) => {
+            const formData = new FormData();
+            Object.entries(payload).forEach(([key, value]) => {
+                if (value) formData.append(key, value);
+            });
+            const res = await fetch('/share-target', {
+                method: 'POST',
+                body: formData,
+                redirect: 'follow',
+            });
+            return res.url;
+        }, fields);
+
+        await this.page.goto(redirectedUrl, { waitUntil: 'networkidle' });
+    }
+
+    async attachGeneratedJpeg(): Promise<number> {
+        return await this.page.evaluate(async () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 2200;
+            canvas.height = 2200;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error('Could not create canvas context');
+
+            const imageData = ctx.createImageData(2200, 2200);
+            const pixels = imageData.data;
+            for (let i = 0; i < pixels.length; i += 4) {
+                pixels[i] = (i * 17 + 31) & 255;
+                pixels[i + 1] = (i * 41 + 7) & 255;
+                pixels[i + 2] = (i * 13 + 113) & 255;
+                pixels[i + 3] = 255;
+            }
+            ctx.putImageData(imageData, 0, 0);
+
+            const blob = await new Promise<Blob>((resolve, reject) => {
+                canvas.toBlob((result) => {
+                    if (result) resolve(result);
+                    else reject(new Error('Failed to encode jpeg'));
+                }, 'image/jpeg', 0.95);
+            });
+
+            const input = document.getElementById('uploaded-file') as HTMLInputElement | null;
+            if (!input) throw new Error('File input not found');
+
+            const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            input.files = dataTransfer.files;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            return blob.size;
+        });
     }
 
 }

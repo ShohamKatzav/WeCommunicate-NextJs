@@ -41,6 +41,20 @@ export const useChatRoom = ({
 }: UseChatRoomProps) => {
     const [chat, setChat] = useState<Message[]>([]);
     const [messageToSend, setMessageToSend] = useState<Message>({ text: '' });
+    // The id of the first message in the "unread tail" of the room being
+    // opened - set once per room switch (see getLastMessages) so ChatWindow
+    // can render a divider there and land the initial scroll on it, instead
+    // of always landing on the very bottom.
+    const [firstUnreadMessageId, setFirstUnreadMessageId] = useState<string | undefined>(undefined);
+    // conversationsForBar is a client-side cache: a message someone else
+    // sent never gets its cached `status` flipped to 'read' locally just
+    // because *this* client emitted 'message read' (that only updates the
+    // server, plus this client's own sent-messages' checkmarks - see
+    // useSocketEvents' read-receipts handler). Without tracking what's
+    // already been surfaced once, reopening the same room later would keep
+    // reading the same still-'sent' cached messages and show the divider
+    // again every time, ratcheting back to whatever was ever unread.
+    const surfacedUnreadMessageIds = useRef<Set<string>>(new Set());
 
     const currentConversationId = useRef<string>("");
     const participants = useRef<ChatUser[] | null>(null);
@@ -117,6 +131,31 @@ export const useChatRoom = ({
             new Date(a.date!).getTime() - new Date(b.date!).getTime()
         ) || [];
 
+        // The 'message read' emit below marks every trailing unread message
+        // as read server-side in one batch (there's no per-message read
+        // position - see handleMessageRead in socket/handlers.js), so "how
+        // far back does the unread streak go from the end" has to be read
+        // off the data as loaded, before that happens. Revoked messages are
+        // skipped rather than treated as a boundary or as unread - their
+        // status is permanently 'revoked' and never becomes 'read', so
+        // treating them as a stop condition would make every conversation
+        // that ever had a deletion look permanently unread from that point.
+        // Also stop at the first message already in surfacedUnreadMessageIds
+        // - its cached `status` will never locally flip to 'read' just
+        // because this client read it (see the ref's own comment), so
+        // without this a reopen would recount the same old messages forever.
+        const unreadTailIds: string[] = [];
+        for (let i = sortedMessages.length - 1; i >= 0; i--) {
+            const msg = sortedMessages[i];
+            if (msg.status === 'revoked') continue;
+            if (msg.sender?.toUpperCase() === userEmail?.toUpperCase()) break;
+            if (msg.status === 'read') break;
+            if (!msg._id || surfacedUnreadMessageIds.current.has(msg._id)) break;
+            unreadTailIds.push(msg._id);
+        }
+        unreadTailIds.forEach(id => surfacedUnreadMessageIds.current.add(id));
+        setFirstUnreadMessageId(unreadTailIds.at(-1));
+
         updateChatRef(sortedMessages);
         participants.current = roomParticipants;
 
@@ -140,13 +179,14 @@ export const useChatRoom = ({
 
         setMobileChatsSidebarOpen(false);
         setMobileUsersSidebarOpen(false);
-    }, [socket, findConversationByExactParticipants, initialConversations, conversationsForBar, updateChatRef, setMobileChatsSidebarOpen, setMobileUsersSidebarOpen]);
+    }, [socket, userEmail, findConversationByExactParticipants, initialConversations, conversationsForBar, updateChatRef, setMobileChatsSidebarOpen, setMobileUsersSidebarOpen]);
 
     const handleLeaveRoom = useCallback(async () => {
         socket?.emit('leave room', { conversationId: currentConversationId.current });
         currentConversationId.current = "";
         updateChatRef([]);
         participants.current = null;
+        setFirstUnreadMessageId(undefined);
     }, [socket, updateChatRef]);
 
     // Persist the in-progress draft for whichever conversation is open right
@@ -180,6 +220,7 @@ export const useChatRoom = ({
         handleLeaveRoom,
         handleTyping,
         isLocalTypingRef,
+        firstUnreadMessageId,
 
     };
 };

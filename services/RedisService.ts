@@ -192,4 +192,25 @@ export default class RedisService {
         }
         return count <= limit;
     }
+
+    private static shareTargetKey(token: string) {
+        return `share-target:${token}`;
+    }
+
+    // Bridges the PWA share-target POST (app/share-target/route.ts, which
+    // can't hand a File object across a redirect) to the /chat page that
+    // actually composes the message. Short TTL and single-use (see
+    // popSharedContent) since this only needs to survive one redirect.
+    static async storeSharedContent(token: string, payload: object, ttlSeconds = 300) {
+        if (!token) return;
+        await this.redis().set(this.shareTargetKey(token), payload, { ex: ttlSeconds });
+    }
+
+    static async popSharedContent<T>(token: string): Promise<T | null> {
+        if (!token) return null;
+        const key = this.shareTargetKey(token);
+        const value = await this.redis().get<T>(key);
+        if (value !== null) await this.redis().del(key);
+        return value;
+    }
 }

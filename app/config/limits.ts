@@ -27,3 +27,8 @@ export const MAX_MATCHES_PER_CONVERSATION = 3;
 // a quote preview - a whole MAX_MESSAGE_LENGTH message quoted verbatim would
 // dwarf the reply itself.
 export const REPLY_SNIPPET_LENGTH = 120;
+
+// Voice messages auto-stop recording at this length - without a cap, a
+// forgotten open mic would fill up the free-tier blob storage/bandwidth
+// quota with one very long recording.
+export const MAX_VOICE_MESSAGE_SECONDS = 60;
