@@ -7,6 +7,7 @@ import Conversation from "@/types/conversation";
 import Message from "@/types/message";
 import MessageSearchResult from "@/types/messageSearchResult";
 import { AsShortName } from "../utils/stringFormat";
+import Avatar from "./avatar";
 
 interface ConversationConversationSummaryProps {
     conversation: Conversation;
@@ -80,24 +81,28 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                     barely lightens the existing dark card, so the text color
                     keeps its normal-state contrast on hover too. */}
                 <div className="w-full text-left p-2 flex gap-3 items-center hover:bg-gray-50 dark:hover:bg-white/5">
-                <div className="w-12 h-12 rounded-full bg-linear-to-r from-amber-400 to-red-500 flex items-center justify-center">
-                    {otherMembers.length > 0 ? (
-                        otherMembers.map((member, index) => {
-                            const letter = (member.nickname || member.email || "U")[0].toUpperCase();
-                            const isLast = index === otherMembers.length - 1;
+                {otherMembers.length === 1 ? (
+                    <Avatar avatarUrl={otherMembers[0].avatarUrl} nickname={otherMembers[0].nickname} email={otherMembers[0].email} size={48} />
+                ) : (
+                    <div className="w-12 h-12 rounded-full bg-linear-to-r from-amber-400 to-red-500 flex items-center justify-center">
+                        {otherMembers.length > 0 ? (
+                            otherMembers.map((member, index) => {
+                                const letter = (member.nickname || member.email || "U")[0].toUpperCase();
+                                const isLast = index === otherMembers.length - 1;
 
-                            return (
-                                index < 3 &&
-                                <span key={index} className="text-white font-bold">
-                                    {letter}
-                                    {!isLast && ","}
-                                </span>
-                            );
-                        })
-                    ) : (
-                        <span className="text-white text-xs">No members in this conversation.</span>
-                    )}
-                </div>
+                                return (
+                                    index < 3 &&
+                                    <span key={index} className="text-white font-bold">
+                                        {letter}
+                                        {!isLast && ","}
+                                    </span>
+                                );
+                            })
+                        ) : (
+                            <span className="text-white text-xs">No members in this conversation.</span>
+                        )}
+                    </div>
+                )}
 
 
                 <div className="flex-1">

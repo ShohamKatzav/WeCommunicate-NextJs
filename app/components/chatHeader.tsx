@@ -1,10 +1,12 @@
 import ChatUser from "@/types/chatUser";
+import Link from "next/link";
 import { SetStateAction, useEffect, useState } from "react";
 import { HiChatBubbleLeftRight, HiUsers } from "react-icons/hi2";
 import { Timer } from "lucide-react";
 import { AsShortName } from "../utils/stringFormat";
 import { useUser } from "../hooks/useUser";
 import ChatDropdown from "./chatDropdown";
+import Avatar from "./avatar";
 import Message from "@/types/message";
 import { getDisappearingMessagesSetting } from "../lib/conversationActions";
 import { DISAPPEARING_MESSAGES_OPTIONS } from "../config/limits";
@@ -81,6 +83,21 @@ const ChatHeader = ({
                 >
                     <HiChatBubbleLeftRight color="rgb(152, 65, 249)" size={26} />
                 </button>
+
+                {participants.current?.length === 1 && (
+                    <Link
+                        href={`/profile/${participants.current[0]._id}`}
+                        aria-label={`View ${participants.current[0].nickname || AsShortName(participants.current[0].email)}'s profile`}
+                        className="shrink-0"
+                    >
+                        <Avatar
+                            avatarUrl={participants.current[0].avatarUrl}
+                            nickname={participants.current[0].nickname}
+                            email={participants.current[0].email}
+                            size={40}
+                        />
+                    </Link>
+                )}
 
                 <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start">

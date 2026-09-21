@@ -133,7 +133,11 @@ export default class ChatPage {
     }
 
     getMessageSentByText(text: string): Locator {
-        return this.page.locator(`.bg-green-700 div:has-text("${text}")`).last();
+        // Own bubbles no longer carry a fixed .bg-green-700 class - the
+        // accent color (see messageBubble.tsx) is now an inline style that
+        // defaults to that same green but can be any of the user's chosen
+        // accent colors, so this matches on the stable data-testid instead.
+        return this.page.getByTestId('sent-message').filter({ hasText: text }).last();
     }
     getDeleteButtonByMessageText(text: string): Locator {
         return this.page.locator(`//div[text()="${text}"]/parent::div/following-sibling::button`).last();

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import jwt from 'jsonwebtoken'
 
-const protectedRoutes = ['/chat', '/locations', '/moderator', '/share-target']
+const protectedRoutes = ['/chat', '/locations', '/moderator', '/share-target', '/profile']
 const publicRoutes = ['/about', '/contact']
 const publiclLoginRoutes = ['/', '/login', '/sign-up']
 
@@ -22,7 +22,11 @@ function redirectToPublicOrigin(path: string) {
 
 export default async function middleware(req: NextRequest) {
     const path = req.nextUrl.pathname
-    const isProtectedRoute = protectedRoutes.includes(path)
+    // Prefix-aware so nested routes (/profile/edit, /profile/[id]) are
+    // covered by listing just '/profile' - safe for the pre-existing entries
+    // too, since none of them have sub-routes today, so this changes nothing
+    // for /chat, /locations, /moderator, /share-target.
+    const isProtectedRoute = protectedRoutes.some(route => path === route || path.startsWith(route + '/'))
     const isPublicRoute = publicRoutes.includes(path)
     const isPublicLoginRoute = publiclLoginRoutes.includes(path)
 
@@ -61,5 +65,7 @@ export const config = {
         '/moderator',
         '/api/send-file',
         '/share-target',
+        '/profile',
+        '/profile/:path*',
     ],
 }

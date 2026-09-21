@@ -15,6 +15,10 @@ export interface IAccount extends Document {
     warningCount?: number;
     lastWarningDate?: Date;
     blocked?: Schema.Types.ObjectId[];
+
+    avatarUrl?: string;
+    about?: string;
+    accentColor?: string;
 }
 
 const AccountSchema = new Schema<IAccount>({
@@ -73,7 +77,11 @@ const AccountSchema = new Schema<IAccount>({
         ref: 'Account',
         required: false,
         default: []
-    }
+    },
+
+    avatarUrl: { type: String, required: false },
+    about: { type: String, trim: true, maxlength: 160, required: false },
+    accentColor: { type: String, required: false }
 
 });
 export default models?.Account || model<IAccount>('Account', AccountSchema);

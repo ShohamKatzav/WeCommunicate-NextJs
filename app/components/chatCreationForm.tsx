@@ -35,7 +35,7 @@ const ChatCreationForm =
         const { user } = useUser();
 
         const fetchUsers = useCallback(async () => {
-            if (!user?.email) return;
+            if (!user?.token) return;
             try {
                 const response: ChatUser[] = await getUsernames();
                 setParticipantsList(response);
@@ -102,7 +102,7 @@ const ChatCreationForm =
                             {Array.isArray(participantsList) && participantsList.length > 0 &&
                                 participantsList
                                     .filter((participant: ChatUser) =>
-                                        participant.email?.toUpperCase() !== user?.email?.toUpperCase()
+                                        !(participant.email && user?.email && participant.email.toUpperCase() === user.email.toUpperCase())
                                     )
                                     .map((participant: ChatUser, index) => {
                                         const shortName = AsShortName(participant.email!);

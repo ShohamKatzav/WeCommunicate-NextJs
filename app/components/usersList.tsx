@@ -36,7 +36,10 @@ export default function UsersListClient({
         if (!Array.isArray(initialUsers)) return [];
         const merged = [...initialUsers];
         (chatListActiveUsers || []).forEach(active => {
-            if (!merged.find(u => ciEquals(u.email as string, active.email as string))) {
+            const alreadyListed = merged.some(u =>
+                u._id && active._id ? u._id === active._id : ciEquals(u.email, active.email)
+            );
+            if (!alreadyListed) {
                 merged.push(active);
             }
         });
@@ -67,15 +70,23 @@ export default function UsersListClient({
     }, []);
 
     const isUserActive = (user: ChatUser) => {
-        return chatListActiveUsers?.some(u => ciEquals(u.email as string, user.email as string));
+        return chatListActiveUsers?.some(u =>
+            user._id && u._id ? user._id === u._id : ciEquals(u.email, user.email)
+        );
     }
 
+    // Only treat two rows as the same person when both actually have an email.
+    // A missing email used to compare equal to another missing email and hide
+    // every account that doesn't have one.
+    const isViewer = (email?: string) =>
+        Boolean(user?.email) && Boolean(email) && email!.toLowerCase() === user!.email!.toLowerCase();
+
     const onlineUsers = chatListAllUsers?.filter(
-        u => u.email?.toLowerCase() !== user?.email?.toLowerCase() && isUserActive(u)
+        u => !isViewer(u.email) && isUserActive(u)
     );
 
     const offlineUsers = chatListAllUsers?.filter(
-        u => u.email?.toLowerCase() !== user?.email?.toLowerCase() && !isUserActive(u)
+        u => !isViewer(u.email) && !isUserActive(u)
     );
 
     return (
@@ -93,7 +104,7 @@ export default function UsersListClient({
                     {onlineUsers.length > 0 ?
                         onlineUsers.sort((a, b) => (a.email ?? "").localeCompare(b.email ?? "")).map((chatUser: ChatUser) => (
                             <UserRow
-                                key={`on-${chatUser.email}`}
+                                key={`on-${chatUser._id || chatUser.email}`}
                                 chatUser={chatUser}
                                 getLastMessages={getLastMessages}
                                 active={true}
@@ -114,7 +125,7 @@ export default function UsersListClient({
                     {offlineUsers.length > 0 ?
                         offlineUsers.sort((a, b) => (a.email ?? "").localeCompare(b.email ?? "")).map((chatUser: ChatUser) => (
                             <UserRow
-                                key={`off-${chatUser.email}`}
+                                key={`off-${chatUser._id || chatUser.email}`}
                                 chatUser={chatUser}
                                 getLastMessages={getLastMessages}
                                 active={false}

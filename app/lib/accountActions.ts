@@ -39,7 +39,7 @@ export const authenticateUser = async (identifier: string, password: string) => 
     if (banStatus.isBanned) return { message: `Your account has been banned. Reason: ${banStatus.reason ?? 'Policy violation'}`, status: 403 };
     if (!await bcrypt.compare(password, user.password)) return { message: 'Invalid password', status: 401 };
     const token = jwt.sign({ _id: user._id, email: user.email, nickname: user.nickname, isModerator: user.isModerator || false, signInTime: Date.now() }, env.JWT_SECRET_KEY!, { expiresIn: '7d' });
-    return { success: true, token, email: user.email, nickname: user.nickname, isModerator: user.isModerator || false, status: 200 };
+    return { success: true, token, email: user.email, nickname: user.nickname, isModerator: user.isModerator || false, avatarUrl: user.avatarUrl, accentColor: user.accentColor, status: 200 };
   } catch (err) { console.error('Failed to authenticate user:', err); return { message: 'Internal Server Error', status: 500 }; }
 };
 export const getUsernames = async () => { await connectDB(); return JSON.parse(JSON.stringify(await AccountRepository.getUsernames())); };

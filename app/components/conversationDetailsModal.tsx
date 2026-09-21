@@ -1,6 +1,8 @@
 import ChatUser from "@/types/chatUser";
+import Link from "next/link";
 import { Dispatch, RefObject, SetStateAction } from "react";
 import { AsShortName } from "../utils/stringFormat";
+import Avatar from "./avatar";
 
 interface ConversationDetailsModalProps {
     participants: RefObject<ChatUser[] | null | undefined>;
@@ -24,15 +26,18 @@ const ConversationDetailsModal = ({ participants, setShowParticipantsModal }: Co
                 <div className="max-h-[60vh] overflow-y-auto p-2">
                     {participants.current && participants.current.length > 0 ? (
                         participants.current.map((user: ChatUser) => (
-                            <div key={user._id} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg">
-                                <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400 font-bold">
-                                    {user.email?.charAt(0) || "U"}
-                                </div>
+                            <Link
+                                key={user._id}
+                                href={`/profile/${user._id}`}
+                                onClick={() => setShowParticipantsModal(false)}
+                                className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg"
+                            >
+                                <Avatar avatarUrl={user.avatarUrl} nickname={user.nickname} email={user.email} size={40} />
                                 <div>
-                                    <p className="text-sm font-medium dark:text-white">{AsShortName(user.email)}</p>
+                                    <p className="text-sm font-medium dark:text-white">{user.nickname || AsShortName(user.email)}</p>
                                     <p className="text-xs text-muted-foreground">{user.email || 'Participant'}</p>
                                 </div>
-                            </div>
+                            </Link>
                         ))
                     ) : (
                         <p className="text-center py-4 text-muted-foreground">No participants found.</p>

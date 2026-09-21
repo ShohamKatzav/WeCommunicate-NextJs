@@ -15,8 +15,9 @@ const CSP_DIRECTIVES = [
     // Styles: Your CSS, Google Fonts stylesheets
     "style-src 'self' 'unsafe-inline' https://maps.googleapis.com https://fonts.googleapis.com",
 
-    // Images: Map tiles, Vercel Blob images
-    "img-src 'self' data: https://maps.googleapis.com https://maps.gstatic.com https://kvhqatb9r0bjfpjq.public.blob.vercel-storage.com",
+    // Images: Map tiles, Vercel Blob images, and the local preview of a
+    // file the user just picked (blob: object URLs never leave the page).
+    "img-src 'self' data: blob: https://maps.googleapis.com https://maps.gstatic.com https://kvhqatb9r0bjfpjq.public.blob.vercel-storage.com",
 
     // Media: Vercel Blob audio/video
     "media-src 'self' https://kvhqatb9r0bjfpjq.public.blob.vercel-storage.com",

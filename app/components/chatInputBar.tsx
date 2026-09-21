@@ -3,7 +3,7 @@ import Message from "@/types/message";
 import ChatUser from "@/types/chatUser";
 import FileDTO from "@/types/FileDTO";
 import { Send, X } from "lucide-react";
-import UploadFile from "./uploadFile";
+import { UploadFileButton, UploadFileProvider, UploadFileStatus } from "./uploadFile";
 import VoiceRecorder from "./voiceRecorder";
 import useIsMobile from "../hooks/useIsMobile";
 import { MAX_MESSAGE_LENGTH } from "../config/limits";
@@ -48,6 +48,7 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
     const handleVoiceRecorded = useCallback((file: FileDTO) => handleSendMessage(file), [handleSendMessage]);
 
     return (
+        <UploadFileProvider message={message} setMessage={setMessage} suspended={isRecordingVoice}>
         <div className="w-full xl:w-[75%] xl:place-self-center">
             <div className={`flex flex-col gap-2 ${isMobile ? 'px-3' : ''}`}>
                 {isBlocked && (
@@ -75,17 +76,12 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
                         </button>
                     </div>
                 )}
-                {!isRecordingVoice && (
-                    // Rendered once regardless of the mobile/desktop layout
-                    // below - a staged (not-yet-sent) upload's state lives
-                    // inside UploadFile itself, so having two separate
-                    // instances (one per layout) meant crossing the mobile
-                    // breakpoint unmounted whichever one was active and
-                    // silently deleted the file the user had just attached.
-                    <div className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 cursor-pointer shrink-0 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors w-fit">
-                        <UploadFile message={message} setMessage={setMessage} />
-                    </div>
-                )}
+                {/* The provider above owns the staged file, so this chip and
+                    the attach button below can sit in different layout
+                    branches without a second upload instance. Crossing the
+                    mobile breakpoint used to unmount that instance and
+                    silently delete the file. */}
+                <UploadFileStatus />
 
                 {/* VoiceRecorder is always mounted at exactly one call site
                     per layout branch below - never behind an
@@ -112,12 +108,13 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
                             />
                         )}
                         <div className="flex items-center gap-2">
+                            <UploadFileButton />
                             <VoiceRecorder participants={participants} onRecorded={handleVoiceRecorded} onStatusChange={setIsRecordingVoice} />
                             {!isRecordingVoice && (
                                 <button
                                     onClick={() => handleSendMessage()}
                                     disabled={!canSend}
-                                    className="w-full p-1.5 rounded-lg bg-green-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-green-800 active:scale-95 transition-all font-medium"
+                                    className="min-w-0 flex-1 whitespace-nowrap p-1.5 rounded-lg bg-green-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-green-800 active:scale-95 transition-all font-medium"
                                     aria-label="Send message"
                                 >
                                     <div className="flex items-center justify-center gap-2">
@@ -130,6 +127,7 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
                     </>
                 ) : (
                     <div className="flex items-center gap-3">
+                        <UploadFileButton />
                         {!isRecordingVoice && (
                             <input
                                 className="flex-1 p-3 rounded-xl bg-gray-100 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 border border-transparent dark:border-gray-600 transition-all"
@@ -158,6 +156,7 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
                 )}
             </div>
         </div>
+        </UploadFileProvider>
     );
 };
 

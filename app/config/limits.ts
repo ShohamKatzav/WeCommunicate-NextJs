@@ -33,6 +33,27 @@ export const REPLY_SNIPPET_LENGTH = 120;
 // quota with one very long recording.
 export const MAX_VOICE_MESSAGE_SECONDS = 60;
 
+// Profile "about" bio - short chat-presence line ("Usually online evenings"),
+// not a dating-style biography, so it's capped well short of MAX_MESSAGE_LENGTH.
+export const ABOUT_MAX_LENGTH = 160;
+
+// Curated accent palette for own-message bubbles / small profile chrome - a
+// fixed allowlist (not an arbitrary color picker) so the server can validate
+// what it's asked to store instead of trusting client-supplied CSS. The first
+// entry doubles as the default, and is deliberately Tailwind's green-700 (the
+// bubble color hardcoded before accent colors existed - see messageBubble.tsx)
+// so a user who never picks one sees the exact same bubble as today.
+export const ACCENT_COLORS = [
+    '#15803d', // green (default)
+    '#1d4ed8', // blue
+    '#7e22ce', // purple
+    '#be185d', // pink
+    '#c2410c', // orange
+    '#0f766e', // teal
+    '#4338ca', // indigo
+] as const;
+export const DEFAULT_ACCENT_COLOR = ACCENT_COLORS[0];
+
 // Selectable disappearing-messages durations, in seconds - 0 means off.
 // Shared between the picker UI and the server action's own validation (only
 // these exact values are accepted, not an arbitrary client-supplied number).

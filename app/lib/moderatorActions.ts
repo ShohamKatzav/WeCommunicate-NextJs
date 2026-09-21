@@ -45,22 +45,23 @@ export async function getAllUsers() {
     }
 }
 
-export async function banUser(userEmail: string) {
+export async function banUser(userId: string) {
     try {
         const isModerator = await verifyModeratorAccess();
         if (!isModerator) {
             return { success: false, message: "Unauthorized" };
         }
         await connectDB();
-        await AccountRepository.updateBanStatus(userEmail, true);
-        return { success: true, message: "User banned successfully", userEmail };
+        const account = await AccountRepository.updateBanStatusById(userId, true) as { email?: string } | null;
+        if (!account) return { success: false, message: "User not found" };
+        return { success: true, message: "User banned successfully", userEmail: account.email ?? null };
     } catch (err) {
         console.error('Failed to ban user:', err);
         return { success: false, message: "Failed to ban user" };
     }
 }
 
-export async function unbanUser(userEmail: string) {
+export async function unbanUser(userId: string) {
     try {
         const isModerator = await verifyModeratorAccess();
         if (!isModerator) {
@@ -68,33 +69,41 @@ export async function unbanUser(userEmail: string) {
         }
 
         await connectDB();
-        await AccountRepository.updateBanStatus(userEmail, false);
-        return { success: true, message: "User unbanned successfully", userEmail };
+        const account = await AccountRepository.updateBanStatusById(userId, false) as { email?: string } | null;
+        if (!account) return { success: false, message: "User not found" };
+        return { success: true, message: "User unbanned successfully", userEmail: account.email ?? null };
     } catch (err) {
         console.error('Failed to unban user:', err);
         return { success: false, message: "Failed to unban user" };
     }
 }
 
-export async function promoteToModerator(userEmail: string) {
-    const isModerator = await verifyModeratorAccess();
-    if (!isModerator) {
-        return { success: false, message: "Unauthorized" };
-    }
+export async function promoteToModerator(userId: string) {
+    try {
+        const isModerator = await verifyModeratorAccess();
+        if (!isModerator) {
+            return { success: false, message: "Unauthorized" };
+        }
 
-    await connectDB();
-    await AccountRepository.updateModeratorStatus(userEmail, true);
-    return { success: true, message: "User promoted to moderator" };
+        await connectDB();
+        const account = await AccountRepository.updateModeratorStatusById(userId, true);
+        if (!account) return { success: false, message: "User not found" };
+        return { success: true, message: "User promoted to moderator" };
+    } catch (err) {
+        console.error('Failed to promote user:', err);
+        return { success: false, message: "Failed to promote user" };
+    }
 }
 
-export async function demoteFromModerator(userEmail: string) {
+export async function demoteFromModerator(userId: string) {
     try {
         const isModerator = await verifyModeratorAccess();
         if (!isModerator) {
             return { success: false, message: "Unauthorized" };
         }
         await connectDB();
-        await AccountRepository.updateModeratorStatus(userEmail, false);
+        const account = await AccountRepository.updateModeratorStatusById(userId, false);
+        if (!account) return { success: false, message: "User not found" };
         return { success: true, message: "Moderator privileges revoked" };
     } catch (err) {
         console.error('Failed to demote user:', err);

@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { ShieldOff, ShieldCheck } from "lucide-react";
 import ChatUser from "@/types/chatUser";
 import { AsShortName } from "../utils/stringFormat";
 import { useSocket } from "../hooks/useSocket";
+import Avatar from "./avatar";
 
 interface ListProps {
     chatUser: ChatUser;
@@ -28,9 +30,13 @@ const UsersRow = ({ chatUser, getLastMessages, active, isBlocked, onToggleBlock 
         >
             <div className="flex items-center gap-3">
                 <div className="relative">
-                    <div className="w-10 h-10 rounded-full bg-linear-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white font-semibold">
-                        {(chatUser.nickname || AsShortName(chatUser.email || ''))[0]}
-                    </div>
+                    <Link
+                        href={`/profile/${chatUser._id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label={`View ${chatUser.nickname || AsShortName(chatUser.email || '')}'s profile`}
+                    >
+                        <Avatar avatarUrl={chatUser.avatarUrl} nickname={chatUser.nickname} email={chatUser.email} size={40} />
+                    </Link>
                     {
                         active ?
                             <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div> :

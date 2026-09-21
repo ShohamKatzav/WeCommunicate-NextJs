@@ -1,6 +1,25 @@
 import Account from "../models/Account";
 import { Types } from "mongoose";
 
+function banStatusUpdate(isBanned: boolean) {
+    return isBanned
+        ? {
+            $set: {
+                isBanned: true,
+                lastWarningDate: Date.now(),
+                banReason: "Banned by moderator"
+            }
+        }
+        : {
+            $set: { isBanned: false },
+            $unset: {
+                lastWarningDate: "",
+                warningCount: "",
+                banReason: ""
+            }
+        };
+}
+
 export default class AccountRepository {
 
     static async getUserByID(ID: string) {
@@ -14,7 +33,7 @@ export default class AccountRepository {
     static async getUsersByID(IDs: string[]) {
         try {
             const obj_ids = IDs.map(id => new Types.ObjectId(id));
-            return await Account.find({ _id: { $in: obj_ids } }).select('_id email nickname').exec();
+            return await Account.find({ _id: { $in: obj_ids } }).select('_id email nickname avatarUrl accentColor').exec();
         } catch (err) {
             console.error('Failed to find users by ID:', err);
             throw new Error('Failed to find users by ID');
@@ -22,7 +41,7 @@ export default class AccountRepository {
     }
     static async getUsersByEmails(emails: string[]) {
         try {
-            return await Account.find({ email: { $in: emails } }).select('_id email nickname').exec();
+            return await Account.find({ email: { $in: emails } }).select('_id email nickname avatarUrl accentColor').exec();
         } catch (err) {
             console.error('Failed to find users by email:', err);
             throw new Error('Failed to find users by email');
@@ -68,8 +87,14 @@ export default class AccountRepository {
             // Only project the fields actually used below - this loads every
             // account (including password hashes) on every chat page render
             // otherwise.
-            const users = await Account.find().select('_id email nickname').lean().exec();
-            const chatUsers = users.map(user => ({ _id: user._id, email: user.email, nickname: user.nickname }));
+            const users = await Account.find().select('_id email nickname avatarUrl accentColor').lean().exec();
+            const chatUsers = users.map(user => ({
+                _id: user._id,
+                email: user.email,
+                nickname: user.nickname,
+                avatarUrl: user.avatarUrl,
+                accentColor: user.accentColor
+            }));
             return chatUsers;
         } catch (err) {
             console.error('Could not get usernames:', err instanceof Error ? err.stack || err.message : err);
@@ -93,25 +118,29 @@ export default class AccountRepository {
 
     static async updateBanStatus(email: string, isBanned: boolean) {
         try {
+            const normalized = email?.trim().toLowerCase();
+            // An empty filter would match the first account in the collection.
+            if (!normalized) throw new Error('Email is required');
             return await Account.updateOne(
-                { email: email?.trim().toLowerCase() },
-                isBanned
-                    ? {
-                        $set: {
-                            isBanned: true,
-                            lastWarningDate: Date.now(),
-                            banReason: "Banned by moderator"
-                        }
-                    }
-                    : {
-                        $set: { isBanned: false },
-                        $unset: {
-                            lastWarningDate: "",
-                            warningCount: "",
-                            banReason: ""
-                        }
-                    }
+                { email: normalized },
+                banStatusUpdate(isBanned)
             );
+        } catch (err) {
+            console.error('Failed to update ban status:', err);
+            throw err;
+        }
+    }
+
+    // Ban/unban by id so an account whose `email` field was removed can still
+    // be moderated. Returns the account so callers can kick a live socket
+    // when an email is still on file.
+    static async updateBanStatusById(userId: string, isBanned: boolean) {
+        try {
+            if (!Types.ObjectId.isValid(userId)) throw new Error('Invalid user id');
+            return await Account.findByIdAndUpdate(userId, banStatusUpdate(isBanned), { new: true })
+                .select('_id email')
+                .lean()
+                .exec();
         } catch (err) {
             console.error('Failed to update ban status:', err);
             throw err;
@@ -120,10 +149,25 @@ export default class AccountRepository {
 
     static async updateModeratorStatus(email: string, isModerator: boolean) {
         try {
+            const normalized = email?.trim().toLowerCase();
+            if (!normalized) throw new Error('Email is required');
             return await Account.updateOne(
-                { email: email?.trim().toLowerCase() },
+                { email: normalized },
                 { $set: { isModerator } }
             );
+        } catch (err) {
+            console.error('Failed to update moderator status:', err);
+            throw err;
+        }
+    }
+
+    static async updateModeratorStatusById(userId: string, isModerator: boolean) {
+        try {
+            if (!Types.ObjectId.isValid(userId)) throw new Error('Invalid user id');
+            return await Account.findByIdAndUpdate(userId, { $set: { isModerator } }, { new: true })
+                .select('_id email')
+                .lean()
+                .exec();
         } catch (err) {
             console.error('Failed to update moderator status:', err);
             throw err;
@@ -219,10 +263,68 @@ export default class AccountRepository {
         }
     }
 
+    // Looks up an account for the profile pages by whichever identifier the
+    // caller has on hand - a Mongo ObjectId (chat participant lists only
+    // carry _id) or an email (own profile, or a direct link). Only ever
+    // selects public-safe fields - never password/ban/blocked internals.
+    static async getProfileByIdentifier(identifier: string) {
+        try {
+            const projection = '_id email phone nickname about avatarUrl accentColor';
+            if (Types.ObjectId.isValid(identifier)) {
+                const byId = await Account.findById(identifier).select(projection).lean().exec();
+                if (byId) return byId;
+            }
+            return await Account.findOne({ email: identifier?.trim().toLowerCase() }).select(projection).lean().exec();
+        } catch (err) {
+            console.error('Failed to find profile:', err);
+            throw new Error('Failed to find profile');
+        }
+    }
+
+    static async updateProfile(userId: string, updates: { nickname?: string; about?: string; accentColor?: string; avatarUrl?: string | null; phone?: string | null }) {
+        try {
+            const set: Record<string, unknown> = {};
+            const unset: Record<string, ''> = {};
+
+            if (updates.nickname !== undefined) set.nickname = updates.nickname;
+            if (updates.about !== undefined) {
+                if (updates.about) set.about = updates.about;
+                else unset.about = '';
+            }
+            if (updates.accentColor !== undefined) set.accentColor = updates.accentColor;
+            if (updates.avatarUrl !== undefined) {
+                if (updates.avatarUrl) set.avatarUrl = updates.avatarUrl;
+                else unset.avatarUrl = '';
+            }
+            if (updates.phone !== undefined) {
+                if (updates.phone) set.phone = updates.phone;
+                else unset.phone = '';
+            }
+
+            const update: Record<string, unknown> = {};
+            if (Object.keys(set).length) update.$set = set;
+            if (Object.keys(unset).length) update.$unset = unset;
+            if (!Object.keys(update).length) return null;
+
+            return await Account.findByIdAndUpdate(userId, update, { new: true })
+                .select('_id email phone nickname about avatarUrl accentColor')
+                .lean()
+                .exec();
+        } catch (err) {
+            console.error('Failed to update profile:', err);
+            // Duplicate key (e.g. `phone` is unique - see models/Account.ts)
+            // needs to reach the caller as-is so it can tell "already taken"
+            // apart from a generic failure, rather than being flattened into
+            // the same opaque error as everything else here.
+            if ((err as { code?: number })?.code === 11000) throw err;
+            throw new Error('Failed to update profile');
+        }
+    }
+
     static async getAllUsersWithStatus() {
         try {
             const users = await Account.find()
-                .select('_id email isModerator isBanned banReason bannedUntil')
+                .select('_id email phone nickname isModerator isBanned banReason bannedUntil')
                 .lean()
                 .exec();
             return users;
