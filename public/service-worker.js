@@ -1,7 +1,15 @@
-import { removeFromQueue, addToQueue, getDeleteQueue, mapQueuedId } from '/indexdb-queue.js';
+// A classic script (not `{ type: 'module' }` at registration), so
+// importScripts() rather than `import` - see the comment at the top of
+// indexdb-queue.js for why. importScripts() must run at the top level,
+// synchronously, before any other statement that depends on it.
+importScripts('/indexdb-queue.js');
 
-const CACHE_NAME = 'my-pwa-cache-v6';
-const STATIC_ASSET_CACHE = 'next-static-assets-v6';
+// Bumped whenever the SW's own format changes (e.g. module -> classic
+// script) as well as on cache-shape changes - a client still running the
+// previous worker needs a cache name it doesn't recognise so `activate`'s
+// cleanup (below) actually clears its stale caches instead of reusing them.
+const CACHE_NAME = 'my-pwa-cache-v7';
+const STATIC_ASSET_CACHE = 'next-static-assets-v7';
 let isSyncing = false;
 
 const OFFLINE_ASSETS = [

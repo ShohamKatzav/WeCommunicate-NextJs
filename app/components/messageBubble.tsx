@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import FullscreenMediaViewer from './fullscreenMediaViewer';
 import AudioPlayer from './audioPlayer';
 import { AsShortName } from "../utils/stringFormat";
+import { linkifyText } from "../utils/linkify";
 
 interface MessageBubbleProps {
   message: Message;
@@ -131,7 +132,7 @@ const MessageBubble = ({ message, onReply }: MessageBubbleProps) => {
         )}
 
         {message.text && (
-          <div className="text-lg md:text-2xl wrap-break-word">{message.text}</div>
+          <div className="text-lg md:text-2xl wrap-break-word">{linkifyText(message.text)}</div>
         )}
 
         {message.file?.contentType && <>

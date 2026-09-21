@@ -6,6 +6,7 @@ import { BottomPromptProvider } from "./context/bottomPromptProvider";
 import InstallPrompt from "./components/InstallPrompt";
 import BottomPromptStack from "./components/bottomPromptStack";
 import OfflineHandler from "./components/offlineHandler";
+import ServiceWorkerRegistrar from "./components/serviceWorkerRegistrar";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -87,6 +88,7 @@ export default function RootLayout({
               a prompt renders, not where it sits in the component tree that
               context flows through. */}
           <BottomPromptProvider>
+            <ServiceWorkerRegistrar />
             <OfflineHandler>
               <ClientProviders>{children}</ClientProviders>
             </OfflineHandler>

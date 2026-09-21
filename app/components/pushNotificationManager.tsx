@@ -32,25 +32,6 @@ export default function PushNotificationManager() {
     // there is no DOM to portal into while this renders on the server.
     const [promptStack, setPromptStack] = useState<HTMLElement | null>(null);
 
-    async function registerServiceWorker() {
-        try {
-            const registration = await navigator.serviceWorker.register("/service-worker.js", {
-                type: 'module',
-                scope: '/',
-                updateViaCache: 'none',
-            });
-
-            const sub = await registration.pushManager.getSubscription();
-            setSubscription(sub);
-
-            window.addEventListener('online', () => {
-                registration.active?.postMessage({ type: 'SYNC_QUEUE' });
-            });
-        } catch (error) {
-            console.error("Service Worker registration failed:", error);
-        }
-    }
-
     async function subscribeToPush() {
         try {
             const registration = await navigator.serviceWorker.ready
@@ -85,8 +66,14 @@ export default function PushNotificationManager() {
     useEffect(() => {
         const supported = 'serviceWorker' in navigator && 'PushManager' in window;
         setIsSupported(supported);
+        // Registration itself happens once, on every page, in
+        // serviceWorkerRegistrar.tsx (root layout) - this only needs to know
+        // whether that worker already holds a push subscription.
         if (supported && !loadingUser) {
-            registerServiceWorker();
+            navigator.serviceWorker.ready
+                .then(registration => registration.pushManager.getSubscription())
+                .then(setSubscription)
+                .catch(error => console.error("Failed to read push subscription:", error));
         }
     }, [loadingUser]);
 
@@ -116,9 +103,8 @@ export default function PushNotificationManager() {
         />
     );
 
-    // Rendered into the shared bottom stack rather than here: this component is
-    // mounted inside the chat's flex row (it registers the service worker from
-    // there), so anything it returned in place became a phantom column beside
-    // the conversation.
+    // Rendered into the shared bottom stack rather than here: this component
+    // is mounted inside the chat's flex row, so anything it returned in
+    // place became a phantom column beside the conversation.
     return createPortal(banner, promptStack);
 }

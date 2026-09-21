@@ -10,6 +10,10 @@ export default class Navbar {
     aboutLink: Locator;
     contactLink: Locator;
     logOutLink: Locator;
+    menuButton: Locator;
+    mobileOverlay: Locator;
+    mobileThemeToggleButton: Locator;
+    desktopThemeToggleButton: Locator;
 
     constructor(page: Page) {
         this.page = page;
@@ -25,6 +29,19 @@ export default class Navbar {
         this.aboutLink = navbar.getByRole('link', { name: /^about$/i });
         this.contactLink = navbar.getByRole('link', { name: /^contact$/i });
         this.logOutLink = navbar.getByRole('link', { name: /^log out$/i });
+        this.menuButton = navbar.getByRole('button', { name: /open menu|close menu/i });
+        // Both the desktop (icon) and mobile (labelled) ThemeToggle are
+        // always in the DOM - only CSS display toggles between them per
+        // breakpoint - so tests scope to the overlay explicitly rather than
+        // matching "the" theme button, which would be ambiguous.
+        this.mobileOverlay = page.getByTestId('mobile-nav-overlay');
+        this.mobileThemeToggleButton = this.mobileOverlay.getByRole('button', { name: /^Theme:/i });
+        this.desktopThemeToggleButton = navbar.locator('ul.hidden').getByRole('button', { name: /^Theme:/i });
+    }
+
+    async openMobileMenu(): Promise<void> {
+        await this.menuButton.click();
+        await this.mobileOverlay.waitFor({ state: 'visible' });
     }
 
     async logout(): Promise<void> {

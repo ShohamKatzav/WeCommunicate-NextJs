@@ -78,7 +78,14 @@ export async function POST(request: NextRequest) {
         .slice(0, MAX_MESSAGE_LENGTH);
 
     const token = randomUUID();
-    await RedisService.storeSharedContent(token, { userID, text: combinedText, file });
+    try {
+        await RedisService.storeSharedContent(token, { userID, text: combinedText, file });
+    } catch (err) {
+        // Nothing to hand off without the Redis entry, but the user still
+        // has an account and a browser - land them in chat rather than 500.
+        console.error('Failed to store shared content:', err);
+        return redirectInApp('/chat');
+    }
 
     return redirectInApp(`/chat?shared=${token}`);
 }
