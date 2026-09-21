@@ -16,6 +16,7 @@ import FullscreenMediaViewer from './fullscreenMediaViewer';
 import AudioPlayer from './audioPlayer';
 import { AsShortName } from "../utils/stringFormat";
 import { linkifyText } from "../utils/linkify";
+import { DEFAULT_ACCENT_COLOR } from "../config/limits";
 
 interface MessageBubbleProps {
   message: Message;
@@ -50,9 +51,14 @@ const MessageBubble = ({ message, onReply }: MessageBubbleProps) => {
   // following light/dark, the same way most chat apps don't reflow message
   // colours when you flip the app's theme.
   const messageStyle = `max-w-[80%] md:max-w-[60%] px-3.5 py-2 md:px-4 md:py-3 overflow-hidden
-  ${isOwnMessage ? "bg-green-700 rounded-br-3xl" : "bg-gray-600 rounded-bl-3xl"
+  ${isOwnMessage ? "rounded-br-3xl" : "bg-gray-600 rounded-bl-3xl"
     } rounded-tl-3xl rounded-tr-xl text-white wrap-break-word mb-3 md:mb-6
     ${deleted ? "gap-1 flex text-lg md:text-2xl" : "gap-6"}`;
+  // Own bubbles use the sender's chosen accent color (types/user.ts,
+  // profileActions.ts) instead of a hardcoded class, falling back to the
+  // exact green-700 hex this used to be a Tailwind class for, so a user who
+  // never picked an accent sees today's bubble unchanged.
+  const bubbleAccentStyle = isOwnMessage ? { backgroundColor: user?.accentColor || DEFAULT_ACCENT_COLOR } : undefined;
   // Own messages sit on the left and received ones on the right - which is also
   // the side each bubble's squared-off corner points at. The side has to be set
   // on this row, because the bubble itself only ever carried justify-self and
@@ -97,6 +103,7 @@ const MessageBubble = ({ message, onReply }: MessageBubbleProps) => {
       <div className={messageRowStyle}>
         <div
           className={messageStyle}
+          style={bubbleAccentStyle}
           data-testid={isOwnMessage ? "sent-message" : "received-message"}
         >
           <IoBan size={isMobile ? 25 : 30} />
@@ -117,6 +124,7 @@ const MessageBubble = ({ message, onReply }: MessageBubbleProps) => {
         onMouseEnter={() => !isMobile && setHover(true)}
         onMouseLeave={() => !isMobile && setHover(false)}
         className={messageStyle}
+        style={bubbleAccentStyle}
         data-testid={message.sender === user?.email ? "sent-message" : "received-message"}
         ref={messageRef}
       >

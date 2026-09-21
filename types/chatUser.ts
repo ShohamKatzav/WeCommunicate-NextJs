@@ -4,4 +4,6 @@ export default interface ChatUser {
     email?: string | undefined;
     nickname?: string | undefined;
     unreadCount: number;
+    avatarUrl?: string;
+    accentColor?: string;
 }

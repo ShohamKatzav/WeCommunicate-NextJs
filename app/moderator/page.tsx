@@ -8,12 +8,37 @@ import { toast } from 'sonner';
 import Loading from '../components/loading';
 import { useSocket } from '../hooks/useSocket';
 
+function sessionUserId(token?: string): string | null {
+    if (!token) return null;
+    try {
+        const payload = token.split('.')[1];
+        if (!payload) return null;
+        const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as { _id?: unknown };
+        return typeof decoded._id === 'string' ? decoded._id : null;
+    } catch {
+        return null;
+    }
+}
+
 interface UserStatus {
     _id: string;
-    email: string;
+    email?: string;
+    nickname?: string;
+    phone?: string;
     isModerator: boolean;
     isBanned: boolean;
     banReason: string;
+}
+
+function accountLabel(userItem: UserStatus): string {
+    if (userItem.email) {
+        return userItem.email.charAt(0).toUpperCase() + userItem.email.slice(1);
+    }
+    const nickname = userItem.nickname?.trim();
+    if (nickname) return nickname;
+    const phone = userItem.phone?.trim();
+    if (phone) return phone;
+    return "Unknown user";
 }
 
 export default function ModeratorPanel() {
@@ -39,12 +64,12 @@ export default function ModeratorPanel() {
     const handleUserBanned = (data: { userEmail: string, message: string }, isBannedUpdate: boolean) => {
         const { userEmail, message } = data;
         const newBanReason = message?.split("Content flagged for: ")[1] || "Banned by moderator";
-        updateUserRow(userEmail, { isBanned: isBannedUpdate, banReason: newBanReason });
+        updateUserRowByEmail(userEmail, { isBanned: isBannedUpdate, banReason: newBanReason });
     }
 
     const handleBanExpired = (userEmails: string[]) => {
         for (const email of userEmails)
-            updateUserRow(email, { isBanned: false });
+            updateUserRowByEmail(email, { isBanned: false });
     }
 
     useEffect(() => {
@@ -83,61 +108,75 @@ export default function ModeratorPanel() {
         setLoading(false);
     };
 
-    const handleBan = async (email: string) => {
-        const result = await banUser(email);
+    const handleBan = async (userId: string) => {
+        const result = await banUser(userId);
         if (result.success) {
             toast.success(result.message);
             if (socket && result.userEmail) {
                 socket.emit('ban user', { userEmail: result.userEmail });
             }
-            updateUserRow(email, { isBanned: true });
+            updateUserRow(userId, { isBanned: true });
         } else {
             toast.error(result.message);
         }
     };
 
-    const handleUnban = async (email: string) => {
-        const result = await unbanUser(email);
+    const handleUnban = async (userId: string) => {
+        const result = await unbanUser(userId);
         if (result.success) {
             toast.success(result.message);
             if (socket && result.userEmail) {
                 socket.emit('unban user', { userEmail: result.userEmail });
             }
-            updateUserRow(email, { isBanned: false });
+            updateUserRow(userId, { isBanned: false });
         } else {
             toast.error(result.message);
         }
     };
 
-    const handleDemote = async (email: string) => {
-        const result = await demoteFromModerator(email);
+    const handleDemote = async (userId: string) => {
+        const result = await demoteFromModerator(userId);
         if (result.success) {
             toast.success(result.message);
-            updateUserRow(email, { isModerator: false });
+            updateUserRow(userId, { isModerator: false });
         } else {
             toast.error(result.message);
         }
     };
 
-    const handlePromote = async (email: string) => {
-        const result = await promoteToModerator(email);
+    const handlePromote = async (userId: string) => {
+        const result = await promoteToModerator(userId);
         if (result.success) {
             toast.success(result.message);
-            updateUserRow(email, { isModerator: true });
+            updateUserRow(userId, { isModerator: true });
         } else {
             toast.error(result.message);
         }
     };
 
-    const filteredUsers = users.filter(u =>
-        u.email.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const currentUserId = sessionUserId(user?.token);
+    const isSelf = (userItem: UserStatus) =>
+        (currentUserId != null && userItem._id === currentUserId) ||
+        (Boolean(userItem.email) && userItem.email!.toLowerCase() === user?.email?.toLowerCase());
 
-    const updateUserRow = (email: string, patch: Partial<UserStatus>) => {
+    const filteredUsers = users.filter(u => {
+        const query = searchQuery.trim().toLowerCase();
+        if (!query) return true;
+        const haystack = [u.email, u.nickname, u.phone].filter(Boolean).join(" ").toLowerCase();
+        return haystack.includes(query);
+    });
+
+    const updateUserRow = (userId: string, patch: Partial<UserStatus>) => {
         setUsers(prev =>
-            prev.map(u =>
-                u.email.toLowerCase() === email?.toLowerCase() ? { ...u, ...patch } : u
-            )
+            prev.map(u => u._id === userId ? { ...u, ...patch } : u)
+        );
+    };
+
+    const updateUserRowByEmail = (email: string, patch: Partial<UserStatus>) => {
+        const target = email?.toLowerCase();
+        if (!target) return;
+        setUsers(prev =>
+            prev.map(u => u.email?.toLowerCase() === target ? { ...u, ...patch } : u)
         );
     };
 
@@ -168,7 +207,7 @@ export default function ModeratorPanel() {
             <div className="mb-6">
                 <input
                     type="text"
-                    placeholder="Search users by email..."
+                    placeholder="Search users..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
@@ -183,7 +222,7 @@ export default function ModeratorPanel() {
                         <thead className="bg-gray-50 dark:bg-gray-900">
                             <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                    Email
+                                    User
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                                     Status
@@ -203,7 +242,7 @@ export default function ModeratorPanel() {
                             {filteredUsers.map((userItem) => (
                                 <tr key={userItem._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                        {userItem.email.slice(0, 1).toUpperCase() + userItem.email.slice(1)}
+                                        {accountLabel(userItem)}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         {userItem.isBanned ? (
@@ -241,7 +280,7 @@ export default function ModeratorPanel() {
                                             {userItem.isBanned ? (
                                                 <button
                                                     key="unban"
-                                                    onClick={() => handleUnban(userItem.email)}
+                                                    onClick={() => handleUnban(userItem._id)}
                                                     // Same inversion the status badges already use (light bg/dark
                                                     // text <-> dark bg/light text), not just a darker shade of the
                                                     // same fill - a one-step 700->800 read as identical at a
@@ -252,11 +291,11 @@ export default function ModeratorPanel() {
                                                     <UserCheck className="w-4 h-4 mr-1" />
                                                     Unban
                                                 </button>
-                                            ) : userItem.email.toLowerCase() !== user.email?.toLowerCase() && (
+                                            ) : !isSelf(userItem) && (
                                                 <button
                                                     key="ban"
-                                                    onClick={() => handleBan(userItem.email)}
-                                                    disabled={userItem.email === user.email}
+                                                    onClick={() => handleBan(userItem._id)}
+                                                    disabled={isSelf(userItem)}
                                                     // red-400/red-950 is 5.8:1 (computed).
                                                     className="inline-flex items-center px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white dark:bg-red-400 dark:hover:bg-red-300 dark:text-red-950 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
@@ -265,10 +304,10 @@ export default function ModeratorPanel() {
                                                 </button>
                                             )}
 
-                                            {userItem.isModerator && userItem.email.toLowerCase() !== user.email?.toLowerCase() ? (
+                                            {userItem.isModerator && !isSelf(userItem) ? (
                                                 <button
                                                     key="demote"
-                                                    onClick={() => handleDemote(userItem.email)}
+                                                    onClick={() => handleDemote(userItem._id)}
                                                     // Same inversion as Unban above - amber-400/amber-950 is 9.0:1.
                                                     className="inline-flex items-center px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white dark:bg-amber-400 dark:hover:bg-amber-300 dark:text-amber-950 rounded-lg transition-colors"
                                                 >
@@ -276,10 +315,10 @@ export default function ModeratorPanel() {
                                                     Demote
                                                 </button>
                                             ) : (
-                                                !userItem.isBanned && userItem.email.toLowerCase() !== user.email?.toLowerCase() && (
+                                                !userItem.isBanned && !isSelf(userItem) && (
                                                     <button
                                                         key="promote"
-                                                        onClick={() => handlePromote(userItem.email)}
+                                                        onClick={() => handlePromote(userItem._id)}
                                                         // Same inversion as Unban above - indigo-400/indigo-950 is 5.4:1.
                                                         className="inline-flex items-center px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-400 dark:hover:bg-indigo-300 dark:text-indigo-950 rounded-lg transition-colors"
                                                     >

@@ -75,7 +75,7 @@ const Login = () => {
       // Authenticate user
       const authResponse = await authenticateUser(email, password);
       if (await authResponse.success) {
-        await updateUser({ email: authResponse.email, nickname: authResponse.nickname, token: authResponse.token, isModerator: authResponse.isModerator, });
+        await updateUser({ email: authResponse.email, nickname: authResponse.nickname, token: authResponse.token, isModerator: authResponse.isModerator, avatarUrl: authResponse.avatarUrl, accentColor: authResponse.accentColor });
         router.replace("/chat");
         return true;
       } else if (authResponse.status === 401) {

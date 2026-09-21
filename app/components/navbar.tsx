@@ -9,9 +9,10 @@ import { useUser } from "../hooks/useUser";
 import { useSocket } from "../hooks/useSocket";
 import { AsShortName } from "../utils/stringFormat";
 import ThemeToggle from "./themeToggle";
+import Avatar from "./avatar";
 import './bars.css';
 
-const DYNAMIC_OFFLINE_LINKS = ['chat', 'locations'];
+const DYNAMIC_OFFLINE_LINKS = ['/chat', '/locations'];
 
 const Navbar = () => {
   const [nav, setNav] = useState(false);
@@ -66,12 +67,12 @@ const Navbar = () => {
   };
 
   const links = [
-    { id: 1, text: "login", link: "login", auth: false, action: () => { } },
-    { id: 2, text: "chat", link: "chat", auth: true, action: () => { } },
-    { id: 3, text: "locations", link: "locations", auth: true, action: () => { } },
-    { id: 4, text: "moderator", link: "moderator", auth: true, moderatorOnly: true, action: () => { } },
-    { id: 5, text: "about", link: "about", auth: null, action: () => { } },
-    { id: 6, text: "contact", link: "contact", auth: null, action: () => { } },
+    { id: 1, text: "login", link: "/login", auth: false, action: () => { } },
+    { id: 2, text: "chat", link: "/chat", auth: true, action: () => { } },
+    { id: 3, text: "locations", link: "/locations", auth: true, action: () => { } },
+    { id: 4, text: "moderator", link: "/moderator", auth: true, moderatorOnly: true, action: () => { } },
+    { id: 5, text: "about", link: "/about", auth: null, action: () => { } },
+    { id: 6, text: "contact", link: "/contact", auth: null, action: () => { } },
     { id: 7, text: "log out", link: "/", auth: true, action: () => handleLogOut() },
   ];
 
@@ -89,10 +90,9 @@ const Navbar = () => {
     return true;
   };
 
-  const isActiveLink = (link: string) => {
-    const href = `/${link}`.replace(/\/$/, '') || '/';
+  const isActiveLink = (href: string) => {
     const currentPath = pathname || '';
-    if (link === '/') return currentPath === '/';
+    if (href === '/') return currentPath === '/';
     return currentPath === href || currentPath.startsWith(`${href}/`);
   };
 
@@ -167,8 +167,16 @@ const Navbar = () => {
               <ThemeToggle variant="icon" />
             </li>
             {isUserConnected() && displayName && (
-              <li className="ml-1 hidden max-w-36 truncate rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-zinc-300 lg:block" title={displayName}>
-                {displayName}
+              <li className="ml-1 hidden lg:block">
+                <Link
+                  href="/profile/edit"
+                  data-testid="navbar-profile-link"
+                  className="flex max-w-36 items-center gap-1.5 truncate rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs font-medium text-zinc-300 hover:bg-white/10 hover:text-white transition-colors"
+                  title={displayName}
+                >
+                  <Avatar avatarUrl={user?.avatarUrl} nickname={user?.nickname} email={user?.email} size={20} />
+                  <span className="truncate">{displayName}</span>
+                </Link>
               </li>
             )}
           </ul>

@@ -147,11 +147,14 @@ async function handleUpdateConnectedUsers(io) {
     const accounts = await Account.find({ email: { $in: onlineEmails } })
         .select('email blocked')
         .lean();
-    const emailById = new Map(accounts.map(a => [a._id.toString(), a.email.toLowerCase()]));
+    const emailById = new Map(
+        accounts.flatMap(a => a.email ? [[a._id.toString(), a.email.toLowerCase()]] : [])
+    );
 
     // targetEmail -> set of emails that have blocked them.
     const blockersOf = new Map();
     for (const account of accounts) {
+        if (!account.email) continue;
         for (const blockedId of account.blocked || []) {
             const targetEmail = emailById.get(blockedId.toString());
             if (!targetEmail) continue; // the account they blocked isn't online right now
@@ -200,6 +203,10 @@ async function handlePublishMessage(io, socket, message) {
     }
 
     for (const member of conversation.members) {
+        // A member whose email was removed from the account can't be routed
+        // by the email-keyed socket registry. Skip them instead of throwing,
+        // so everyone else in the conversation still receives the message.
+        if (!member.email) continue;
         if (member.email.toUpperCase() === message.sender.toUpperCase()) continue;
 
         const memberSocketIds = await RedisService.getUserSocketsByEmail(member.email);

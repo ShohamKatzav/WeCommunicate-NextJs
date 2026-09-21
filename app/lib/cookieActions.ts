@@ -34,7 +34,9 @@ export async function createUserCoockie(data: User): Promise<any> {
       email: data.email,
       nickname: data.nickname,
       token: data.token,
-      isModerator
+      isModerator,
+      avatarUrl: data.avatarUrl,
+      accentColor: data.accentColor
     }),
   });
 }

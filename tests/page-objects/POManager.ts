@@ -8,6 +8,7 @@ import ForgotPasswordPage from "./ForgotPassword";
 import SignUpPage from "./SignUpPage";
 import OfflinePage from "./OfflinePage";
 import Page404 from "./404Page";
+import ProfilePage from "./ProfilePage";
 
 
 export default class POManager {
@@ -22,6 +23,7 @@ export default class POManager {
     private signUpPage: SignUpPage;
     private offlinePage: OfflinePage;
     private page404: Page404;
+    private profilePage: ProfilePage;
 
 
     constructor(page: Page) {
@@ -35,6 +37,7 @@ export default class POManager {
         this.signUpPage = new SignUpPage(page);
         this.offlinePage = new OfflinePage(page);
         this.page404 = new Page404(page);
+        this.profilePage = new ProfilePage(page);
     }
 
     async getEmailValidationError(emailInput: Locator): Promise<string> {
@@ -104,5 +107,12 @@ export default class POManager {
             this.page404 = new Page404(this.page);
         }
         return this.page404;
+    }
+
+    getProfilePage() {
+        if (!this.profilePage) {
+            this.profilePage = new ProfilePage(this.page);
+        }
+        return this.profilePage;
     }
 }

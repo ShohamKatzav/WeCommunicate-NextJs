@@ -9,6 +9,7 @@ export default class Navbar {
     locationsLink: Locator;
     aboutLink: Locator;
     contactLink: Locator;
+    profileLink: Locator;
     logOutLink: Locator;
     menuButton: Locator;
     mobileOverlay: Locator;
@@ -28,6 +29,11 @@ export default class Navbar {
         this.locationsLink = navbar.getByRole('link', { name: /^locations$/i });
         this.aboutLink = navbar.getByRole('link', { name: /^about$/i });
         this.contactLink = navbar.getByRole('link', { name: /^contact$/i });
+        // Not a plain nav-links entry - there's no standalone "profile" link
+        // (clicking the user's own name/avatar badge goes straight to
+        // /profile/edit), so this is matched by its testid rather than role
+        // name, which varies with the signed-in user's display name.
+        this.profileLink = navbar.getByTestId('navbar-profile-link');
         this.logOutLink = navbar.getByRole('link', { name: /^log out$/i });
         this.menuButton = navbar.getByRole('button', { name: /open menu|close menu/i });
         // Both the desktop (icon) and mobile (labelled) ThemeToggle are

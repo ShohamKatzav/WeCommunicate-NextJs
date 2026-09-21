@@ -11,7 +11,7 @@ interface OTPProcessProps {
     mode: 'forgot' | 'sign-up';
 }
 
-const sanitizePhoneInput = (value: string) => {
+export const sanitizePhoneInput = (value: string) => {
     const sanitized = value.replace(/[^\d\s()+-]/g, '');
     return sanitized.startsWith('+')
         ? `+${sanitized.slice(1).replace(/\+/g, '')}`
