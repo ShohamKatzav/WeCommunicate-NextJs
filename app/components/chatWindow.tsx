@@ -74,7 +74,7 @@ const ChatWindow = ({ messages, participants, isMobile, onReply, conversationId,
                 participants.current ?
                     (<div className="flex min-h-0 flex-1 flex-col bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
                         <div className="flex min-h-0 flex-1 flex-col">
-                            {(!messages || messages?.length === 0) && <div className="text-sm text-muted-foreground self-start">No messages yet — say hi 👋</div>}
+                            {(!messages || messages?.length === 0) && <div className="text-sm text-muted-foreground self-start p-3">No messages yet — say hi 👋</div>}
                             <div ref={chatBox} className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto w-full p-2">
                                 <div>
                                     {messages?.map((message, index) =>

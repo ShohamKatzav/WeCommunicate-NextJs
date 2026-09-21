@@ -33,7 +33,12 @@ export default function OfflinePage({ forceOffline }: { forceOffline?: boolean }
     };
 
     return (
-        <div className="min-h-screen w-full bg-gradient-to-br from-gray-900 to-slate-900 text-gray-50 flex flex-col items-center justify-center text-center px-6 relative z-50">
+        // Was permanently dark (from-gray-900 to-slate-900, no dark: pair) -
+        // this page is rendered inside the app's real ThemeProvider (see
+        // offlineHandler.tsx in layout.tsx), so .dark toggling already
+        // worked here; it just never had a light-mode look to switch to.
+        // Same gradient stops as public/offline.html's light/dark pair.
+        <div className="min-h-screen w-full bg-gradient-to-br from-gray-50 to-sky-100 dark:from-gray-900 dark:to-slate-800 text-gray-800 dark:text-gray-50 flex flex-col items-center justify-center text-center px-6 relative z-50">
             {/* Status Icon */}
             <div className={`w-24 h-24 ${isOnline ? 'animate-pulse' : 'animate-bounce'}`}>
                 {isOnline ? (
@@ -43,7 +48,12 @@ export default function OfflinePage({ forceOffline }: { forceOffline?: boolean }
                         stroke="currentColor"
                         strokeWidth="2"
                         viewBox="0 0 24 24"
-                        className="w-full h-full text-green-400"
+                        // text-success: the plain green-400 this used to be
+                        // is under the 3:1 non-text contrast minimum against
+                        // the new light background (computed ~1.5:1) - this
+                        // token is the same one already audited for exactly
+                        // this "obvious shade fails" case (see globals.css).
+                        className="w-full h-full text-success"
                     >
                         <path
                             strokeLinecap="round"
@@ -58,7 +68,7 @@ export default function OfflinePage({ forceOffline }: { forceOffline?: boolean }
                         stroke="currentColor"
                         strokeWidth="2"
                         viewBox="0 0 24 24"
-                        className="w-full h-full text-gray-400"
+                        className="w-full h-full text-muted-foreground"
                     >
                         <path
                             strokeLinecap="round"
@@ -83,15 +93,15 @@ export default function OfflinePage({ forceOffline }: { forceOffline?: boolean }
                 )}
             </p>
 
-            <p className="mt-2 text-sm italic text-gray-400">
+            <p className="mt-2 text-sm italic text-muted-foreground">
                 "Sometimes you need to disconnect to reconnect." — Anonymous
             </p>
 
             {/* Connection Indicator */}
             <div
                 className={`mt-6 px-4 py-2 rounded-full font-medium inline-block ${isOnline
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                    : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                     }`}
             >
                 {isOnline ? '✓ Connected' : '✗ No connection'}

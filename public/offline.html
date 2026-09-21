@@ -43,15 +43,30 @@
             color: #f9fafb;
         }
 
+        /* text-4xl sm:text-5xl in offlinePage.tsx's React version - "Reduced
+           size for better mobile fit" there per its own comment, which this
+           page (more likely than most to actually be opened on a phone)
+           wasn't doing at any width. */
         h1 {
             margin-top: 1.5rem;
-            font-size: 3rem;
+            font-size: 2.25rem;
             font-weight: 800;
         }
 
+        /* text-base sm:text-lg in the React version. */
         p {
             margin-top: 1rem;
-            font-size: 1.125rem;
+            font-size: 1rem;
+        }
+
+        @media (min-width: 640px) {
+            h1 {
+                font-size: 3rem;
+            }
+
+            p {
+                font-size: 1.125rem;
+            }
         }
 
         p.italic {
@@ -85,6 +100,19 @@
             color: #991b1b;
         }
 
+        /* Matches offlinePage.tsx's dark: pair for the same pill (the
+           moderator page's status-badge pattern: light pastel bg/dark text,
+           dark saturated bg/light text). */
+        .dark .status.online {
+            background-color: #14532d;
+            color: #bbf7d0;
+        }
+
+        .dark .status.offline {
+            background-color: #7f1d1d;
+            color: #fecaca;
+        }
+
         .button {
             display: inline-flex;
             align-items: center;
@@ -112,16 +140,18 @@
             cursor: not-allowed;
         }
 
+        /* Fixed regardless of theme, matching app/components/offlinePage.tsx's
+           React version (bg-gray-700/text-gray-100/border-gray-600, no dark:
+           pair) - this used to be a light button in light mode and only
+           picked up the dark styling under .dark, unlike the React page. */
         .button.back {
-            background-color: white;
-            color: #1f2937;
-            border: 1px solid #d1d5db;
+            background-color: #374151;
+            color: #f3f4f6;
+            border: 1px solid #4b5563;
         }
 
-        .dark .button.back {
-            background-color: #374151;
-            color: #e5e7eb;
-            border-color: #4b5563;
+        .button.back:hover {
+            background-color: #4b5563;
         }
 
         ul {
@@ -141,6 +171,31 @@
             width: 6rem;
             height: 6rem;
             margin: auto;
+        }
+
+        /* The SVGs use stroke="currentColor" with no color of their own, so
+           this is what actually tints them - matching offlinePage.tsx's
+           React version (text-success/text-muted-foreground on the <svg>).
+           Previously unset here, so both states just inherited body's text
+           color instead of ever turning green. Light-mode values are
+           app/globals.css's --success/--muted-foreground light values
+           (green-400/gray-400 - the plain Tailwind shade - fails the 3:1
+           non-text contrast minimum against this page's light background,
+           same reason those tokens exist instead of the obvious shade). */
+        .icon.online {
+            color: #15803d;
+        }
+
+        .icon.offline {
+            color: #4b5563;
+        }
+
+        .dark .icon.online {
+            color: #4ade80;
+        }
+
+        .dark .icon.offline {
+            color: #9ca3af;
         }
 
         .animate-bounce {
@@ -236,7 +291,7 @@
 
 <body>
 
-    <div id="status-icon" class="icon animate-bounce">
+    <div id="status-icon" class="icon animate-bounce offline">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M2 12h20M2 6h20M2 18h20" />
         </svg>
@@ -312,20 +367,24 @@
                     statusIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                     </svg>`;
-                    statusIcon.className = "icon animate-pulse";
+                    statusIcon.className = "icon animate-pulse online";
 
                     connectionIndicator.textContent = "✓ Connected";
                     connectionIndicator.className = "status online";
 
                     retryBtn.disabled = false;
                 } else {
-                    statusText.textContent = "You're offline";
+                    // Same antenna treatment as the initial markup above and
+                    // offlinePage.tsx's React version ("You're offline 📡") -
+                    // this used to drop the emoji on every status refresh,
+                    // including the very first one on page load.
+                    statusText.innerHTML = 'You\'re offline <span aria-hidden="true">📡</span>';
                     descriptionText.innerHTML = 'Looks like you\'ve lost your <strong>internet connection</strong>';
 
                     statusIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M2 12h20M2 6h20M2 18h20"/>
                     </svg>`;
-                    statusIcon.className = "icon animate-bounce";
+                    statusIcon.className = "icon animate-bounce offline";
 
                     connectionIndicator.textContent = "✗ No connection";
                     connectionIndicator.className = "status offline";

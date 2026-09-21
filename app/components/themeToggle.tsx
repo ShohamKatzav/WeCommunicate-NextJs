@@ -59,7 +59,10 @@ export default function ThemeToggle({ variant = "icon", className = "" }: ThemeT
                 onClick={() => setOpen(prev => !prev)}
                 aria-haspopup="menu"
                 aria-expanded={open}
-                aria-label={`Theme: ${current.label}. Change theme`}
+                // Same mounted guard as the icon: next-themes reads localStorage
+                // on the client's first paint, so a theme-specific label here
+                // (Light vs the server's System fallback) is a hydration mismatch.
+                aria-label={mounted ? `Theme: ${current.label}. Change theme` : "Change theme"}
                 className={
                     variant === "icon"
                         ? "flex h-9 w-9 items-center justify-center rounded-md text-zinc-400 hover:bg-white/5 hover:text-white transition-colors"

@@ -1,15 +1,21 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { MessageSquare, Mail, Linkedin, Facebook, Github } from "lucide-react";
+import { Mail, Linkedin, Facebook, Github } from "lucide-react";
 import { useUser } from "../hooks/useUser";
 import "./bars.css";
 
-// Chat is a full-viewport shell sized to the gap under the navbar. A tall
-// in-flow footer there would either cover the composer or force the page to
-// scroll under a non-scrolling message list, so this page omits it. Everywhere
-// else the footer sits in document flow at the bottom of the content.
+// Chat is a full-viewport shell sized to the gap under the navbar
+// (.viewport-between-bars, app/globals.css), which subtracts --footer-height
+// from 100dvh so this in-flow footer still ends up on screen instead of
+// below the fold. Every other page leaves --footer-height at its 0px
+// default: BottomPromptStack (bottomPromptStack.tsx) reads the same
+// variable to sit its fixed prompt bar right above the footer, and outside
+// chat that bar is meant to overlay the footer's tail end, not make room
+// for it (see the footer-jump comment below).
 const APP_SHELL_PATHS = ["/chat"];
 
 const productLinks = [
@@ -50,108 +56,161 @@ const Footer = () => {
     const { user } = useUser();
     const year = new Date().getFullYear();
     const signedIn = Boolean(user && Object.keys(user).length > 0);
+    const footerRef = useRef<HTMLElement>(null);
 
     const currentPath = pathname || '';
     const isAppShell = APP_SHELL_PATHS.some(
         (path) => currentPath === path || currentPath.startsWith(`${path}/`)
     );
-    if (isAppShell) return null;
+
+    useEffect(() => {
+        // Only chat's own height calc needs the real number (see the import
+        // comment above) - everywhere else must keep the 0px default, so
+        // leaving chat has to clear this rather than leave the last
+        // measured height stuck on the CSS variable.
+        if (!isAppShell) {
+            document.documentElement.style.removeProperty("--footer-height");
+            return;
+        }
+
+        const footer = footerRef.current;
+        if (!footer) return;
+
+        const publishHeight = () => {
+            document.documentElement.style.setProperty("--footer-height", `${footer.offsetHeight}px`);
+        };
+
+        publishHeight();
+        const resizeObserver = new ResizeObserver(publishHeight);
+        resizeObserver.observe(footer);
+
+        return () => {
+            resizeObserver.disconnect();
+            document.documentElement.style.removeProperty("--footer-height");
+        };
+    }, [isAppShell]);
 
     return (
-        <footer className="footer bg-zinc-950 text-zinc-300 pb-[var(--bottom-prompt-height)]">
+        // No pb-[var(--bottom-prompt-height)] here: padding the footer's own
+        // box grows it, and on a short page that eats the leftover space
+        // margin-top: auto (bars.css) was using to park it at the viewport
+        // bottom - the footer visibly jumped up whenever a prompt appeared.
+        // BottomPromptStack is fixed + a higher z-index than this static
+        // footer, so it already overlays the footer's tail end on its own;
+        // nothing needs to make room for it here. (On /chat there is no
+        // "short page" case - the shell above is sized to leave exactly
+        // this footer's height, so the prompt bar lands in the gap between
+        // the composer and the footer instead of over either one.)
+        <footer ref={footerRef} className="footer bg-zinc-950 text-zinc-300">
             <div
                 className="h-0.5 bg-linear-to-r from-pink-400 via-indigo-500 to-indigo-700"
                 aria-hidden="true"
             />
-            <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8 md:py-12">
-                <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10 lg:px-8 md:py-12">
+                <div className="grid gap-6 sm:grid-cols-2 sm:gap-10 lg:grid-cols-4">
                     <div className="sm:col-span-2 lg:col-span-1">
                         <Link href="/" className="inline-flex items-center gap-2.5">
-                            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-linear-to-br from-pink-400 to-indigo-700 text-white shadow-md shadow-indigo-900/40">
-                                <MessageSquare className="h-4 w-4" aria-hidden="true" />
-                            </span>
+                            {/* Decorative - the wordmark right next to it already names the app. */}
+                            <Image
+                                src="/icon192.png"
+                                alt=""
+                                width={36}
+                                height={36}
+                                className="h-9 w-9 shrink-0 rounded-lg"
+                            />
                             <span className="text-lg font-semibold tracking-tight text-white">
                                 WeCommunicate
                             </span>
                         </Link>
-                        <p className="mt-4 max-w-xs text-sm leading-relaxed text-zinc-400">
+                        <p className="mt-3 max-w-xs text-sm leading-relaxed text-zinc-400 sm:mt-4">
                             Real-time chat with voice notes, disappearing messages, and full
                             offline support - free, in your browser.
                         </p>
                     </div>
 
-                    <div>
-                        <h2 className="text-xs font-semibold tracking-widest text-zinc-400 uppercase">
-                            Explore
-                        </h2>
-                        <ul className="mt-4 space-y-2.5">
-                            {productLinks.map((item) => (
-                                <li key={item.href}>
-                                    <Link
-                                        href={item.href}
-                                        className="text-sm text-zinc-300 transition-colors hover:text-white"
-                                    >
-                                        {item.label}
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-
-                    <div>
-                        <h2 className="text-xs font-semibold tracking-widest text-zinc-400 uppercase">
-                            Account
-                        </h2>
-                        <ul className="mt-4 space-y-2.5">
-                            {signedIn ? (
-                                <>
-                                    <li>
+                    {/* Grouped into one grid row on phones instead of each
+                        stacking full-width - the biggest single contributor to
+                        the footer outgrowing short pages. sm:contents drops
+                        this wrapper from layout at the sm breakpoint so Explore
+                        and Account rejoin the outer grid as their own columns,
+                        unchanged from the desktop layout below. */}
+                    <div className="grid grid-cols-2 gap-6 sm:contents">
+                        <div>
+                            <h2 className="text-xs font-semibold tracking-widest text-zinc-400 uppercase">
+                                Explore
+                            </h2>
+                            <ul className="mt-3 space-y-2 sm:mt-4 sm:space-y-2.5">
+                                {productLinks.map((item) => (
+                                    <li key={item.href}>
                                         <Link
-                                            href="/chat"
+                                            href={item.href}
                                             className="text-sm text-zinc-300 transition-colors hover:text-white"
                                         >
-                                            Open chat
+                                            {item.label}
                                         </Link>
                                     </li>
-                                    {user?.isModerator && (
+                                ))}
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h2 className="text-xs font-semibold tracking-widest text-zinc-400 uppercase">
+                                Account
+                            </h2>
+                            <ul className="mt-3 space-y-2 sm:mt-4 sm:space-y-2.5">
+                                {signedIn ? (
+                                    <>
                                         <li>
                                             <Link
-                                                href="/moderator"
+                                                href="/chat"
                                                 className="text-sm text-zinc-300 transition-colors hover:text-white"
                                             >
-                                                Moderator
+                                                Open chat
                                             </Link>
                                         </li>
-                                    )}
-                                </>
-                            ) : (
-                                <>
-                                    <li>
-                                        <Link
-                                            href="/login"
-                                            className="text-sm text-zinc-300 transition-colors hover:text-white"
-                                        >
-                                            Log in
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link
-                                            href="/sign-up"
-                                            className="text-sm text-zinc-300 transition-colors hover:text-white"
-                                        >
-                                            Create an account
-                                        </Link>
-                                    </li>
-                                </>
-                            )}
-                        </ul>
+                                        {user?.isModerator && (
+                                            <li>
+                                                <Link
+                                                    href="/moderator"
+                                                    className="text-sm text-zinc-300 transition-colors hover:text-white"
+                                                >
+                                                    Moderator
+                                                </Link>
+                                            </li>
+                                        )}
+                                    </>
+                                ) : (
+                                    <>
+                                        <li>
+                                            <Link
+                                                href="/login"
+                                                className="text-sm text-zinc-300 transition-colors hover:text-white"
+                                            >
+                                                Log in
+                                            </Link>
+                                        </li>
+                                        <li>
+                                            <Link
+                                                href="/sign-up"
+                                                className="text-sm text-zinc-300 transition-colors hover:text-white"
+                                            >
+                                                Create an account
+                                            </Link>
+                                        </li>
+                                    </>
+                                )}
+                            </ul>
+                        </div>
                     </div>
 
                     <div>
                         <h2 className="text-xs font-semibold tracking-widest text-zinc-400 uppercase">
                             Connect
                         </h2>
-                        <div className="mt-4 flex flex-wrap gap-2">
+                        {/* flex-nowrap: only 4 icons, so they always fit one
+                            row even at the narrowest supported width - wrapping
+                            would just add an unnecessary second row. */}
+                        <div className="mt-3 flex flex-nowrap gap-2 sm:mt-4">
                             {socialLinks.map((item) => {
                                 const Icon = item.icon;
                                 return (
@@ -170,7 +229,7 @@ const Footer = () => {
                                 );
                             })}
                         </div>
-                        <p className="mt-4 text-sm text-zinc-400">
+                        <p className="mt-3 text-sm text-zinc-400 sm:mt-4">
                             Questions or feedback?{" "}
                             <Link
                                 href="/contact"
@@ -182,7 +241,7 @@ const Footer = () => {
                     </div>
                 </div>
 
-                <div className="mt-10 flex flex-col gap-2 border-t border-white/10 pt-6 text-xs text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
+                <div className="mt-6 flex flex-col gap-2 border-t border-white/10 pt-4 text-xs text-zinc-400 sm:mt-10 sm:flex-row sm:items-center sm:justify-between sm:pt-6">
                     <p>&copy; {year} WeCommunicate. Built by Shoham Katzav.</p>
                     <p>A real-time chat app running on free-tier infrastructure.</p>
                 </div>

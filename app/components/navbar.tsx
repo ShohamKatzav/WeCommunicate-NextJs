@@ -1,8 +1,9 @@
 "use client"
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, MessageSquare } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { deleteUserCoockie } from '../lib/cookieActions';
 import { useUser } from "../hooks/useUser";
 import { useSocket } from "../hooks/useSocket";
@@ -133,9 +134,15 @@ const Navbar = () => {
             href="/"
             className="flex min-w-0 items-center gap-2.5"
           >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-pink-400 to-indigo-700 text-white shadow-sm shadow-indigo-900/50">
-              <MessageSquare className="h-4 w-4" aria-hidden="true" />
-            </span>
+            {/* The wordmark right next to it already names the app, so this
+                is decorative - same as the MessageSquare mark it replaces. */}
+            <Image
+              src="/icon192.png"
+              alt=""
+              width={32}
+              height={32}
+              className="h-8 w-8 shrink-0 rounded-lg"
+            />
             <h1 className="truncate text-lg font-semibold tracking-tight md:text-xl">
               We Communicate
             </h1>
