@@ -3,14 +3,16 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { upload } from "@vercel/blob/client";
 import { toast } from "sonner";
-import { Camera, Trash2 } from "lucide-react";
+import { ImageUp, Trash2 } from "lucide-react";
 import { useUser } from "../../hooks/useUser";
 import { getMyProfile, updateMyProfile, updateMyAvatar } from "../../lib/profileActions";
-import { compressImageIfWorthwhile } from "../../components/uploadFile";
+import { compressImageIfWorthwhile, convertHeicToJpegIfNeeded } from "../../components/uploadFile";
 import { isEmail } from "../../lib/contact";
 import Avatar from "../../components/avatar";
 import AccentColorPicker from "../../components/accentColorPicker";
 import PhoneNumberEditor from "../../components/phoneNumberEditor";
+import EmailAddressEditor from "../../components/emailAddressEditor";
+import AvatarCameraCapture from "../../components/avatarCameraCapture";
 import Loading from "../../components/loading";
 import { ABOUT_MAX_LENGTH, DEFAULT_ACCENT_COLOR } from "../../config/limits";
 
@@ -28,8 +30,14 @@ export default function EditProfilePage() {
     const [accentColor, setAccentColor] = useState<string>(DEFAULT_ACCENT_COLOR);
     const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
     const [phone, setPhone] = useState<string | undefined>(undefined);
+    const [email, setEmail] = useState<string | undefined>(undefined);
+    // False for a phone sign-up account whose `email` is really the
+    // synthetic `phone:...` key (see createUser in accountActions.ts) - that
+    // key must never be shown or treated as a real address.
+    const [hasRealEmail, setHasRealEmail] = useState(false);
     // Phone changes are only offered when the account has a real email to
-    // verify the request against - see PhoneNumberEditor.tsx.
+    // verify the request against - see PhoneNumberEditor.tsx. Becomes true
+    // on the next load of this page once the account gains a real email.
     const [canEditPhone, setCanEditPhone] = useState(false);
     const [saving, setSaving] = useState(false);
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -58,18 +66,29 @@ export default function EditProfilePage() {
                 setAccentColor(result.profile.accentColor || DEFAULT_ACCENT_COLOR);
                 setAvatarUrl(result.profile.avatarUrl);
                 setPhone(result.profile.phone);
-                setCanEditPhone(isEmail(result.profile.email));
+                const realEmail = isEmail(result.profile.email);
+                setHasRealEmail(realEmail);
+                setEmail(realEmail ? result.profile.email : undefined);
+                setCanEditPhone(realEmail);
             }
             setLoading(false);
         })();
         return () => { cancelled = true; };
     }, [loadingUser, user?.token]);
 
-    const handleAvatarChange = async () => {
-        if (!user?.token || !fileInputRef.current?.files?.length) return;
+    const processAvatarFile = async (rawFile: File) => {
+        if (!user?.token) return;
 
-        let file = fileInputRef.current.files[0];
-        if (fileInputRef.current) fileInputRef.current.value = "";
+        let file = rawFile;
+        if (!file.type || file.type === "image/heic" || file.type === "image/heif") {
+            try {
+                file = await convertHeicToJpegIfNeeded(file);
+            } catch (err) {
+                console.error("HEIC conversion failed:", err);
+                toast.error("Please choose a JPG, PNG, or WEBP image");
+                return;
+            }
+        }
 
         if (!AVATAR_TYPES.includes(file.type)) {
             toast.error("Please choose a JPG, PNG, or WEBP image");
@@ -112,6 +131,12 @@ export default function EditProfilePage() {
         }
     };
 
+    const handleAvatarChange = () => {
+        const file = fileInputRef.current?.files?.[0];
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        if (file) void processAvatarFile(file);
+    };
+
     const handleRemoveAvatar = async () => {
         if (!avatarUrl) return;
         setUploadingAvatar(true);
@@ -127,6 +152,15 @@ export default function EditProfilePage() {
         } finally {
             setUploadingAvatar(false);
         }
+    };
+
+    const handleEmailChanged = async (newEmail: string, newToken: string) => {
+        setEmail(newEmail);
+        setHasRealEmail(true);
+        // SocketProvider reconnects when user.token/email change, and socket
+        // auth reads email from the JWT (not the handshake header) - so both
+        // must be replaced together with the reissued token.
+        await updateUser({ ...user, email: newEmail, token: newToken });
     };
 
     const handleSave = async () => {
@@ -164,7 +198,7 @@ export default function EditProfilePage() {
                             className="absolute bottom-0 right-0 p-1.5 rounded-full bg-primary text-primary-foreground cursor-pointer hover:opacity-90"
                             aria-label="Change avatar"
                         >
-                            <Camera size={16} />
+                            <ImageUp size={16} />
                         </label>
                         <input
                             id="avatar-upload"
@@ -174,6 +208,10 @@ export default function EditProfilePage() {
                             className="hidden"
                             disabled={uploadingAvatar}
                             onChange={handleAvatarChange}
+                        />
+                        <AvatarCameraCapture
+                            onCapture={(file) => void processAvatarFile(file)}
+                            disabled={uploadingAvatar}
                         />
                     </div>
                     {avatarUrl && (
@@ -201,6 +239,8 @@ export default function EditProfilePage() {
                             className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                     </div>
+
+                    <EmailAddressEditor currentEmail={email} hasRealEmail={hasRealEmail} hasPhone={!!phone} onChanged={handleEmailChanged} />
 
                     <PhoneNumberEditor currentPhone={phone} canEdit={canEditPhone} onChanged={setPhone} />
 

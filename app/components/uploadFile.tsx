@@ -80,6 +80,39 @@ export async function compressImageIfWorthwhile(file: File): Promise<File> {
     }
 }
 
+// Safari (and most phones shooting HEIC by default) hand off photos with
+// either literally image/heic(/heif), or no browser-recognized type at all -
+// canvas can still decode those via createImageBitmap on platforms with
+// native HEIC support, so this re-encodes to JPEG before any type allowlist
+// gets a chance to reject the file outright. Throws if the platform can't
+// decode it (e.g. no native HEIC support); callers should catch and fall
+// back to their own "unsupported format" messaging.
+const HEIC_LIKE_TYPES = new Set(['', 'image/heic', 'image/heif']);
+
+export async function convertHeicToJpegIfNeeded(file: File): Promise<File> {
+    if (!HEIC_LIKE_TYPES.has(file.type)) return file;
+
+    const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    try {
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Canvas 2D context unavailable');
+        ctx.drawImage(bitmap, 0, 0);
+
+        const blob = await new Promise<Blob | null>(resolve =>
+            canvas.toBlob(resolve, 'image/jpeg', JPEG_QUALITY)
+        );
+        if (!blob) throw new Error('HEIC to JPEG conversion failed');
+
+        const name = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+        return new File([blob], name, { type: 'image/jpeg' });
+    } finally {
+        bitmap.close();
+    }
+}
+
 const VALID_TYPES = [
     'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp',
     'audio/mp3', 'audio/mpeg',

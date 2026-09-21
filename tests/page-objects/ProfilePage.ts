@@ -17,13 +17,29 @@ export default class ProfilePage {
 
     // Phone number editor (see app/components/phoneNumberEditor.tsx) - a
     // three-step widget (view -> enter new number -> enter emailed OTP)
-    // rather than a plain input, so it gets its own set of locators.
+    // rather than a plain input, so it gets its own set of locators. Scoped
+    // to its own data-testid root: the email editor below shares the same
+    // "Add"/"Change" button label in its own view step, so an unscoped
+    // getByRole would match both and fail strict mode.
+    phoneEditor: Locator;
     phoneAddOrChangeButton: Locator;
     newPhoneInput: Locator;
     sendPhoneCodeButton: Locator;
     phoneOtpInput: Locator;
     confirmPhoneButton: Locator;
     resendPhoneCodeButton: Locator;
+
+    // Email address editor (see app/components/emailAddressEditor.tsx) - a
+    // four-step widget (view -> enter new address -> verify current contact
+    // -> verify new address).
+    emailEditor: Locator;
+    emailAddOrChangeButton: Locator;
+    newEmailInput: Locator;
+    sendEmailCodeButton: Locator;
+    currentEmailOtpInput: Locator;
+    confirmCurrentEmailOtpButton: Locator;
+    newEmailOtpInput: Locator;
+    confirmNewEmailOtpButton: Locator;
 
     constructor(page: Page) {
         this.page = page;
@@ -38,12 +54,22 @@ export default class ProfilePage {
         this.saveButton = page.getByRole('button', { name: 'Save' });
         this.cancelButton = page.getByRole('button', { name: 'Cancel' });
 
-        this.phoneAddOrChangeButton = page.getByRole('button', { name: /^(Add|Change)$/ });
+        this.phoneEditor = page.getByTestId('phone-number-editor');
+        this.phoneAddOrChangeButton = this.phoneEditor.getByRole('button', { name: /^(Add|Change)$/ });
         this.newPhoneInput = page.locator('#new-phone');
-        this.sendPhoneCodeButton = page.getByRole('button', { name: 'Send verification code' });
+        this.sendPhoneCodeButton = this.phoneEditor.getByRole('button', { name: 'Send verification code' });
         this.phoneOtpInput = page.locator('#phone-otp');
-        this.confirmPhoneButton = page.getByRole('button', { name: 'Confirm' });
-        this.resendPhoneCodeButton = page.getByRole('button', { name: /Resend/ });
+        this.confirmPhoneButton = this.phoneEditor.getByRole('button', { name: 'Confirm' });
+        this.resendPhoneCodeButton = this.phoneEditor.getByRole('button', { name: /Resend/ });
+
+        this.emailEditor = page.getByTestId('email-address-editor');
+        this.emailAddOrChangeButton = this.emailEditor.getByRole('button', { name: /^(Add|Change)$/ });
+        this.newEmailInput = page.locator('#new-email');
+        this.sendEmailCodeButton = this.emailEditor.getByRole('button', { name: 'Send verification code' });
+        this.currentEmailOtpInput = page.locator('#current-otp');
+        this.confirmCurrentEmailOtpButton = this.emailEditor.getByRole('button', { name: 'Confirm' });
+        this.newEmailOtpInput = page.locator('#new-otp');
+        this.confirmNewEmailOtpButton = this.emailEditor.getByRole('button', { name: 'Confirm' });
     }
 
     // The navbar's own name/avatar badge goes straight to /profile/edit

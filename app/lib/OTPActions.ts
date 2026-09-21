@@ -27,14 +27,19 @@ async function sendCode(contact: string, channel: VerificationChannel, otp: stri
   const message = new Brevo.SendSmtpEmail(); message.to = [{ email: contact }]; message.sender = { name: 'WeCommunicate', email: env.SMTP_USER }; message.subject = 'Your WeCommunicate verification code'; message.htmlContent = `<p>Your verification code is <strong>${otp}</strong>.</p><p>It expires in 10 minutes.</p>`;
   await emailApi.sendTransacEmail(message);
 }
-export async function requestOTP(contact: string, mode: 'sign-up' | 'forgot' | 'change-phone', channel: VerificationChannel = 'email') {
+export async function requestOTP(contact: string, mode: 'sign-up' | 'forgot' | 'change-phone' | 'change-email', channel: VerificationChannel = 'email') {
   if (!(channel === 'sms' ? isPhone(contact) : isEmail(contact))) return { message: channel === 'sms' ? 'Use an international phone number, e.g. +972 50 123 4567' : 'Enter a valid email address', status: 400 };
-  // 'change-phone' (profileActions.ts's phone-number-change flow) always
-  // targets the caller's own already-existing account email, so neither the
-  // sign-up "already taken" guard nor the forgot-password "pretend success
-  // for a nonexistent account" guard applies - it falls straight through to
-  // sending a real code below.
-  const exists = await isExist(contact); if (mode === 'sign-up' && exists.accountExists) return { message: `An account already exists for this ${channel === 'sms' ? 'phone number' : 'email address'}`, status: 400 }; if (mode === 'forgot' && !exists.accountExists) return { status: 200 };
+  // 'change-phone' always targets a contact already on the caller's own
+  // account - the account email for profileActions.ts's phone-number-change
+  // flow, or (reused as-is, same behavior) the account's own phone for the
+  // first step of its email-change flow - so neither the sign-up "already
+  // taken" guard nor the forgot-password "pretend success for a nonexistent
+  // account" guard applies; it falls straight through to sending a real code
+  // below. 'change-email' is the email-change flow's second step, sending to
+  // the *new* address the caller doesn't own yet - it must refuse an address
+  // already claimed by another account, like sign-up, but "wrong meaning" is
+  // avoided by not reusing 'sign-up' itself.
+  const exists = await isExist(contact); if ((mode === 'sign-up' || mode === 'change-email') && exists.accountExists) return { message: `An account already exists for this ${channel === 'sms' ? 'phone number' : 'email address'}`, status: 400 }; if (mode === 'forgot' && !exists.accountExists) return { status: 200 };
 
   const otpKey = key(contact, channel);
   if (!(await isTestBypass())) {

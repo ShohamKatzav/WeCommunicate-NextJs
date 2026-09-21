@@ -321,6 +321,24 @@ export default class AccountRepository {
         }
     }
 
+    // Separate from updateProfile: email is required/unique (never unsettable
+    // the way the optional profile fields there can be $unset) and, unlike
+    // them, doubles as the realtime-messaging identity key - see
+    // profileActions.ts's confirmEmailChange, which rewrites Message.sender
+    // history to match right after this call.
+    static async updateEmail(userId: string, newEmail: string) {
+        try {
+            return await Account.findByIdAndUpdate(userId, { $set: { email: newEmail } }, { new: true })
+                .select('_id email phone nickname about avatarUrl accentColor')
+                .lean()
+                .exec();
+        } catch (err) {
+            console.error('Failed to update email:', err);
+            if ((err as { code?: number })?.code === 11000) throw err;
+            throw new Error('Failed to update email');
+        }
+    }
+
     static async getAllUsersWithStatus() {
         try {
             const users = await Account.find()
