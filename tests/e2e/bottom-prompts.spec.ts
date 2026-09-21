@@ -16,6 +16,7 @@ customTest.describe('Bottom prompts', () => {
 
         await authPage.getLoginPage().navigateToLoginPage();
         const chat = authPage.getChatPage();
+        await chat.resetNotificationPermissionToPrompt();
         await chat.ensureConversation(recipient);
 
         await expect(chat.notificationsPromptMessage).toBeVisible();
@@ -33,6 +34,7 @@ customTest.describe('Bottom prompts', () => {
     customTest('Dismissing the prompt persists across reload', async ({ authPage }) => {
         await authPage.getLoginPage().navigateToLoginPage();
         const chat = authPage.getChatPage();
+        await chat.resetNotificationPermissionToPrompt();
 
         await expect(chat.notificationsPromptMessage).toBeVisible();
         await chat.dismissNotificationsButton.click();
@@ -45,6 +47,7 @@ customTest.describe('Bottom prompts', () => {
     customTest('Later snoozes the prompt instead of dismissing it permanently', async ({ authPage }) => {
         await authPage.getLoginPage().navigateToLoginPage();
         const chat = authPage.getChatPage();
+        await chat.resetNotificationPermissionToPrompt();
 
         await expect(chat.notificationsPromptMessage).toBeVisible();
         await chat.laterNotificationsButton.click();
@@ -64,15 +67,16 @@ customTest.describe('Bottom prompts', () => {
     // A real subscription can't be driven end-to-end here: Chromium refuses
     // the Push API in the incognito-style contexts Playwright always runs in
     // ("Chrome currently does not support the Push API in incognito mode"),
-    // regardless of granted permissions, so subscribeToPush() always takes
-    // its catch branch under automation. That still exercises what this test
-    // cares about - clicking Enable never leaves the old persistent green
-    // "Notifications Enabled" banner behind, success or failure, because
-    // both outcomes are one-shot toasts now instead of a queued prompt.
-    customTest('Enabling notifications never leaves a persistent banner behind', async ({ authPage, context }) => {
-        await context.grantPermissions(['notifications']);
+    // so subscribeToPush() always takes its catch branch under automation.
+    // Granting notifications first would also hide the soft-ask (permission
+    // would no longer be "default"), so Enable is clicked from the prompt
+    // state instead. That still covers what this test cares about - Enable
+    // never leaves the old persistent green "Notifications Enabled" banner
+    // behind, because both success and failure are one-shot toasts now.
+    customTest('Enabling notifications never leaves a persistent banner behind', async ({ authPage }) => {
         await authPage.getLoginPage().navigateToLoginPage();
         const chat = authPage.getChatPage();
+        await chat.resetNotificationPermissionToPrompt();
 
         await expect(chat.notificationsPromptMessage).toBeVisible();
         await chat.enableNotificationsButton.click();

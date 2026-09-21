@@ -85,6 +85,21 @@ export default class ChatPage {
         this.dismissNotificationsButton = page.getByRole('button', { name: 'Permanently dismiss notification prompt' });
     }
 
+    // Playwright Chromium reports Notification.permission as "denied" (the
+    // browser never shows its own prompt under automation). CDP
+    // Browser.setPermission(prompt) is a no-op here, so stub the getter to
+    // the pre-prompt "default" the soft-ask requires, then remount chat so
+    // PushNotificationManager reads it.
+    async resetNotificationPermissionToPrompt(): Promise<void> {
+        await this.page.addInitScript(() => {
+            Object.defineProperty(Notification, 'permission', {
+                configurable: true,
+                get: () => 'default',
+            });
+        });
+        await this.page.goto('/chat');
+    }
+
     async navigateToChatPage(): Promise<void> {
         await Promise.all([
             this.page?.waitForURL('**/chat'),
