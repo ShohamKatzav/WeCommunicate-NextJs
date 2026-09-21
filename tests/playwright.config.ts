@@ -42,7 +42,7 @@ export default defineConfig({
     },
     ignoreHTTPSErrors: true,
     baseURL: process.env.CI ? 'https://wecommunicate-nextjs.onrender.com/' : 'https://localhost:3000/',
-    trace: 'on-first-retry',
+    trace: process.env.CI ? 'retain-on-failure' : 'on-first-retry',
     headless: process.env.CI ? true : false,
     screenshot: 'only-on-failure',
   },

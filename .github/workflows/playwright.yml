@@ -127,6 +127,75 @@ jobs:
         }
         EOF
 
+    # Traces embed the Next.js client bundle (and cookies/network). Strip them
+    # from Allure results before generate so gh-pages never gets the zips.
+    - name: Strip Playwright traces from Allure results
+      if: always()
+      run: |
+        set -euo pipefail
+        python3 - <<'PY'
+        from pathlib import Path
+        import json
+
+        results_dir = Path("tests/playwright-report/allure-results")
+        results_dir.mkdir(parents=True, exist_ok=True)
+
+        def is_trace_zip(att):
+            if not isinstance(att, dict):
+                return False
+            name = str(att.get("name") or "").lower()
+            source = str(att.get("source") or "").lower()
+            typ = str(att.get("type") or "").lower()
+            if source.endswith(".zip"):
+                return True
+            if "playwright-trace" in typ:
+                return True
+            if name == "trace" or name.endswith(".zip"):
+                return True
+            return False
+
+        def strip_attachments(obj, removed):
+            if isinstance(obj, dict):
+                atts = obj.get("attachments")
+                if isinstance(atts, list):
+                    kept = []
+                    for att in atts:
+                        if is_trace_zip(att):
+                            removed.append(att)
+                            source = att.get("source")
+                            if source:
+                                path = results_dir / source
+                                if path.is_file():
+                                    path.unlink()
+                        else:
+                            kept.append(att)
+                    obj["attachments"] = kept
+                for value in obj.values():
+                    strip_attachments(value, removed)
+            elif isinstance(obj, list):
+                for item in obj:
+                    strip_attachments(item, removed)
+
+        removed = []
+        for pattern in ("*-result.json", "*-container.json"):
+            for json_path in results_dir.glob(pattern):
+                data = json.loads(json_path.read_text(encoding="utf-8"))
+                strip_attachments(data, removed)
+                json_path.write_text(
+                    json.dumps(data, ensure_ascii=False),
+                    encoding="utf-8",
+                )
+
+        leftover = list(results_dir.rglob("*.zip"))
+        for zip_path in leftover:
+            zip_path.unlink()
+
+        print(
+            f"Removed {len(removed)} trace attachment(s) from Allure results JSON; "
+            f"deleted {len(leftover)} leftover zip file(s)."
+        )
+        PY
+
     - name: Generate Allure Report
       if: always()
       run: pnpm run allure:report
@@ -153,8 +222,55 @@ jobs:
         index.write_text(html, encoding="utf-8")
         PY
 
-    - name: Persist Allure report history
+    - name: Scan Allure report for leaked Google API keys
+      id: scan
       if: always()
+      run: |
+        set -euo pipefail
+        python3 - <<'PY'
+        from pathlib import Path
+        import re
+        import sys
+
+        report = Path("tests/playwright-report/allure-report")
+        if not report.is_dir():
+            print("Allure report directory missing; refusing to publish.")
+            sys.exit(1)
+
+        zip_files = sorted(
+            p.relative_to(report).as_posix()
+            for p in report.rglob("*.zip")
+            if p.is_file()
+        )
+        if zip_files:
+            print("Refusing to publish: zip attachments still present in Allure report:")
+            for rel in zip_files:
+                print(f"  {rel}")
+            sys.exit(1)
+
+        pattern = re.compile(rb"AIza[0-9A-Za-z_-]{20,}")
+        leaked = []
+        for path in report.rglob("*"):
+            if not path.is_file():
+                continue
+            try:
+                data = path.read_bytes()
+            except OSError:
+                continue
+            if pattern.search(data):
+                leaked.append(path.relative_to(report).as_posix())
+
+        if leaked:
+            print("Refusing to publish: Google API key pattern found in Allure report:")
+            for rel in leaked:
+                print(f"  {rel}")
+            sys.exit(1)
+
+        print("Allure report scan passed.")
+        PY
+
+    - name: Persist Allure report history
+      if: always() && steps.scan.outcome == 'success'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
@@ -174,10 +290,10 @@ jobs:
         git push --force origin HEAD:gh-pages
 
     - uses: actions/upload-artifact@v7
-      if: always()
+      if: always() && steps.scan.outcome == 'success'
       with:
-        name: playwright-report
-        path: tests/playwright-report/
+        name: allure-report
+        path: tests/playwright-report/allure-report
         include-hidden-files: true
         retention-days: 30
 
@@ -194,7 +310,7 @@ jobs:
     steps:
     - uses: actions/download-artifact@v7
       with:
-        name: playwright-report
+        name: allure-report
         path: tests/playwright-report
 
     - name: Configure GitHub Pages
