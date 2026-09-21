@@ -289,6 +289,11 @@ jobs:
         git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
         git push --force origin HEAD:gh-pages
 
+    - name: Add Allure link to Job Summary
+      if: always() && steps.scan.outcome == 'success'
+      run: |
+        echo "### 📊 [View Allure Report](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/?v=${{ github.run_number }})" >> $GITHUB_STEP_SUMMARY
+
     - uses: actions/upload-artifact@v7
       if: always() && steps.scan.outcome == 'success'
       with:
@@ -296,36 +301,3 @@ jobs:
         path: tests/playwright-report/allure-report
         include-hidden-files: true
         retention-days: 30
-
-  publish-report:
-    needs: test
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    permissions:
-      pages: write
-      id-token: write
-
-    steps:
-    - uses: actions/download-artifact@v7
-      with:
-        name: allure-report
-        path: tests/playwright-report
-
-    - name: Configure GitHub Pages
-      uses: actions/configure-pages@v6
-
-    - name: Upload report to GitHub Pages
-      uses: actions/upload-pages-artifact@v5
-      with:
-        path: tests/playwright-report/allure-report
-        include-hidden-files: true
-
-    - name: Deploy report to GitHub Pages
-      uses: actions/deploy-pages@v5
-      id: deployment
-
-    - name: Add Allure link to Job Summary
-      run: |
-        echo "### 📊 [View Allure Report](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/?v=${{ github.run_number }})" >> $GITHUB_STEP_SUMMARY
