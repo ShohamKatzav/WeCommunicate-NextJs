@@ -90,7 +90,7 @@ const PhoneNumberEditor = ({ currentPhone, canEdit, onChanged }: PhoneNumberEdit
 
     if (!canEdit) {
         return (
-            <div>
+            <div data-testid="phone-number-editor">
                 <span className="block text-sm font-medium mb-1">Phone number</span>
                 <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-900 text-muted-foreground text-sm">
                     <PhoneIcon size={16} aria-hidden="true" />
@@ -104,7 +104,7 @@ const PhoneNumberEditor = ({ currentPhone, canEdit, onChanged }: PhoneNumberEdit
     }
 
     return (
-        <div>
+        <div data-testid="phone-number-editor">
             <span className="block text-sm font-medium mb-1">Phone number</span>
 
             {step === 'view' && (

@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { Phone } from "lucide-react";
+import { Mail, Phone } from "lucide-react";
 import Avatar from "./avatar";
 import Profile from "@/types/profile";
 import { DEFAULT_ACCENT_COLOR } from "../config/limits";
 import { AsShortName } from "../utils/stringFormat";
+import { isEmail } from "../lib/contact";
 
 interface ProfileCardProps {
     profile: Profile;
@@ -20,11 +21,28 @@ const ProfileCard = ({ profile, isOwn }: ProfileCardProps) => {
                 <Avatar avatarUrl={profile.avatarUrl} nickname={profile.nickname} email={profile.email} size={96} />
                 <h1 className="text-xl font-semibold" data-testid="profile-nickname">{displayName}</h1>
 
-                {profile.phone && (
+                {isOwn && profile.phone && (
                     <div className="flex items-center gap-1.5 text-sm text-muted-foreground" data-testid="profile-phone">
                         <Phone size={14} aria-hidden="true" />
                         {profile.phone}
                     </div>
+                )}
+
+                {/* A chat participant's profile always shows both rows, even
+                    when unset - `email` may be a synthetic `phone:...` signup
+                    key rather than a real address (see isEmail/createUser),
+                    which must never be rendered as if it were one. */}
+                {!isOwn && (
+                    <>
+                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground" data-testid="profile-email">
+                            <Mail size={14} aria-hidden="true" />
+                            {isEmail(profile.email) ? profile.email : <span className="italic">Hasn&apos;t added an email</span>}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground" data-testid="profile-phone">
+                            <Phone size={14} aria-hidden="true" />
+                            {profile.phone ? profile.phone : <span className="italic">Hasn&apos;t added a phone number</span>}
+                        </div>
+                    </>
                 )}
 
                 {profile.about ? (
