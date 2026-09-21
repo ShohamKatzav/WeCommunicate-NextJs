@@ -1,7 +1,14 @@
+// Loaded into service-worker.js via importScripts(), not `import` - a module
+// service worker is a common cause of Samsung Internet/Firefox refusing to
+// install the PWA (the WebAPK/install pipeline there doesn't handle module
+// workers reliably the way Chrome does), so the worker registers as a
+// classic script. importScripts() runs this in the worker's global scope
+// rather than resolving it as an ES module, so these functions are declared
+// as plain globals instead of being `export`ed.
 const DB_NAME = 'offline-queue-db-v6';
 const STORE_NAME = 'operations-queue-v6';
 
-export function openDB() {
+function openDB() {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME);
 
@@ -17,7 +24,7 @@ export function openDB() {
     });
 }
 
-export async function addToQueue(operation, data) {
+async function addToQueue(operation, data) {
     let db;
     try {
         db = await openDB();
@@ -52,7 +59,7 @@ export async function addToQueue(operation, data) {
     }
 }
 
-export async function getDeleteQueue() {
+async function getDeleteQueue() {
     let db;
     try {
         db = await openDB();
@@ -76,7 +83,7 @@ export async function getDeleteQueue() {
     }
 }
 
-export async function removeFromQueue(id) {
+async function removeFromQueue(id) {
     let db;
     try {
         db = await openDB();
@@ -97,7 +104,7 @@ export async function removeFromQueue(id) {
     }
 }
 
-export async function clearQueue() {
+async function clearQueue() {
     let db;
     try {
         db = await openDB();
@@ -119,7 +126,7 @@ export async function clearQueue() {
 }
 
 
-export async function mapQueuedId(operation, tempId, realId) {
+async function mapQueuedId(operation, tempId, realId) {
     let db;
     try {
         db = await openDB();

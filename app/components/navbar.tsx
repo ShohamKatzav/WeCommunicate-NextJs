@@ -178,7 +178,17 @@ const Navbar = () => {
         </div>
 
         {nav && (
-          <ul className="absolute inset-x-0 top-0 z-40 flex h-[100dvh] flex-col items-center justify-center gap-1 bg-linear-to-b from-zinc-950 to-zinc-900 text-zinc-300">
+          // overflow-y-auto + [justify-content:safe_center]: on a short phone
+          // screen the logged-in link list (chat/locations/moderator/about/
+          // contact/log out) plus the theme row can exceed 100dvh - plain
+          // `justify-center` on an overflowing flex column clips content off
+          // both ends with no way to reach it, so "safe" falls back to
+          // start-alignment (and lets the list scroll) only once it no
+          // longer fits, while still centering it when it does.
+          <ul
+            data-testid="mobile-nav-overlay"
+            className="absolute inset-x-0 top-0 z-40 flex h-[100dvh] flex-col items-center gap-1 overflow-y-auto py-8 [justify-content:safe_center] bg-linear-to-b from-zinc-950 to-zinc-900 text-zinc-300"
+          >
             {links.map((item) => (
               shouldDisplayLink(item) &&
               <li
@@ -196,7 +206,11 @@ const Navbar = () => {
                 </Link>
               </li>
             ))}
-            <li className="w-48 px-4 py-4">
+            {/* Same row shape as the links above (px-4 py-4, same centering)
+                instead of its own fixed-width box, so it lands on the same
+                axis as "chat" / "about" / etc. instead of sitting off-center
+                as a narrower, smaller-type block underneath them. */}
+            <li className="px-4 py-4">
               <ThemeToggle variant="labelled" />
             </li>
           </ul>

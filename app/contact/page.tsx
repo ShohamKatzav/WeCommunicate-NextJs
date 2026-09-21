@@ -88,7 +88,7 @@ const Contact = () => {
                             href="https://github.com/ShohamKatzav/"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transform hover:scale-105 transition-all duration-200"
+                            className="inline-flex items-center px-8 py-3 bg-primary text-primary-foreground hover:opacity-90 font-semibold rounded-lg transform hover:scale-105 transition-all duration-200"
                         >
                             <span>Visit GitHub Profile</span>
                         </a>

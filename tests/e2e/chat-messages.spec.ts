@@ -67,3 +67,50 @@ customTest.describe('Chat Messages Functionality', () => {
 
 });
 
+customTest.describe('Message link rendering', () => {
+
+    customTest('A URL in message text renders as a real, safe link', async ({ authPage, loginData }) => {
+        const sharedUrl = 'https://example.com/path?x=1';
+        const textToSend = `Check this out: ${sharedUrl} thanks`;
+        await authPage.getLoginPage().navigateToLoginPage();
+        const anotherLoginData = dataSet.find(user => user.username !== loginData.username);
+        const secondUserShortName = anotherLoginData?.username.split('@')[0] || '';
+        await (await authPage.getChatPage().selectUser(secondUserShortName)).click();
+
+        await authPage.getChatPage().sendMessage(textToSend);
+
+        const sentMessage = authPage.getChatPage().getSentMessageByText('Check this out');
+        const link = sentMessage.getByRole('link', { name: sharedUrl });
+        await expect(link).toBeVisible();
+        await expect(link).toHaveAttribute('href', sharedUrl);
+        await expect(link).toHaveAttribute('target', '_blank');
+        await expect(link).toHaveAttribute('rel', /noopener/);
+    });
+
+    customTest('Plain text with no URL is not linkified', async ({ authPage, loginData }) => {
+        const textToSend = `Just a normal message, nothing to click ${Date.now()}`;
+        await authPage.getLoginPage().navigateToLoginPage();
+        const anotherLoginData = dataSet.find(user => user.username !== loginData.username);
+        const secondUserShortName = anotherLoginData?.username.split('@')[0] || '';
+        await (await authPage.getChatPage().selectUser(secondUserShortName)).click();
+
+        await authPage.getChatPage().sendMessage(textToSend);
+
+        const sentMessage = authPage.getChatPage().getSentMessageByText(textToSend);
+        await expect(sentMessage.getByRole('link')).toHaveCount(0);
+    });
+
+    customTest('A javascript: URL in message text is never turned into a link', async ({ authPage, loginData }) => {
+        const textToSend = `click javascript:alert(1) nope ${Date.now()}`;
+        await authPage.getLoginPage().navigateToLoginPage();
+        const anotherLoginData = dataSet.find(user => user.username !== loginData.username);
+        const secondUserShortName = anotherLoginData?.username.split('@')[0] || '';
+        await (await authPage.getChatPage().selectUser(secondUserShortName)).click();
+
+        await authPage.getChatPage().sendMessage(textToSend);
+
+        const sentMessage = authPage.getChatPage().getSentMessageByText('click javascript');
+        await expect(sentMessage.getByRole('link')).toHaveCount(0);
+    });
+});
+

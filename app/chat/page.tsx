@@ -1,5 +1,6 @@
 import { env } from '@/app/config/env'
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { Types } from 'mongoose';
 import connectDB from "@/app/lib/MongoDb";
 import ConversationRepository from "@/repositories/ConversationRepository";
@@ -29,7 +30,11 @@ export async function getConversations(numOfMessages: number) {
     const cookieStore = await cookies();
     const userCookie = cookieStore.get("user");
 
-    if (!userCookie) throw new Error("Missing user cookie");
+    // proxy.ts already gates /chat behind a valid session, but that depends
+    // on its matcher staying in sync with this route - a share landing here
+    // (or any other request) with no/invalid session must go back to login
+    // instead of throwing into the framework's default error page.
+    if (!userCookie) redirect('/login');
 
     let user: User;
     try {
@@ -38,7 +43,13 @@ export async function getConversations(numOfMessages: number) {
         user = { token: userCookie.value };
     }
     if (!user.token) return;
-    const decoded = jwt.verify(user.token as string, env.JWT_SECRET_KEY as string) as unknown as DecodedToken;
+
+    let decoded: DecodedToken;
+    try {
+        decoded = jwt.verify(user.token as string, env.JWT_SECRET_KEY as string) as unknown as DecodedToken;
+    } catch {
+        redirect('/login');
+    }
     await connectDB();
 
     const recentConversations = await ConversationRepository.GetRecentConversations(

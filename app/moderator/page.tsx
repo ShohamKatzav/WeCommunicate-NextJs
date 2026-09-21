@@ -155,7 +155,7 @@ export default function ModeratorPanel() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="mb-8">
                 <div className="flex items-center gap-3 mb-4">
-                    <Shield className="w-8 h-8 text-blue-600" />
+                    <Shield className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                     <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
                         Moderator Panel
                     </h1>
@@ -241,7 +241,10 @@ export default function ModeratorPanel() {
                                             {userItem.isBanned ? (
                                                 <button
                                                     onClick={() => handleUnban(userItem.email)}
-                                                    className="inline-flex items-center px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                                                    // green-600 with white text is 3.3:1 - under the 4.5:1 AA text
+                                                    // minimum in both themes (this button carries its own solid
+                                                    // background, so contrast doesn't depend on light/dark at all).
+                                                    className="inline-flex items-center px-3 py-1.5 bg-green-700 hover:bg-green-800 text-white rounded-lg transition-colors"
                                                 >
                                                     <UserCheck className="w-4 h-4 mr-1" />
                                                     Unban
@@ -260,7 +263,8 @@ export default function ModeratorPanel() {
                                             {userItem.isModerator && userItem.email.toLowerCase() !== user.email?.toLowerCase() ? (
                                                 <button
                                                     onClick={() => handleDemote(userItem.email)}
-                                                    className="inline-flex items-center px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors"
+                                                    // Same contrast fix as Unban above - amber-600/white is 3.2:1.
+                                                    className="inline-flex items-center px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-lg transition-colors"
                                                 >
                                                     <ShieldOff className="w-4 h-4 mr-1" />
                                                     Demote

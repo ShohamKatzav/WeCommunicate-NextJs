@@ -75,6 +75,19 @@ const nextConfig: NextConfig = {
                     { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
                 ],
             },
+            {
+                // Next serves this static public/ file with a generic
+                // Content-Type by default; Samsung's WebAPK builder is strict
+                // about the manifest actually being served as a manifest, and
+                // no-cache keeps it from pinning a stale (pre-icon-fix)
+                // install payload the service worker also has cached under
+                // OFFLINE_ASSETS.
+                source: "/manifest.json",
+                headers: [
+                    { key: "Content-Type", value: "application/manifest+json; charset=utf-8" },
+                    { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+                ],
+            },
         ];
     },
 };
