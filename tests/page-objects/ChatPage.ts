@@ -327,6 +327,23 @@ export default class ChatPage {
         await this.page.goto(`${redirected.pathname}${redirected.search}`, { waitUntil: 'domcontentloaded' });
     }
 
+    async shareContentViaShareTargetGet(fields: { title?: string; text?: string; url?: string }): Promise<void> {
+        const params = new URLSearchParams({
+            title: fields.title ?? '',
+            text: fields.text ?? '',
+            url: fields.url ?? '',
+        });
+        const response = await this.page.request.get(`/share-target?${params.toString()}`, {
+            maxRedirects: 0,
+        });
+        const location = response.headers()['location'];
+        if (!location) {
+            throw new Error(`share-target GET returned ${response.status()} with no Location header`);
+        }
+        const redirected = new URL(location, this.page.url());
+        await this.page.goto(`${redirected.pathname}${redirected.search}`, { waitUntil: 'domcontentloaded' });
+    }
+
     async attachGeneratedJpeg(): Promise<number> {
         return await this.page.evaluate(async () => {
             const canvas = document.createElement('canvas');

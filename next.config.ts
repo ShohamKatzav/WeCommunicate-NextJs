@@ -76,18 +76,26 @@ const nextConfig: NextConfig = {
                 ],
             },
             {
-                // Next serves this static public/ file with a generic
-                // Content-Type by default; Samsung's WebAPK builder is strict
-                // about the manifest actually being served as a manifest, and
-                // no-cache keeps it from pinning a stale (pre-icon-fix)
-                // install payload the service worker also has cached under
-                // OFFLINE_ASSETS.
+                // Body and Content-Type are chosen per User-Agent in
+                // app/api/web-manifest/route.ts (rewritten from /manifest.json).
+                // Cache-Control stays here so a CDN in front of Render cannot
+                // pin the Chrome POST share_target payload onto a Samsung
+                // Internet request.
                 source: "/manifest.json",
                 headers: [
-                    { key: "Content-Type", value: "application/manifest+json; charset=utf-8" },
                     { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+                    { key: "Vary", value: "User-Agent" },
                 ],
             },
+        ];
+    },
+    async rewrites() {
+        // public/manifest.json was a static file, so it could not vary by
+        // User-Agent. Samsung Internet's WebAPK builder fails on POST
+        // share_target ("Failed to download"); Chrome needs POST for file
+        // shares. The route at /api/web-manifest picks which body to send.
+        return [
+            { source: "/manifest.json", destination: "/api/web-manifest" },
         ];
     },
 };

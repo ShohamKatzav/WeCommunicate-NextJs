@@ -5,6 +5,7 @@ import { Download } from "lucide-react";
 import PromptBar from "./promptBar";
 import { usePromptDismissal } from "../hooks/usePromptDismissal";
 import { usePromptSlot } from "../hooks/usePromptSlot";
+import { isSamsungInternet } from "../utils/samsungInternet";
 
 const PROMPT_ID = "install";
 // Separate id from PROMPT_ID: dismissing "you can install this" (the manual
@@ -28,6 +29,7 @@ export default function InstallPrompt() {
     const [showInstallButton, setShowInstallButton] = useState(false);
     const [isInstalled, setIsInstalled] = useState(false);
     const [showManualFallback, setShowManualFallback] = useState(false);
+    const [isSamsung, setIsSamsung] = useState(false);
     // Read inside the fallback timer instead of showInstallButton state - the
     // timer closure is captured once, on mount, so it must not depend on a
     // state value that can still change after that.
@@ -40,6 +42,8 @@ export default function InstallPrompt() {
             window.matchMedia("(display-mode: standalone)").matches ||
             (window.navigator as Navigator & { standalone?: boolean }).standalone === true ||
             document.referrer.startsWith("android-app://");
+
+        setIsSamsung(isSamsungInternet(window.navigator.userAgent));
 
         if (isStandalone) {
             setIsInstalled(true);
@@ -117,7 +121,9 @@ export default function InstallPrompt() {
         return (
             <PromptBar
                 icon={<Download className="h-5 w-5 text-cyan-300" />}
-                message="Install WeCommunicate: open your browser menu and choose Add to Home screen"
+                message={isSamsung
+                    ? "Samsung: menu → Add page to → Home screen"
+                    : "Install WeCommunicate: open your browser menu and choose Add to Home screen"}
                 onDismiss={dismissFallback}
                 dismissLabel="Dismiss install instructions"
                 queuedCount={fallbackQueuedBehind}
