@@ -24,7 +24,11 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
 
     const [step, setStep] = useState<'email' | 'otp' | 'password'>('email');
     const [email, setEmail] = useState("");
+    const [phone, setPhone] = useState("");
     const [channel, setChannel] = useState<'email' | 'sms'>('email');
+    // Email and SMS are separate inputs. Toggling must not copy or sanitize
+    // one into the other (an address would otherwise collapse to leftover digits).
+    const contact = channel === 'sms' ? phone : email;
     const [nickname, setNickname] = useState("");
     const [otp, setOtp] = useState("");
     const [newPassword, setNewPassword] = useState("");
@@ -72,12 +76,12 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
         event.preventDefault();
         clearErrors();
 
-        if (!email.trim()) {
+        if (!contact.trim()) {
             setEmailError(channel === 'sms' ? "Please enter your phone number" : "Please enter your email");
             return;
         }
 
-        if (channel === 'email' && !validateEmail(email)) {
+        if (channel === 'email' && !validateEmail(contact)) {
             setEmailError("Please enter a valid email");
             return;
         }
@@ -85,7 +89,7 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
             setGeneralError('Please choose a nickname');
             return;
         }
-        if (channel === 'sms' && !isPhone(email)) {
+        if (channel === 'sms' && !isPhone(contact)) {
             setEmailError("Use an international phone number, e.g. +972 50 123 4567");
             return;
         }
@@ -93,7 +97,7 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
         setLoading(true);
 
         try {
-            const response = await requestOTP(email, mode, channel);
+            const response = await requestOTP(contact, mode, channel);
             if (response.status === 200) {
                 if (mode === 'forgot')
                     setSuccessMessage(`If an account with this ${channel === 'sms' ? 'phone number' : 'email'} exists, an OTP was sent.\nPlease check your ${channel === 'sms' ? 'phone' : 'inbox'}.`);
@@ -131,7 +135,7 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
         setLoading(true);
 
         try {
-            const response = await verifyOTP(email, otp, channel);
+            const response = await verifyOTP(contact, otp, channel);
 
             if (response.status >= 200 && response.status < 300) {
                 setSuccessMessage("OTP verified successfully!");
@@ -176,9 +180,9 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
         try {
             let response = null;
             if (mode === 'forgot')
-                response = await resetPassword(email, otp, newPassword, channel);
+                response = await resetPassword(contact, otp, newPassword, channel);
             else
-                response = await createAccount(email, otp, newPassword, nickname, channel);
+                response = await createAccount(contact, otp, newPassword, nickname, channel);
             if (response.status >= 200 && response.status < 300) {
                 if (mode === 'sign-up' && 'token' in response && response.token) {
                     const signupResponse = response as unknown as {
@@ -220,7 +224,7 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
         setLoading(true);
 
         try {
-            const response = await requestOTP(email, mode, channel);
+            const response = await requestOTP(contact, mode, channel);
             if (response.status === 200) {
                 setSuccessMessage("OTP resent successfully!");
                 startResendTimer();
@@ -310,8 +314,9 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                                             type="button"
                                             aria-pressed={channel === option}
                                             onClick={() => {
+                                                if (option === channel) return;
                                                 setChannel(option);
-                                                if (option === 'sms') setEmail(sanitizePhoneInput(email));
+                                                setEmailError("");
                                             }}
                                             className={`flex-1 rounded-md border py-2 text-sm font-medium transition-colors ${
                                                 channel === option
@@ -326,11 +331,15 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                                 {mode === 'sign-up' && <input id="nickname" value={nickname} onChange={ev => setNickname(ev.target.value)} placeholder="Choose a nickname" className="inputBox mb-3 w-full" maxLength={40} required />}
                                 <label htmlFor="email" className="sr-only">Email or phone number</label>
                                 <input
+                                    key={channel}
                                     id="email"
                                     type={channel === 'email' ? 'email' : 'tel'}
-                                    value={email}
+                                    value={contact}
                                     placeholder={channel === 'email' ? 'Enter your email' : 'Enter phone number, e.g. +972 50 123 4567'}
-                                    onChange={ev => setEmail(channel === 'sms' ? sanitizePhoneInput(ev.target.value) : ev.target.value)}
+                                    onChange={ev => {
+                                        if (channel === 'sms') setPhone(sanitizePhoneInput(ev.target.value));
+                                        else setEmail(ev.target.value);
+                                    }}
                                     className="inputBox w-full"
                                     autoComplete={channel === 'email' ? 'email' : 'tel'}
                                     inputMode={channel === 'sms' ? 'tel' : undefined}
@@ -485,7 +494,7 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                     <div className="grid">
                         <div className="inputContainer flex flex-col items-center justify-self-center">
                             <button
-                                className="inputButton disabled:opacity-50 disabled:cursor-not-allowed w-full max-w-sm md:w-3xs mx-auto block"
+                                className="inputButton disabled:opacity-50 disabled:cursor-not-allowed"
                                 type="submit"
                                 disabled={loading}
                             >

@@ -210,7 +210,7 @@ const Login = () => {
         <div className={`mt-5 ${generalError ? 'row-start-4' : 'row-start-3'}`}>
           <div className="inputContainer justify-self-center">
             <button
-              className="inputButton disabled:opacity-50 disabled:cursor-not-allowed w-3xs"
+              className="inputButton disabled:opacity-50 disabled:cursor-not-allowed"
               type="submit"
               disabled={loading}
             >

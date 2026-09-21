@@ -39,6 +39,10 @@ code {
   border-radius: 8px;
   cursor: pointer;
   display: block;
+  /* Shrink to the label. w-full / w-3xs stretched these across the form,
+     which on a phone is most of the screen for a two-word action. */
+  width: fit-content;
+  max-width: 100%;
 }
 
 .mainContainer {
