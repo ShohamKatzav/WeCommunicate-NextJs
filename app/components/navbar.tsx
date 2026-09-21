@@ -221,6 +221,23 @@ const Navbar = () => {
                 </Link>
               </li>
             ))}
+            {/* Desktop's equivalent link (navbar-profile-link) is `hidden
+                lg:block` - CSS-hidden, not unmounted - so it's still present
+                in the DOM on a narrow viewport. A distinct testid keeps this
+                one from colliding with it in a getByTestId query. */}
+            {isUserConnected() && displayName && (
+              <li className="px-4 py-4">
+                <Link
+                  onClick={() => toggleNav()}
+                  href="/profile/edit"
+                  data-testid="navbar-profile-link-mobile"
+                  className="flex items-center gap-2 text-3xl hover:text-white"
+                >
+                  <Avatar avatarUrl={user?.avatarUrl} nickname={user?.nickname} email={user?.email} size={28} />
+                  <span className="max-w-[60vw] truncate">{displayName}</span>
+                </Link>
+              </li>
+            )}
             {/* Same row shape as the links above (px-4 py-4, same centering)
                 instead of its own fixed-width box, so it lands on the same
                 axis as "chat" / "about" / etc. instead of sitting off-center

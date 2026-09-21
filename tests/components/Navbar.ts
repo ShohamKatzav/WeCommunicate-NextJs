@@ -32,8 +32,18 @@ export default class Navbar {
         // Not a plain nav-links entry - there's no standalone "profile" link
         // (clicking the user's own name/avatar badge goes straight to
         // /profile/edit), so this is matched by its testid rather than role
-        // name, which varies with the signed-in user's display name.
-        this.profileLink = navbar.getByTestId('navbar-profile-link');
+        // name, which varies with the signed-in user's display name. The
+        // desktop and mobile-overlay badges use distinct testids (unlike the
+        // plain text links, which share a role/name and get their duplicate
+        // resolved by getByRole excluding the CSS-hidden one) since
+        // getByTestId matches raw DOM regardless of display:none - so both
+        // would otherwise be in play at once and violate strict mode. Each
+        // is only ever actionable in its own breakpoint/overlay state, so
+        // :visible picks the right one without the caller needing to know
+        // which context it's in.
+        this.profileLink = navbar.locator(
+            '[data-testid="navbar-profile-link"]:visible, [data-testid="navbar-profile-link-mobile"]:visible'
+        );
         this.logOutLink = navbar.getByRole('link', { name: /^log out$/i });
         this.menuButton = navbar.getByRole('button', { name: /open menu|close menu/i });
         // Both the desktop (icon) and mobile (labelled) ThemeToggle are

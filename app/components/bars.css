@@ -10,6 +10,19 @@
   flex-shrink: 0;
 }
 
+/* /chat sizes its shell by subtracting --footer-height from 100dvh. On a
+   phone that footer is most of the screen, so the message list collapses
+   to a sliver (landscape is worse: the footer is taller than the
+   viewport). The navbar menu already reaches the same pages, so the
+   marketing footer stays out of the chat shell here. footer.tsx keeps
+   --footer-height at 0 for the same query. Other pages are unaffected. */
+@media screen and (max-width: 768px),
+       screen and (max-height: 500px) and (max-width: 1024px) {
+  .footer.is-app-shell {
+    display: none;
+  }
+}
+
 /* min-height, not height: long pages must be allowed to grow. Unlayered so
    it can't lose to a utility the way the previous Tailwind arbitrary
    min-h-[calc(...)] did, which left the footer sitting in the middle of

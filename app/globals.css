@@ -67,11 +67,14 @@
    that same surplus is most of the screen's usable height, so there it is
    only enough to keep content off the bar.
    The site footer is in document flow and shown on every page, including
-   /chat. Everywhere except /chat this stays at its 0px default; footer.tsx
-   only overwrites it (to the footer's real measured height) while mounted
-   on /chat, where .viewport-between-bars below needs it to shrink the chat
-   shell by exactly the footer's height so the footer lands on screen
-   instead of below the fold. */
+   /chat on a tall desktop window. Everywhere except that case this stays
+   at its 0px default; footer.tsx only overwrites it (to the footer's real
+   measured height) while mounted on /chat, where .viewport-between-bars
+   below needs it to shrink the chat shell by exactly the footer's height
+   so the footer lands on screen instead of below the fold. Phones and
+   short landscape windows hide that footer (bars.css) and leave this at
+   0, because reserving a footer taller than the leftover viewport
+   collapses the message list. */
 :root {
   --navbar-height: 64px;
   --footer-height: 0px;
