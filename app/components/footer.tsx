@@ -16,7 +16,13 @@ import "./bars.css";
 // variable to sit its fixed prompt bar right above the footer, and outside
 // chat that bar is meant to overlay the footer's tail end, not make room
 // for it (see the footer-jump comment below).
+// On a phone, and in landscape where the screen is shorter than this
+// footer, that subtraction eats the chat. bars.css hides .is-app-shell
+// for the same media query, and the effect below publishes 0 so the shell
+// fills the screen. The navbar menu still reaches these links.
 const APP_SHELL_PATHS = ["/chat"];
+
+const COMPACT_SHELL_QUERY = "(max-width: 768px), (max-height: 500px) and (max-width: 1024px)";
 
 const productLinks = [
     { href: "/chat", label: "Chat" },
@@ -76,16 +82,25 @@ const Footer = () => {
         const footer = footerRef.current;
         if (!footer) return;
 
+        const compactShellQuery = window.matchMedia(COMPACT_SHELL_QUERY);
+
         const publishHeight = () => {
-            document.documentElement.style.setProperty("--footer-height", `${footer.offsetHeight}px`);
+            // A hidden footer (bars.css, same query) reports 0 anyway; the
+            // explicit branch covers the resize from a wide window, where
+            // the last measured height would otherwise stay applied for a
+            // frame and keep crushing the chat.
+            const height = compactShellQuery.matches ? 0 : footer.offsetHeight;
+            document.documentElement.style.setProperty("--footer-height", `${height}px`);
         };
 
         publishHeight();
         const resizeObserver = new ResizeObserver(publishHeight);
         resizeObserver.observe(footer);
+        compactShellQuery.addEventListener("change", publishHeight);
 
         return () => {
             resizeObserver.disconnect();
+            compactShellQuery.removeEventListener("change", publishHeight);
             document.documentElement.style.removeProperty("--footer-height");
         };
     }, [isAppShell]);
@@ -101,7 +116,7 @@ const Footer = () => {
         // "short page" case - the shell above is sized to leave exactly
         // this footer's height, so the prompt bar lands in the gap between
         // the composer and the footer instead of over either one.)
-        <footer ref={footerRef} className="footer bg-zinc-950 text-zinc-300">
+        <footer ref={footerRef} className={`footer bg-zinc-950 text-zinc-300${isAppShell ? " is-app-shell" : ""}`}>
             <div
                 className="h-0.5 bg-linear-to-r from-pink-400 via-indigo-500 to-indigo-700"
                 aria-hidden="true"
