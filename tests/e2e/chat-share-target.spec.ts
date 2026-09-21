@@ -16,6 +16,11 @@ customTest.describe('PWA share target', () => {
         expect(manifest.share_target.method).toBe('POST');
         expect(manifest.share_target.enctype).toBe('multipart/form-data');
         expect(manifest.share_target.params.files[0].name).toBe('file');
+        expect(
+            (manifest.share_target.params.files[0].accept as string[]).every(
+                (type: string) => !type.startsWith('.')
+            )
+        ).toBeTruthy();
 
         // Samsung's WebAPK builder (unlike Chrome's) requires at least a
         // 192x192 "any" icon alongside the 512s, and rejects a manifest
@@ -33,6 +38,21 @@ customTest.describe('PWA share target', () => {
             expect(iconResponse.ok()).toBeTruthy();
             expect(iconResponse.headers()['content-type']).toBe('image/png');
         }
+    });
+
+    customTest('Samsung Internet is served a GET share_target so WebAPK install does not fail', async ({ page }) => {
+        const samsungUA = 'Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/27.0 Chrome/122.0.0.0 Mobile Safari/537.36';
+        const response = await page.request.get('/manifest.json', {
+            headers: { 'User-Agent': samsungUA },
+        });
+        expect(response.ok()).toBeTruthy();
+        expect(response.headers()['content-type']).toMatch(/application\/json/);
+        const manifest = await response.json();
+        expect(manifest.share_target.action).toBe('/share-target');
+        expect(manifest.share_target.method).toBe('GET');
+        expect(manifest.share_target.enctype).toBe('application/x-www-form-urlencoded');
+        expect(manifest.share_target.params.files).toBeUndefined();
+        expect(manifest.orientation).toBeUndefined();
     });
 
     customTest('Shared text opens the picker and lands in the composer', async ({ authPage, loginData }) => {
@@ -78,6 +98,29 @@ customTest.describe('PWA share target', () => {
         await chat.ensureConversation(recipient);
         await expect(chat.messageInput).not.toHaveValue(new RegExp(sharedTitle));
     });
+
+    customTest('GET share-target (Samsung WebAPK path) opens the picker with the shared text', async ({ authPage, loginData }) => {
+        const sharedTitle = `Shared via GET ${Date.now()}`;
+        await authPage.getLoginPage().navigateToLoginPage();
+        const anotherLoginData = dataSet.find(user => user.username !== loginData.username);
+        const recipient = anotherLoginData?.username.split('@')[0] || '';
+        const chat = authPage.getChatPage();
+
+        await chat.shareContentViaShareTargetGet({
+            title: sharedTitle,
+            text: 'Shared from Samsung Internet',
+            url: 'https://example.com/from-samsung'
+        });
+
+        await expect(chat.shareToHeader).toBeVisible({ timeout: 10000 });
+        await chat.conversationForm.participantLabel
+            .filter({ hasText: recipient })
+            .click();
+        await chat.conversationForm.startChattingButton.click();
+
+        await expect(chat.messageInput).toHaveValue(new RegExp(sharedTitle));
+        await expect(chat.messageInput).toHaveValue(/example\.com\/from-samsung/);
+    });
 });
 
 customTest.describe('PWA share target - logged out / no valid session', () => {
@@ -109,6 +152,17 @@ customTest.describe('PWA share target - logged out / no valid session', () => {
         // land on a working login page, not another error.
         await page.goto(location!);
         await expect(page).toHaveURL(/\/login$/);
+    });
+
+    customTest('Unauthenticated GET to /share-target 303s to login, never 500s', async ({ page, baseURL }) => {
+        const response = await page.request.get('/share-target?text=hello-from-samsung', {
+            maxRedirects: 0,
+        });
+
+        expect(response.status()).toBe(303);
+        const location = response.headers()['location'];
+        expect(location).toBeTruthy();
+        expect(new URL(location!, baseURL).pathname).toBe('/login');
     });
 
     customTest('POST to /share-target with an invalid session cookie 303s to login, never 500s', async ({ browser, baseURL }) => {
