@@ -240,20 +240,25 @@ export default function ModeratorPanel() {
                                         <div className="flex justify-end gap-2">
                                             {userItem.isBanned ? (
                                                 <button
+                                                    key="unban"
                                                     onClick={() => handleUnban(userItem.email)}
-                                                    // green-600 with white text is 3.3:1 - under the 4.5:1 AA text
-                                                    // minimum in both themes (this button carries its own solid
-                                                    // background, so contrast doesn't depend on light/dark at all).
-                                                    className="inline-flex items-center px-3 py-1.5 bg-green-700 hover:bg-green-800 text-white rounded-lg transition-colors"
+                                                    // Same inversion the status badges already use (light bg/dark
+                                                    // text <-> dark bg/light text), not just a darker shade of the
+                                                    // same fill - a one-step 700->800 read as identical at a
+                                                    // glance. green-400/green-950 is 8.6:1 (computed), well past
+                                                    // the 4.5:1 AA minimum for text.
+                                                    className="inline-flex items-center px-3 py-1.5 bg-green-700 hover:bg-green-800 text-white dark:bg-green-400 dark:hover:bg-green-300 dark:text-green-950 rounded-lg transition-colors"
                                                 >
                                                     <UserCheck className="w-4 h-4 mr-1" />
                                                     Unban
                                                 </button>
                                             ) : userItem.email.toLowerCase() !== user.email?.toLowerCase() && (
                                                 <button
+                                                    key="ban"
                                                     onClick={() => handleBan(userItem.email)}
                                                     disabled={userItem.email === user.email}
-                                                    className="inline-flex items-center px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    // red-400/red-950 is 5.8:1 (computed).
+                                                    className="inline-flex items-center px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white dark:bg-red-400 dark:hover:bg-red-300 dark:text-red-950 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
                                                     <UserX className="w-4 h-4 mr-1" />
                                                     Ban
@@ -262,9 +267,10 @@ export default function ModeratorPanel() {
 
                                             {userItem.isModerator && userItem.email.toLowerCase() !== user.email?.toLowerCase() ? (
                                                 <button
+                                                    key="demote"
                                                     onClick={() => handleDemote(userItem.email)}
-                                                    // Same contrast fix as Unban above - amber-600/white is 3.2:1.
-                                                    className="inline-flex items-center px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-lg transition-colors"
+                                                    // Same inversion as Unban above - amber-400/amber-950 is 9.0:1.
+                                                    className="inline-flex items-center px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white dark:bg-amber-400 dark:hover:bg-amber-300 dark:text-amber-950 rounded-lg transition-colors"
                                                 >
                                                     <ShieldOff className="w-4 h-4 mr-1" />
                                                     Demote
@@ -272,8 +278,10 @@ export default function ModeratorPanel() {
                                             ) : (
                                                 !userItem.isBanned && userItem.email.toLowerCase() !== user.email?.toLowerCase() && (
                                                     <button
+                                                        key="promote"
                                                         onClick={() => handlePromote(userItem.email)}
-                                                        className="inline-flex items-center px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+                                                        // Same inversion as Unban above - indigo-400/indigo-950 is 5.4:1.
+                                                        className="inline-flex items-center px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-400 dark:hover:bg-indigo-300 dark:text-indigo-950 rounded-lg transition-colors"
                                                     >
                                                         <ShieldPlus className="w-4 h-4 mr-1" />
                                                         Promote

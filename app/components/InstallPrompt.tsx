@@ -24,12 +24,34 @@ interface BeforeInstallPromptEvent extends Event {
     userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 }
 
+// Chromium-only and behind a flag on most channels, so this is a bonus signal,
+// not something either branch below can assume exists.
+interface NavigatorWithRelatedApps extends Navigator {
+    getInstalledRelatedApps?: () => Promise<Array<{ id?: string; platform: string; url?: string }>>;
+}
+
+// The manual "open your menu and Add to Home Screen" fallback only makes
+// sense on a browser that genuinely never fires beforeinstallprompt. On
+// Chromium (Chrome/Edge desktop and Android) the event simply hasn't fired
+// yet - install criteria not met, or a signal the fallback timer can't see -
+// and showing manual instructions there is misleading, not helpful.
+function neverFiresBeforeInstallPrompt(navigator: Navigator): boolean {
+    const isIOS =
+        /iP(hone|od|ad)/.test(navigator.userAgent) ||
+        // iPadOS 13+ reports as "Macintosh" but is touch-capable, unlike a
+        // real Mac.
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const isFirefox = /firefox/i.test(navigator.userAgent);
+    return isIOS || isFirefox || isSamsungInternet(navigator.userAgent);
+}
+
 export default function InstallPrompt() {
     const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
     const [showInstallButton, setShowInstallButton] = useState(false);
     const [isInstalled, setIsInstalled] = useState(false);
     const [showManualFallback, setShowManualFallback] = useState(false);
     const [isSamsung, setIsSamsung] = useState(false);
+    const [canFallBackToManualInstall, setCanFallBackToManualInstall] = useState(false);
     // Read inside the fallback timer instead of showInstallButton state - the
     // timer closure is captured once, on mount, so it must not depend on a
     // state value that can still change after that.
@@ -44,11 +66,35 @@ export default function InstallPrompt() {
             document.referrer.startsWith("android-app://");
 
         setIsSamsung(isSamsungInternet(window.navigator.userAgent));
+        setCanFallBackToManualInstall(neverFiresBeforeInstallPrompt(window.navigator));
 
         if (isStandalone) {
             setIsInstalled(true);
             setShowInstallButton(false);
             return;
+        }
+
+        // Chrome (and other Chromium browsers) generally don't fire
+        // beforeinstallprompt once the app is already installed, which used
+        // to leave gotBeforeInstallPromptRef false forever and let the 4s
+        // fallback below wrongly conclude "never fires here, show manual
+        // install" for a visitor who already has it. Ask directly where the
+        // browser supports it; isInstalled below is reactive, so this can
+        // resolve after the fallback timer already fired and still hide it.
+        const relatedAppsNavigator = window.navigator as NavigatorWithRelatedApps;
+        if (typeof relatedAppsNavigator.getInstalledRelatedApps === "function") {
+            relatedAppsNavigator
+                .getInstalledRelatedApps()
+                .then((apps) => {
+                    if (apps.length > 0) {
+                        setIsInstalled(true);
+                        setShowInstallButton(false);
+                    }
+                })
+                .catch(() => {
+                    // Unsupported in this build/flag state - fall through to
+                    // the normal beforeinstallprompt/fallback flow below.
+                });
         }
 
         const handler = (event: Event) => {
@@ -97,8 +143,12 @@ export default function InstallPrompt() {
 
     // Mutually exclusive with wantsToShow above (this only turns on once the
     // timer decides beforeinstallprompt isn't coming), so the two prompts
-    // never both want the slot at once.
-    const wantsManualFallback = !showInstallButton && showManualFallback && fallbackSuppressed === false && !isInstalled;
+    // never both want the slot at once. canFallBackToManualInstall keeps this
+    // off Chromium: there, "hasn't fired yet" usually just means the
+    // installability criteria aren't met (or it's already installed, handled
+    // by isInstalled), not that manual instructions would help.
+    const wantsManualFallback =
+        !showInstallButton && showManualFallback && canFallBackToManualInstall && fallbackSuppressed === false && !isInstalled;
     const { isCurrent: isFallbackCurrent, queuedBehind: fallbackQueuedBehind } = usePromptSlot(FALLBACK_PROMPT_ID, wantsManualFallback);
 
     if (isCurrent) {
