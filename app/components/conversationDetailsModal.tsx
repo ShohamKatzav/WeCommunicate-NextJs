@@ -25,7 +25,7 @@ const ConversationDetailsModal = ({ participants, setShowParticipantsModal }: Co
                     {participants.current && participants.current.length > 0 ? (
                         participants.current.map((user: ChatUser) => (
                             <div key={user._id} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg">
-                                <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold">
+                                <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400 font-bold">
                                     {user.email?.charAt(0) || "U"}
                                 </div>
                                 <div>
@@ -41,7 +41,7 @@ const ConversationDetailsModal = ({ participants, setShowParticipantsModal }: Co
                 <div className="p-3 bg-gray-50 dark:bg-gray-900 text-right">
                     <button
                         onClick={() => setShowParticipantsModal(false)}
-                        className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700"
+                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90"
                     >
                         Close
                     </button>
