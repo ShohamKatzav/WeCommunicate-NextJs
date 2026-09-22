@@ -46,8 +46,8 @@ customTest.describe('Mobile hamburger menu - theme control alignment', () => {
         const nav = new Navbar(page);
 
         await nav.openMobileMenu();
-        // The theme row is the last item in the overlay - on a very short
-        // viewport it only becomes visible by scrolling the overlay itself.
+        // Signed out, the theme row is the last item in the overlay - on a
+        // very short viewport it only becomes visible by scrolling.
         await nav.mobileThemeToggleButton.scrollIntoViewIfNeeded();
         await expect(nav.mobileThemeToggleButton).toBeVisible();
     });

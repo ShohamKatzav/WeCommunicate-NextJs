@@ -126,7 +126,7 @@ customTest.describe('Phone number editing', () => {
     customTest('Adding a phone number requires an emailed verification code', async ({ authPage }) => {
         await authPage.getLoginPage().navigateToLoginPage();
         const profilePage = authPage.getProfilePage();
-        const newPhone = '+15550001111';
+        const newPhone = '+972523292847';
 
         await profilePage.navigateToEditViaNavbar();
         await profilePage.phoneAddOrChangeButton.click();
