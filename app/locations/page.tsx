@@ -208,7 +208,7 @@ function Locations() {
       </div>
 
       <div className="mt-4 rounded-xl border border-gray-200 bg-white p-3 shadow-xs dark:border-gray-700 dark:bg-gray-900 sm:p-4">
-        <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
           <h2 className="text-base font-semibold text-gray-900 dark:text-white sm:text-lg">Distance from you</h2>
           {!currentUserPosition && (
             <p className="text-xs text-amber-600 dark:text-amber-400">Enable your location to calculate distances</p>

@@ -54,6 +54,12 @@ export const ACCENT_COLORS = [
 ] as const;
 export const DEFAULT_ACCENT_COLOR = ACCENT_COLORS[0];
 
+// The only reactions a message can carry - a short fixed row, not a full
+// emoji keyboard. Shared between the picker and the server action's own
+// validation, so a client can't store arbitrary text (or a 400-character
+// "emoji") on someone else's message.
+export const MESSAGE_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'] as const;
+
 // Selectable disappearing-messages durations, in seconds - 0 means off.
 // Shared between the picker UI and the server action's own validation (only
 // these exact values are accepted, not an arbitrary client-supplied number).

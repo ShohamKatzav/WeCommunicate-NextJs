@@ -6,6 +6,7 @@ import MoreMessagesLoader from "./moreMessagesLoader";
 import OfflineOutbox from "./offlineOutbox";
 import ChatUser from "@/types/chatUser";
 import { HiOutlineChatBubbleLeftRight } from "react-icons/hi2";
+import { accentForSender, buildAccentBySender } from "../utils/accentColor";
 
 interface ChatWindowProps {
     messages: Message[];
@@ -25,6 +26,8 @@ const ChatWindow = ({ messages, participants, isMobile, onReply, conversationId,
     // message changed within the one already open" - only the former should
     // ever land on the unread divider instead of the bottom.
     const previousConversationId = useRef<string>("");
+
+    const accentBySender = buildAccentBySender(participants.current);
 
     const handleScroll = () => {
         const el = chatBox.current;
@@ -75,7 +78,13 @@ const ChatWindow = ({ messages, participants, isMobile, onReply, conversationId,
                 participants.current ?
                     (<div className="flex min-h-0 flex-1 flex-col bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
                         <div className="flex min-h-0 flex-1 flex-col">
-                            {(!messages || messages?.length === 0) && <div className="text-sm text-muted-foreground self-start p-3">No messages yet — say hi 👋</div>}
+                            {(!messages || messages?.length === 0) && (
+                                <div className="flex flex-col items-center gap-1 px-4 py-6 text-center">
+                                    <HiOutlineChatBubbleLeftRight size={28} className="text-muted-foreground opacity-50" aria-hidden="true" />
+                                    <p className="text-sm font-medium">No messages yet</p>
+                                    <p className="text-xs text-muted-foreground">Say hi 👋 — your first message starts this conversation.</p>
+                                </div>
+                            )}
                             <div ref={chatBox} className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto w-full p-2">
                                 <div>
                                     {messages?.map((message, index) =>
@@ -92,7 +101,11 @@ const ChatWindow = ({ messages, participants, isMobile, onReply, conversationId,
                                                     <div className="flex-1 h-px bg-red-300 dark:bg-red-700" />
                                                 </div>
                                             )}
-                                            <MessageBubble message={message} onReply={onReply} />
+                                            <MessageBubble
+                                                message={message}
+                                                onReply={onReply}
+                                                senderAccentColor={accentForSender(accentBySender, message.sender)}
+                                            />
                                         </Fragment>)
                                     }
                                 </div>
@@ -102,20 +115,23 @@ const ChatWindow = ({ messages, participants, isMobile, onReply, conversationId,
                             </div>
                         </div>
                     </div>) :
-                    (<div className="text-muted-foreground">
-                        <div className="text-center">
-                            <h4 className="text-xl font-semibold mb-2">No conversation selected</h4>
-                            {isMobile ?
-                                <p className="text-sm flex items-center gap-1">
-                                    Select a chat or start a new one with the
-                                    <HiOutlineChatBubbleLeftRight className="inline text-gray-700" />
-                                    button.
-                                </p>
-                                : <p className="text-sm flex items-center gap-1">
-                                    Choose a chat from the left or start a new one.
-                                </p>
-                            }
-                        </div>
+                    (<div className="flex w-full max-w-sm flex-col items-center gap-2 px-4 text-center text-muted-foreground">
+                        <HiOutlineChatBubbleLeftRight size={40} className="opacity-40" aria-hidden="true" />
+                        <h4 className="text-lg font-semibold text-foreground sm:text-xl">No conversation selected</h4>
+                        {isMobile ?
+                            // The inline icon marks the same button the header
+                            // actually shows, so it has to sit in the flow of
+                            // the sentence - wrap instead of overflowing it on
+                            // a narrow screen.
+                            <p className="flex flex-wrap items-center justify-center gap-1 text-sm">
+                                Select a chat, or start a new one with the
+                                <HiOutlineChatBubbleLeftRight className="inline shrink-0" aria-hidden="true" />
+                                button.
+                            </p>
+                            : <p className="text-sm">
+                                Choose a chat from the left, or start a new one.
+                            </p>
+                        }
                     </div>)
             }
         </div>

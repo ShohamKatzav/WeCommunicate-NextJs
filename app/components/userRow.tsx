@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ShieldOff, ShieldCheck } from "lucide-react";
 import ChatUser from "@/types/chatUser";
 import { AsShortName } from "../utils/stringFormat";
+import { formatLastSeen } from "../utils/lastSeen";
 import { useSocket } from "../hooks/useSocket";
 import Avatar from "./avatar";
 
@@ -11,11 +12,15 @@ interface ListProps {
     active?: boolean;
     isBlocked: boolean;
     onToggleBlock: (targetUserId: string, shouldBlock: boolean) => Promise<void>;
+    lastSeen?: string | Date;
 }
 
-const UsersRow = ({ chatUser, getLastMessages, active, isBlocked, onToggleBlock }: ListProps) => {
+const UsersRow = ({ chatUser, getLastMessages, active, isBlocked, onToggleBlock, lastSeen }: ListProps) => {
 
     const { socket } = useSocket();
+    // Never for a blocked user: how recently someone was around is exactly
+    // the kind of visibility blocking them is meant to end.
+    const lastSeenText = isBlocked ? null : formatLastSeen(lastSeen);
 
     const switchRoom = async (participant: ChatUser) => {
         if (socket && participant) {
@@ -57,9 +62,13 @@ const UsersRow = ({ chatUser, getLastMessages, active, isBlocked, onToggleBlock 
                                 <div className="text-xs text-success">
                                     Online
                                 </div> :
-                                <div className="text-xs text-red-600 dark:text-red-400">
-                                    Offline
-                                </div>
+                                lastSeenText ?
+                                    <div className="text-xs text-muted-foreground truncate">
+                                        Last seen {lastSeenText}
+                                    </div> :
+                                    <div className="text-xs text-red-600 dark:text-red-400">
+                                        Offline
+                                    </div>
                     }
                 </div>
                 <button

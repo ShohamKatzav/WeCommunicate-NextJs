@@ -30,7 +30,25 @@ export const useSocketEvents = ({
 
     const [chatListActiveUsers, setChatListActiveUsers] = useState<ChatUser[]>([]);
     const [typingUsers, setTypingUsers] = useState<Record<string, boolean>>({});
+    // Overrides whatever last-seen value the page was server-rendered with,
+    // for anyone who has gone offline since it loaded.
+    const [lastSeenByEmail, setLastSeenByEmail] = useState<Record<string, string>>({});
     const pathname = usePathname();
+
+    useEffect(() => {
+        if (!socket || loadingSocket) return;
+
+        const onLastSeen = (data: { email?: string; lastSeen?: string }) => {
+            if (!data?.email || !data.lastSeen) return;
+            setLastSeenByEmail(prev => ({ ...prev, [data.email!.toLowerCase()]: data.lastSeen! }));
+        };
+
+        socket.on("user last seen", onLastSeen);
+
+        return () => {
+            socket.off("user last seen", onLastSeen);
+        };
+    }, [socket, loadingSocket]);
 
     useEffect(() => {
         if (!socket || loadingSocket) return;
@@ -169,6 +187,7 @@ export const useSocketEvents = ({
     }, [socket, loadingSocket, setChat, chatRef, userEmail]);
     return {
         chatListActiveUsers,
-        typingUsers
+        typingUsers,
+        lastSeenByEmail
     };
 };

@@ -59,6 +59,7 @@ export default async function handleSocketConnection(io, socket) {
         socket.on('message read', (data) => handleMessageRead(io, socket, data));
         socket.on('publish message', (message) => handlePublishMessage(io, socket, message));
         socket.on('delete message', (message) => handleDeleteMessage(io, socket, message));
+        socket.on('react to message', (data) => handleReactToMessage(io, socket, data));
         socket.on('notifications update', () => handleNotificationsUpdate(socket, email));
         socket.on("notifications checked", (roomID) => handleNotificationsChecked(roomID, email));
         socket.on('get locations', () => handleGetLocation(io, socket));
@@ -262,6 +263,28 @@ async function handleDeleteMessage(io, socket, message) {
     }
 }
 
+// The reaction itself was already persisted by the toggleMessageReaction
+// server action before this fires - this only fans the change out to whoever
+// has the conversation open. The reactions broadcast are re-read from the
+// document rather than taken from the client payload, so a client can't
+// announce reactions that were never stored.
+async function handleReactToMessage(io, socket, data) {
+    const messageId = data?.messageId;
+    if (!messageId) return;
+
+    const message = await Message.findById(messageId).select('conversation reactions').lean();
+    if (!message) return;
+
+    const conversationId = message.conversation.toString();
+    if (!(await isConversationMember(conversationId, socket.data.email))) return;
+
+    io.to(`chat_room_${conversationId}`).emit('message reactions', {
+        messageId: message._id.toString(),
+        conversationId,
+        reactions: message.reactions || []
+    });
+}
+
 async function handleStartTyping(socket, data) {
     const room = `chat_room_${data.conversationId}`;
     // Broadcast the authenticated caller's own identity, not whatever
@@ -344,5 +367,44 @@ async function handleLeaveRoom(body, socket) {
 
 async function handleDisconnect(io, email, socketId) {
     await RedisService.removeUserSocket(email, socketId);
+
+    // Only when the last socket for this account goes away - closing one of
+    // several open tabs (or a reconnect) isn't leaving, and stamping a last
+    // seen then would make someone who is plainly still online look gone.
+    const remainingSockets = await RedisService.getUserSocketsByEmail(email);
+    if (remainingSockets.length === 0) {
+        await recordLastSeen(io, email);
+    }
+
     await handleUpdateConnectedUsers(io);
+}
+
+// Stored on the account, then pushed to everyone already looking at a users
+// list or chat header so it appears without a refresh. Held back from anyone
+// this user has blocked, mirroring how handleUpdateConnectedUsers already
+// hides a blocker's presence from the person they blocked - "last seen 2
+// minutes ago" is the same information presence is.
+async function recordLastSeen(io, email) {
+    if (!email) return;
+
+    const lastSeen = new Date();
+    const account = await Account.findOneAndUpdate(
+        { email },
+        { $set: { lastSeen } }
+    ).select('_id blocked').lean();
+    if (!account) return;
+
+    const blockedAccounts = (account.blocked || []).length
+        ? await Account.find({ _id: { $in: account.blocked } }).select('email').lean()
+        : [];
+    const hiddenFrom = new Set(
+        blockedAccounts.flatMap(blocked => blocked.email ? [blocked.email.toLowerCase()] : [])
+    );
+
+    const sockets = await io.fetchSockets();
+    for (const s of sockets) {
+        const viewerEmail = s.data.email?.toLowerCase();
+        if (viewerEmail && hiddenFrom.has(viewerEmail)) continue;
+        s.emit('user last seen', { email, lastSeen: lastSeen.toISOString() });
+    }
 }

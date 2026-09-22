@@ -107,7 +107,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
     });
 
     // Socket events
-    const { chatListActiveUsers, typingUsers } = useSocketEvents({
+    const { chatListActiveUsers, typingUsers, lastSeenByEmail } = useSocketEvents({
         socket,
         loadingSocket,
         userEmail: user?.email,
@@ -205,7 +205,9 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
             replyTo: {
                 messageId: message._id!,
                 sender: message.sender!,
-                snippet: message.text || (message.file ? `sent file ${message.file.pathname}` : ''),
+                snippet: message.text
+                    || (message.file ? `sent file ${message.file.pathname}` : '')
+                    || (message.location ? 'Shared a location' : ''),
                 hasFile: !!message.file
             }
         }));
@@ -272,6 +274,12 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
         return <Loading />;
     }
 
+    // Blocking is scoped to 1:1 conversations (see chatActions.saveMessage) -
+    // it gates both sending and, in the header, whether the other person's
+    // last seen is shown at all.
+    const isCurrentChatBlocked = participants.current?.length === 1
+        && blockedUserIds.includes(participants.current[0]._id);
+
     return (
         <div className="viewport-between-bars flex overflow-hidden bg-linear-to-br bg-white dark:from-gray-900 dark:to-gray-800">
             <PushNotificationManager />
@@ -297,6 +305,8 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
                     typingUsers={typingUsers}
                     activeSocketUsers={chatListActiveUsers}
                     setPendingClear={setPendingClear}
+                    lastSeenByEmail={lastSeenByEmail}
+                    isBlocked={isCurrentChatBlocked}
                 />
 
                 <ChatWindow
@@ -317,7 +327,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
                             participants={participants}
                             handleSendMessage={handleSendMessage}
                             handleTyping={handleTyping}
-                            isBlocked={participants.current.length === 1 && blockedUserIds.includes(participants.current[0]._id)}
+                            isBlocked={isCurrentChatBlocked}
                         />
                     </div>
                 )}
@@ -331,6 +341,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
                 initialUsers={initialUsers}
                 blockedUserIds={blockedUserIds}
                 onToggleBlock={handleToggleBlock}
+                lastSeenByEmail={lastSeenByEmail}
             />
 
             {isMobileChatsSidebarOpen && (

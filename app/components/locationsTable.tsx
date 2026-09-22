@@ -1,3 +1,4 @@
+import { MapPinOff } from "lucide-react";
 import { AsShortName } from "../utils/stringFormat";
 
 export interface FriendDistanceRow {
@@ -15,7 +16,11 @@ interface LocationsTableProps {
 const LocationsTable = ({ friendsWithDistance }: LocationsTableProps) => {
     return (
         friendsWithDistance.length === 0 ? (
-            <p className="text-sm text-gray-600 dark:text-gray-300">No friends with active location found.</p>
+            <div className="flex flex-col items-center gap-1 px-4 py-6 text-center">
+                <MapPinOff size={28} className="text-gray-400 dark:text-gray-500" aria-hidden="true" />
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">No friends with active location</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300">They&apos;ll show up here once they share where they are.</p>
+            </div>
         ) : (
             <div className="overflow-x-auto">
                 <table className="min-w-full table-auto text-left text-xs sm:text-sm">

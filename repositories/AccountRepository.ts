@@ -33,7 +33,7 @@ export default class AccountRepository {
     static async getUsersByID(IDs: string[]) {
         try {
             const obj_ids = IDs.map(id => new Types.ObjectId(id));
-            return await Account.find({ _id: { $in: obj_ids } }).select('_id email nickname avatarUrl accentColor').exec();
+            return await Account.find({ _id: { $in: obj_ids } }).select('_id email nickname avatarUrl accentColor lastSeen').exec();
         } catch (err) {
             console.error('Failed to find users by ID:', err);
             throw new Error('Failed to find users by ID');
@@ -41,7 +41,7 @@ export default class AccountRepository {
     }
     static async getUsersByEmails(emails: string[]) {
         try {
-            return await Account.find({ email: { $in: emails } }).select('_id email nickname avatarUrl accentColor').exec();
+            return await Account.find({ email: { $in: emails } }).select('_id email nickname avatarUrl accentColor lastSeen').exec();
         } catch (err) {
             console.error('Failed to find users by email:', err);
             throw new Error('Failed to find users by email');
@@ -87,13 +87,14 @@ export default class AccountRepository {
             // Only project the fields actually used below - this loads every
             // account (including password hashes) on every chat page render
             // otherwise.
-            const users = await Account.find().select('_id email nickname avatarUrl accentColor').lean().exec();
+            const users = await Account.find().select('_id email nickname avatarUrl accentColor lastSeen').lean().exec();
             const chatUsers = users.map(user => ({
                 _id: user._id,
                 email: user.email,
                 nickname: user.nickname,
                 avatarUrl: user.avatarUrl,
-                accentColor: user.accentColor
+                accentColor: user.accentColor,
+                lastSeen: user.lastSeen
             }));
             return chatUsers;
         } catch (err) {
@@ -269,7 +270,7 @@ export default class AccountRepository {
     // selects public-safe fields - never password/ban/blocked internals.
     static async getProfileByIdentifier(identifier: string) {
         try {
-            const projection = '_id email phone nickname about avatarUrl accentColor';
+            const projection = '_id email phone nickname about avatarUrl accentColor lastSeen';
             if (Types.ObjectId.isValid(identifier)) {
                 const byId = await Account.findById(identifier).select(projection).lean().exec();
                 if (byId) return byId;

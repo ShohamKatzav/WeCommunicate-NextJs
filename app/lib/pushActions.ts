@@ -86,7 +86,8 @@ export async function sendNotification(message: Message) {
         const notificationPayload = {
             title: 'New Message from WeCommunicate',
             body: message.text ? AsShortName(message.sender) + ": " + message.text :
-                AsShortName(message.sender) + " has sent you a file",
+                message.location ? AsShortName(message.sender) + " has shared a location" :
+                    AsShortName(message.sender) + " has sent you a file",
             icon: '/icon.png',
         };
         for (const sub of subscriptions) {

@@ -1,6 +1,6 @@
 "use server"
 import { env } from '@/app/config/env';
-import { MAX_MESSAGE_LENGTH } from '@/app/config/limits';
+import { MAX_MESSAGE_LENGTH, MESSAGE_REACTIONS } from '@/app/config/limits';
 import connectDB from "@/app/lib/MongoDb";
 import mongoose, { Types } from "mongoose";
 import ModerationService from '@/services/ModerationService';
@@ -45,6 +45,17 @@ async function notifyOfflineParticipants(message: MessageDTO, messageDoc: any) {
     } catch (err) {
         console.error('Failed to send push notification:', err);
     }
+}
+
+// A pin arrives as whatever the client put on the payload, so it's narrowed
+// to two finite numbers in range here rather than handed to Mongoose as-is -
+// the schema's own min/max is the last line of defence, not the first.
+function isValidLocation(location: MessageDTO['location']) {
+    if (!location) return false;
+    const { latitude, longitude } = location;
+    return Number.isFinite(latitude) && Number.isFinite(longitude)
+        && latitude >= -90 && latitude <= 90
+        && longitude >= -180 && longitude <= 180;
 }
 
 export const getMessages = async (participantsId: string[], page: number) => {
@@ -152,6 +163,23 @@ export const saveMessage = async (message: MessageDTO) => {
             throw new Error('Unauthorized');
         }
         message = { ...message, sender: senderEmail };
+
+        if (message.location !== undefined && message.location !== null) {
+            if (!isValidLocation(message.location)) {
+                return JSON.parse(JSON.stringify({
+                    success: false,
+                    blocked: true,
+                    message: "That location couldn't be shared."
+                }));
+            }
+            message = {
+                ...message,
+                location: {
+                    latitude: message.location.latitude,
+                    longitude: message.location.longitude
+                }
+            };
+        }
 
         // Enforced here as well as on the inputs, because a server action is a
         // public endpoint - the client-side maxLength is a convenience, not a
@@ -270,6 +298,57 @@ export const deleteMessage = async (id: string, type: string = "message") => {
         console.error('Failed to delete message:', err);
         const result = { success: false, message: 'Failed to delete message' };
         return result;
+    }
+}
+
+// Adds the caller's reaction to a message, or removes it when they pick the
+// one they already have. Never revalidates /chat: reactions reach everyone
+// else over the socket (see 'react to message' in socket/handlers.js), and a
+// full route revalidation per tap would be wildly out of proportion.
+export const toggleMessageReaction = async (messageId: string, emoji: string) => {
+    try {
+        if (typeof messageId !== 'string' || !Types.ObjectId.isValid(messageId)) {
+            return { success: false, message: 'Invalid message' };
+        }
+        if (!MESSAGE_REACTIONS.includes(emoji as typeof MESSAGE_REACTIONS[number])) {
+            return { success: false, message: 'Unsupported reaction' };
+        }
+
+        await connectDB();
+        const userID = await extractUserIDFromCoockie();
+        if (typeof userID !== 'string') {
+            return { success: false, message: 'Unauthorized' };
+        }
+
+        if (!(await isTestBypass())) {
+            // A reaction is one tap, so the ceiling is higher than sending -
+            // but it's still a write per tap, and holding a key down on the
+            // picker shouldn't be able to hammer the DB.
+            const allowed = await RedisService.checkRateLimit('react-message', userID, 60, 60);
+            if (!allowed) {
+                return { success: false, rateLimited: true, message: "You're reacting too quickly. Please slow down." };
+            }
+        }
+
+        const senderEmail = await AccountRepository.getEmailById(new Types.ObjectId(userID));
+        if (!senderEmail) {
+            return { success: false, message: 'Unauthorized' };
+        }
+
+        const result = await MessageRepository.ToggleReaction(
+            messageId,
+            senderEmail,
+            emoji,
+            Types.ObjectId.createFromHexString(userID)
+        );
+        if (!result) {
+            return { success: false, message: "That message is no longer available." };
+        }
+
+        return JSON.parse(JSON.stringify({ success: true, ...result }));
+    } catch (err) {
+        console.error('Failed to toggle reaction:', err);
+        return { success: false, message: 'Failed to update reaction' };
     }
 }
 

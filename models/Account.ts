@@ -19,6 +19,7 @@ export interface IAccount extends Document {
     avatarUrl?: string;
     about?: string;
     accentColor?: string;
+    lastSeen?: Date;
 }
 
 const AccountSchema = new Schema<IAccount>({
@@ -81,7 +82,13 @@ const AccountSchema = new Schema<IAccount>({
 
     avatarUrl: { type: String, required: false },
     about: { type: String, trim: true, maxlength: 160, required: false },
-    accentColor: { type: String, required: false }
+    accentColor: { type: String, required: false },
+
+    // Written when a user's *last* socket goes away (see handleDisconnect in
+    // socket/handlers.js) - closing one of several open tabs isn't leaving.
+    // Only meaningful while they're offline: presence, not this, is what says
+    // whether someone is here right now.
+    lastSeen: { type: Date, required: false }
 
 });
 export default models?.Account || model<IAccount>('Account', AccountSchema);

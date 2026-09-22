@@ -1,5 +1,6 @@
 import FileDTO from "./FileDTO";
 import ReplyTo from "./replyTo";
+import MessageLocation from "./messageLocation";
 
 export default interface MessageDTO {
     _id?: string;
@@ -7,6 +8,7 @@ export default interface MessageDTO {
     sender: string;
     text?: string;
     file?: FileDTO;
+    location?: MessageLocation;
     participantID: string[];
     conversationID: string;
     // Only `messageId` is trusted server-side - SaveMessage re-derives

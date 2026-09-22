@@ -30,7 +30,7 @@ export const getProfile = async (identifier: string) => {
     if (!identifier) return { success: false, error: 'Invalid user' };
     try {
         await connectDB();
-        const profile = await AccountRepository.getProfileByIdentifier(identifier) as { _id: { toString(): string } } | null;
+        const profile = await AccountRepository.getProfileByIdentifier(identifier) as { _id: { toString(): string }; lastSeen?: Date } | null;
         if (!profile) return { success: false, error: 'User not found' };
 
         // Computed server-side from the caller's own JWT rather than having
@@ -39,6 +39,17 @@ export const getProfile = async (identifier: string) => {
         // an email-to-email comparison would just silently never match.
         const callerID = await extractUserIDFromCoockie().catch(() => null);
         const isOwn = typeof callerID === 'string' && callerID === profile._id.toString();
+
+        // Mirrors the presence hiding in socket/handlers.js's
+        // recordLastSeen: blocking someone hides their last-seen from you,
+        // same as it already hides their online dot, so this page can't be
+        // used to see around that.
+        if (!isOwn && typeof callerID === 'string') {
+            const viewerBlockedIds = await AccountRepository.getBlockedIds(callerID);
+            if (viewerBlockedIds.includes(profile._id.toString())) {
+                delete profile.lastSeen;
+            }
+        }
 
         return { success: true, profile: JSON.parse(JSON.stringify(profile)), isOwn };
     } catch (err) {
