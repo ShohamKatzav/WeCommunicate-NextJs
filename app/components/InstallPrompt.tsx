@@ -54,9 +54,10 @@ type ManualInstallPlatform = "ios" | "samsung" | "other";
 // iOS has no "Add to Home Screen" in a browser menu - in Safari (and, since
 // iOS 16.4, Chrome/Edge/Firefox on iOS too) it lives in the Share sheet, so
 // the generic "open your browser menu" wording sent people looking in the
-// wrong place.
+// wrong place. iOS 26's compact Safari layout hides Share behind the "•••"
+// button, so the message names both routes.
 function manualInstallMessage(platform: ManualInstallPlatform): string {
-    if (platform === "ios") return "Install WeCommunicate: tap Share, then Add to Home Screen";
+    if (platform === "ios") return "Install: tap ••• or Share, then Add to Home Screen";
     if (platform === "samsung") return "Samsung: menu → Add page to → Home screen";
     return "Install WeCommunicate: open your browser menu and choose Add to Home screen";
 }
