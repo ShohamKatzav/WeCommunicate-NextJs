@@ -85,16 +85,16 @@ export default function ThemeToggle({ variant = "icon", className = "" }: ThemeT
                     className={
                         variant === "icon"
                             ? "absolute right-0 top-full mt-2 w-40 overflow-hidden rounded-md border border-white/10 bg-zinc-900 py-1 shadow-lg z-50"
-                            // In-flow (not absolutely positioned) and no wider than the
-                            // trigger above it: the trigger's own row is already fully
-                            // on-screen (it's centered in the overlay like its
-                            // siblings), so anchoring the menu to exactly that width
-                            // keeps it on-screen too instead of guessing a fixed
-                            // width that could run off a narrow phone. Being in-flow
-                            // also means it becomes part of the overlay's own
-                            // scrollable content instead of needing its own
-                            // viewport-clipping logic.
-                            : "mt-1 w-full overflow-hidden rounded-md border border-white/10 bg-white/5 py-1"
+                            // Absolutely positioned (like the icon variant) rather than
+                            // in-flow: an in-flow menu here used to grow the mobile
+                            // overlay's flex column, pushing profile/log out further
+                            // down every time it opened. Anchoring it to exactly the
+                            // trigger's own width keeps it on-screen on a narrow phone
+                            // without guessing a fixed width, and an opaque background
+                            // (not the icon variant's translucent one) is needed since
+                            // it now paints over the rows below instead of them
+                            // reflowing out of the way.
+                            : "absolute left-0 top-full mt-1 w-full overflow-hidden rounded-md border border-white/10 bg-zinc-900 py-1 shadow-lg z-50"
                     }
                 >
                     {OPTIONS.map(({ value, label, Icon }) => (

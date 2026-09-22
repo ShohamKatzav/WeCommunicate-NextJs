@@ -96,6 +96,32 @@ const MessageBubble = ({ message, onReply }: MessageBubbleProps) => {
     setIsFullscreen(true);
   };
 
+  // Desktop hover hitbox for reply/delete: tracked on the row (bubble +
+  // buttons together, see below) rather than the bubble alone, so crossing
+  // from the bubble onto a button doesn't cross a gap that clears hover
+  // first. But the row is a full-width block (it has to be, to justify-
+  // start/end the bubble+buttons to the correct side - see messageRowStyle),
+  // so it reaches far past the buttons into empty space. Gate on cursor X
+  // too: own messages (buttons trail the bubble on the right) stop tracking
+  // past the delete button's right edge; received messages (button trails
+  // the bubble on the right, but the row itself is right-aligned so the
+  // empty space is on the left) start tracking at the bubble's own left
+  // edge.
+  const handleRowMouseMove = (e: React.MouseEvent) => {
+    if (isMobile) return;
+    if (isOwnMessage) {
+      const rightEdge = deleteButtonRef.current?.getBoundingClientRect().right;
+      setHover(rightEdge == null || e.clientX <= rightEdge);
+    } else {
+      const leftEdge = messageRef.current?.getBoundingClientRect().left;
+      setHover(leftEdge == null || e.clientX >= leftEdge);
+    }
+  };
+
+  const handleRowMouseLeave = () => {
+    if (!isMobile) setHover(false);
+  };
+
   if (deleted) {
     const deletedMessageText = isOwnMessage ? 'You deleted this message' :
       'This message was deleted';
@@ -117,12 +143,14 @@ const MessageBubble = ({ message, onReply }: MessageBubbleProps) => {
   const isRead = message.status === 'read';
 
   return (
-    <div className={messageRowStyle}>
+    <div
+      className={messageRowStyle}
+      onMouseMove={handleRowMouseMove}
+      onMouseLeave={handleRowMouseLeave}
+    >
       <div onClick={() => {
         if (isMobile) setShowActions(prev => !prev);
       }}
-        onMouseEnter={() => !isMobile && setHover(true)}
-        onMouseLeave={() => !isMobile && setHover(false)}
         className={messageStyle}
         style={bubbleAccentStyle}
         data-testid={message.sender === user?.email ? "sent-message" : "received-message"}
@@ -223,8 +251,6 @@ const MessageBubble = ({ message, onReply }: MessageBubbleProps) => {
           className='flex'
           aria-label="Reply to message">
           <Reply
-            onMouseEnter={() => !isMobile && setHover(true)}
-            onMouseLeave={() => !isMobile && setHover(false)}
             className={showActions || hover ? 'block' : 'hidden'}
             size={28}
           />
@@ -237,8 +263,6 @@ const MessageBubble = ({ message, onReply }: MessageBubbleProps) => {
           className='flex'
           aria-label="Delete message">
           <TiDeleteOutline
-            onMouseEnter={() => !isMobile && setHover(true)}
-            onMouseLeave={() => !isMobile && setHover(false)}
             className={showActions || hover ? 'block' : 'hidden'}
             size={40}
             color="red"

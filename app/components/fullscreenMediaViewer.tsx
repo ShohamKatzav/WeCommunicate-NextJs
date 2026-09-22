@@ -1,8 +1,8 @@
 
 "use client"
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { X } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 
 interface FullscreenMediaViewerProps {
     src: string;
@@ -11,6 +11,7 @@ interface FullscreenMediaViewerProps {
 
 const FullscreenMediaViewer = ({ src, onClose }: FullscreenMediaViewerProps) => {
     const containerRef = useRef<HTMLDivElement>(null);
+    const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
         // Prevent body scroll when fullscreen is open
@@ -49,12 +50,21 @@ const FullscreenMediaViewer = ({ src, onClose }: FullscreenMediaViewerProps) => 
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="relative w-full h-full">
+                    {!loaded && (
+                        <div
+                            className="absolute inset-0 flex items-center justify-center"
+                            aria-label="Loading image"
+                        >
+                            <Loader2 size={48} className="animate-spin text-white/80" />
+                        </div>
+                    )}
                     <Image
                         src={src}
                         alt="Fullscreen image"
                         fill
-                        style={{ objectFit: 'contain' }}
+                        style={{ objectFit: 'contain', opacity: loaded ? 1 : 0 }}
                         priority
+                        onLoad={() => setLoaded(true)}
                     />
                 </div>
             </div>
