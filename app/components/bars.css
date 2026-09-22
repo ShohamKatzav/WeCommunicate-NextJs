@@ -2,7 +2,7 @@
    the space reserved for these bars is calculated from them elsewhere -
    hard-coding them twice is how the navbar and its spacer drifted apart. */
 .footer {
-  color: #fff;
+  color: var(--foreground);
   width: 100%;
   /* Eats leftover space in .page-shell so short pages (login, forgot
      password, OTP) still park the footer on the bottom of the viewport. */
@@ -41,7 +41,7 @@
 }
 
 .navbar {
-  color: #fff;
+  color: var(--foreground);
   position: fixed;
   left: 0;
   top: 0;

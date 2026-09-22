@@ -29,6 +29,13 @@
   --primary-foreground: #ffffff;
   --destructive: #b91c1c;
   --success: #15803d;
+  /* The navbar/footer surface is deliberately its own token, not --card:
+     --card already means "the same white as a content tile" (see the
+     landing page's highlight cards), and in dark mode the bars need to read
+     as darker than --background, not as a lighter elevated tile - no
+     existing token is both "distinct in light" and "distinct in dark" at
+     once. */
+  --bar-background: #ffffff;
 }
 
 .dark {
@@ -42,6 +49,7 @@
   --primary-foreground: #0b1220;
   --destructive: #f87171;
   --success: #4ade80;
+  --bar-background: #030712;
 }
 
 @theme inline {
@@ -55,6 +63,7 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-destructive: var(--destructive);
   --color-success: var(--success);
+  --color-bar-background: var(--bar-background);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
