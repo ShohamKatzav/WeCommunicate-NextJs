@@ -6,6 +6,7 @@ import ChatUser from '@/types/chatUser';
 import FileDTO from '@/types/FileDTO';
 import { saveMessage, revalidateChatRoute } from '@/app/lib/chatActions';
 import { toast } from "sonner";
+import { PendingClears } from './usePendingCleanHistory';
 
 interface UseMessageHandlingProps {
     socket: Socket | null;
@@ -18,7 +19,13 @@ interface UseMessageHandlingProps {
     messageToSend: Message;
     setMessageToSend: React.Dispatch<React.SetStateAction<Message>>;
     updateConversationsBar: (message: Message | null, mode?: string, cleanId?: string) => Promise<void>;
+    pendingClearsRef: React.RefObject<PendingClears>;
 }
+
+const isAtOrBeforeCutoff = (dateValue: Date | string | undefined, cutoff: string | undefined): boolean => {
+    if (!cutoff || !dateValue) return false;
+    return new Date(dateValue).getTime() <= new Date(cutoff).getTime();
+};
 
 const warningsBeforeBan = 3;
 
@@ -32,11 +39,18 @@ export const useMessageHandling = ({
     setChat,
     messageToSend,
     setMessageToSend,
-    updateConversationsBar
+    updateConversationsBar,
+    pendingClearsRef
 }: UseMessageHandlingProps) => {
 
     const handleIncomingMessage = useCallback((data: Message) => {
         if (data.sender?.toUpperCase() === userEmail?.toUpperCase()) return;
+
+        // Predates a clear this device applied offline but hasn't synced yet
+        // - must not reappear in the transcript or bump the bar, same as a
+        // synced message would be dropped by handleServerSavedMessageResponse.
+        const cutoff = data.conversationID ? pendingClearsRef.current[data.conversationID] : undefined;
+        if (isAtOrBeforeCutoff(data.date, cutoff)) return;
 
         if (data.conversationID?.toUpperCase() === currentConversationId.current.toUpperCase()) {
             setChat([...chatRef.current, data].sort((a: Message, b: Message) =>
@@ -48,7 +62,7 @@ export const useMessageHandling = ({
         }
 
         updateConversationsBar(data);
-    }, [userEmail, currentConversationId, chatRef, setChat, updateConversationsBar, socket]);
+    }, [userEmail, currentConversationId, chatRef, setChat, updateConversationsBar, socket, pendingClearsRef]);
 
     const handleServerSavedMessageResponse = useCallback(async (savedMessage: any, tempId: string) => {
         const tempMessage = chatRef.current.find(
@@ -62,10 +76,19 @@ export const useMessageHandling = ({
 
         const messageDoc = savedMessage.messageDoc || savedMessage;
 
+        // A message that was queued before a clear this device applied
+        // offline (its date now resolves to at or before that cutoff) is
+        // still a real, delivered message - it's still published to the
+        // other participant below - but it must not resurface in our own
+        // transcript or bar, since it predates a clear we made on this device.
+        const cutoffConversationId = messageDoc.conversation || currentConversationId.current;
+        const cutoff = cutoffConversationId ? pendingClearsRef.current[cutoffConversationId] : undefined;
+        const isClearedByPending = isAtOrBeforeCutoff(messageDoc.date, cutoff);
+
         setChat(
-            chatRef.current.map(msg =>
-                msg._id === tempMessage._id ? messageDoc : msg
-            )
+            isClearedByPending
+                ? chatRef.current.filter(msg => msg._id !== tempMessage._id)
+                : chatRef.current.map(msg => msg._id === tempMessage._id ? messageDoc : msg)
         );
 
         tempMessage._id = messageDoc._id;
@@ -85,13 +108,15 @@ export const useMessageHandling = ({
 
         socket?.emit('publish message', messageToEmit);
 
-        const finalMessage = {
-            ...messageDoc,
-            conversationID: currentConversationId.current || newConversationId
-        };
+        if (!isClearedByPending) {
+            const finalMessage = {
+                ...messageDoc,
+                conversationID: currentConversationId.current || newConversationId
+            };
 
-        updateConversationsBar(finalMessage);
-    }, [socket, currentConversationId, chatRef, setChat, updateConversationsBar]);
+            updateConversationsBar(finalMessage);
+        }
+    }, [socket, currentConversationId, chatRef, setChat, updateConversationsBar, pendingClearsRef]);
 
     // `overrideFile` lets a caller send a file that was only just produced
     // (e.g. voiceRecorder.tsx, right after its upload finishes) without

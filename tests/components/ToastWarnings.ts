@@ -16,7 +16,7 @@ export default class ToastWarnings {
         this.page = page;
         this.messageSendingOfflineWarning = page.getByText('I’ll send this message when you’re back online').first();
         this.messageDeletingOfflineWarning = page.getByText('The message will be deleted when the connection is restored').first();
-        this.messageCleaningHistoryOfflineWarning = page.getByText('I’ll clear your chat history when you’re back online').first();
+        this.messageCleaningHistoryOfflineWarning = page.getByText('history is cleared on this device and will sync once you’re back online').first();
         this.conversationDeletingOfflineWarning = page.getByText('I’ll delete this conversation once the connection is restored').first();
         this.notificationsEnabledToast = page.getByText('Notifications enabled').first();
         this.notificationsDisabledToast = page.getByText('Notifications turned off').first();

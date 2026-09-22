@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X } from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 import { deleteUserCoockie } from '../lib/cookieActions';
 import { useUser } from "../hooks/useUser";
 import { useSocket } from "../hooks/useSocket";
@@ -13,6 +13,31 @@ import Avatar from "./avatar";
 import './bars.css';
 
 const DYNAMIC_OFFLINE_LINKS = ['/chat', '/locations'];
+
+function LogOutButton({
+  variant,
+  onClick,
+}: {
+  variant: "icon" | "labelled";
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Log out"
+      title="Log out"
+      className={
+        variant === "icon"
+          ? "flex h-9 w-9 items-center justify-center rounded-md text-zinc-400 hover:bg-white/5 hover:text-white transition-colors"
+          : "flex items-center justify-center gap-3 text-3xl capitalize text-zinc-300 hover:text-white transition-colors"
+      }
+    >
+      <LogOut className={variant === "icon" ? "h-5 w-5" : "h-7 w-7"} aria-hidden="true" />
+      {variant === "labelled" && <span>log out</span>}
+    </button>
+  );
+}
 
 const Navbar = () => {
   const [nav, setNav] = useState(false);
@@ -66,6 +91,9 @@ const Navbar = () => {
     }
   };
 
+  // Login stays a text link: it navigates to a page, and a door icon
+  // next to nothing else reads as log out. Log out is an action, rendered
+  // separately after the account controls.
   const links = [
     { id: 1, text: "login", link: "/login", auth: false, action: () => { } },
     { id: 2, text: "chat", link: "/chat", auth: true, action: () => { } },
@@ -73,7 +101,6 @@ const Navbar = () => {
     { id: 4, text: "moderator", link: "/moderator", auth: true, moderatorOnly: true, action: () => { } },
     { id: 5, text: "about", link: "/about", auth: null, action: () => { } },
     { id: 6, text: "contact", link: "/contact", auth: null, action: () => { } },
-    { id: 7, text: "log out", link: "/", auth: true, action: () => handleLogOut() },
   ];
 
   const isUserConnected = () => {
@@ -99,7 +126,7 @@ const Navbar = () => {
   const linkClassName = (link: string, extra = "") => {
     const active = link !== "/" && isActiveLink(link);
     return [
-      "nav-links rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors duration-200",
+      "nav-links rounded-md px-2 py-1.5 text-sm font-medium capitalize transition-colors duration-200 lg:px-3",
       active
         ? "bg-white/10 text-white"
         : "text-zinc-400 hover:bg-white/5 hover:text-white",
@@ -167,7 +194,7 @@ const Navbar = () => {
               <ThemeToggle variant="icon" />
             </li>
             {isUserConnected() && displayName && (
-              <li className="ml-1 hidden lg:block">
+              <li className="ml-1">
                 <Link
                   href="/profile/edit"
                   data-testid="navbar-profile-link"
@@ -177,6 +204,11 @@ const Navbar = () => {
                   <Avatar avatarUrl={user?.avatarUrl} nickname={user?.nickname} email={user?.email} size={20} />
                   <span className="truncate">{displayName}</span>
                 </Link>
+              </li>
+            )}
+            {isUserConnected() && (
+              <li className="ml-1">
+                <LogOutButton variant="icon" onClick={() => { void handleLogOut(); }} />
               </li>
             )}
           </ul>
@@ -194,8 +226,8 @@ const Navbar = () => {
 
         {nav && (
           // overflow-y-auto + [justify-content:safe_center]: on a short phone
-          // screen the logged-in link list (chat/locations/moderator/about/
-          // contact/log out) plus the theme row can exceed 100dvh - plain
+          // screen the logged-in list (chat/locations/moderator/about/
+          // contact, then theme, profile, log out) can exceed 100dvh - plain
           // `justify-center` on an overflowing flex column clips content off
           // both ends with no way to reach it, so "safe" falls back to
           // start-alignment (and lets the list scroll) only once it no
@@ -221,10 +253,16 @@ const Navbar = () => {
                 </Link>
               </li>
             ))}
-            {/* Desktop's equivalent link (navbar-profile-link) is `hidden
-                lg:block` - CSS-hidden, not unmounted - so it's still present
-                in the DOM on a narrow viewport. A distinct testid keeps this
-                one from colliding with it in a getByTestId query. */}
+            {/* Same row shape as the links above (px-4 py-4, same centering)
+                instead of its own fixed-width box, so it lands on the same
+                axis as "chat" / "about" / etc. instead of sitting off-center
+                as a narrower, smaller-type block underneath them. */}
+            <li className="px-4 py-4">
+              <ThemeToggle variant="labelled" />
+            </li>
+            {/* Desktop's profile link stays in the DOM on a narrow viewport
+                (its row is CSS-hidden, not unmounted). A distinct testid
+                keeps this one from colliding with it in a getByTestId query. */}
             {isUserConnected() && displayName && (
               <li className="px-4 py-4">
                 <Link
@@ -238,13 +276,17 @@ const Navbar = () => {
                 </Link>
               </li>
             )}
-            {/* Same row shape as the links above (px-4 py-4, same centering)
-                instead of its own fixed-width box, so it lands on the same
-                axis as "chat" / "about" / etc. instead of sitting off-center
-                as a narrower, smaller-type block underneath them. */}
-            <li className="px-4 py-4">
-              <ThemeToggle variant="labelled" />
-            </li>
+            {isUserConnected() && (
+              <li className="px-4 py-4">
+                <LogOutButton
+                  variant="labelled"
+                  onClick={() => {
+                    toggleNav();
+                    void handleLogOut();
+                  }}
+                />
+              </li>
+            )}
           </ul>
         )}
         <div

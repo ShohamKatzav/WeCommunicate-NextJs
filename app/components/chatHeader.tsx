@@ -22,6 +22,7 @@ interface ChatHeaderProps {
     updateConversationsBar: (message: Message | null, mode?: string, cleanId?: string) => Promise<void>;
     typingUsers: Record<string, boolean>;
     activeSocketUsers: ChatUser[];
+    setPendingClear: (conversationId: string, clearedAt: string) => void;
 }
 
 const ChatHeader = ({
@@ -34,7 +35,8 @@ const ChatHeader = ({
     conversationId,
     updateConversationsBar,
     typingUsers,
-    activeSocketUsers }: ChatHeaderProps) => {
+    activeSocketUsers,
+    setPendingClear }: ChatHeaderProps) => {
 
     const { user } = useUser();
 
@@ -169,7 +171,8 @@ const ChatHeader = ({
                             conversationId={conversationId}
                             participants={participants}
                             updateConversationsBar={updateConversationsBar}
-                            onDisappearingMessagesChange={setDisappearingSeconds} />
+                            onDisappearingMessagesChange={setDisappearingSeconds}
+                            setPendingClear={setPendingClear} />
                     }
                 </div>
             </div>

@@ -4,19 +4,22 @@ import { useState } from 'react';
 import ConversationsList from './conversationsList';
 import ChatUser from '@/types/chatUser';
 import Conversation from '@/types/conversation';
+import { PendingClears } from '@/app/hooks/usePendingCleanHistory';
 
 interface ConversationsBarProps {
     isMobileChatsSidebarOpen: boolean;
     handleOpenModal: (mode: string) => void;
     getLastMessages: (roomParticipants: ChatUser[]) => Promise<void>;
     initialRecentConversations: Conversation[];
+    pendingClears: PendingClears;
 }
 
 const ConversationsBar =
     ({ isMobileChatsSidebarOpen,
         handleOpenModal,
         getLastMessages,
-        initialRecentConversations }:
+        initialRecentConversations,
+        pendingClears }:
         ConversationsBarProps) => {
 
         const [query, setQuery] = useState('');
@@ -67,6 +70,7 @@ const ConversationsBar =
                             getLastMessages={getLastMessages}
                             query={query}
                             initialConversations={initialRecentConversations}
+                            pendingClears={pendingClears}
                         />
                     </div>
                 </aside>

@@ -23,6 +23,10 @@ const Avatar = ({ avatarUrl, nickname, email, size = 40, className = "" }: Avata
                 alt={displayName ? `${displayName}'s avatar` : "User avatar"}
                 width={size}
                 height={size}
+                // Tailwind's preflight sets `height: auto` on images, which
+                // drops the height attribute. A failed load then wraps the
+                // alt text down a 28px-wide column and stretches the row.
+                style={{ width: size, height: size }}
                 className={`rounded-full object-cover shrink-0 ${className}`}
             />
         );

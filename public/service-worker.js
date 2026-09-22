@@ -179,6 +179,21 @@ async function processQueue() {
                     });
                 }
 
+                // Distinct from MESSAGE_SYNCED so useServiceWorkerSync can
+                // drop the local pending-clear record (app/hooks/
+                // usePendingCleanHistory.tsx) now that the server's own
+                // cutoff exists and every read path already honors it.
+                if (item.operation === "cleanHistory") {
+                    self.clients.matchAll({ includeUncontrolled: true }).then(clients => {
+                        clients.forEach(client => {
+                            client.postMessage({
+                                type: 'CLEAN_HISTORY_SYNCED',
+                                conversationId: item.data.conversationId,
+                            });
+                        });
+                    });
+                }
+
                 await removeFromQueue(item.id);
                 queue = await getDeleteQueue();
 
@@ -189,6 +204,19 @@ async function processQueue() {
                 // ever fail the same way, so drop it instead of retrying it
                 // forever on every future reconnect.
                 console.error(`Permanently rejected ${item.operation} with status ${response.status}, dropping from queue:`, item.id);
+                if (item.operation === "cleanHistory") {
+                    // The clear never actually applied server-side - drop the
+                    // local record too so the client stops hiding history the
+                    // server never agreed to hide, and re-fetch to bring it back.
+                    self.clients.matchAll({ includeUncontrolled: true }).then(clients => {
+                        clients.forEach(client => {
+                            client.postMessage({
+                                type: 'CLEAN_HISTORY_REJECTED',
+                                conversationId: item.data.conversationId,
+                            });
+                        });
+                    });
+                }
                 await removeFromQueue(item.id);
                 queue = await getDeleteQueue();
             } else {
@@ -321,7 +349,11 @@ self.addEventListener('fetch', async event => {
 
                         const isDeleteMessage = (hasObjectIdPayload || hasTempIdPayload) && body.length === 2 && body[1] === 'message';
                         const isDeleteConversation = hasObjectIdPayload && body.length === 2 && body[1] === 'conversation';
-                        const isCleanHistory = hasObjectIdPayload && body.length === 2 && body[1] === 'cleanHistory';
+                        // 3 args, not 2 - cleanHistory's server action now also
+                        // carries the click-time clearedAt (see
+                        // conversationActions.ts' cleanHistory) so the replay
+                        // below can apply it instead of flush time.
+                        const isCleanHistory = hasObjectIdPayload && body.length === 3 && body[1] === 'cleanHistory';
                         // Recognise a pending message by the fields the save
                         // actually needs, not by an exact key count. Counting keys
                         // meant adding or removing a single optional field on
@@ -360,7 +392,7 @@ self.addEventListener('fetch', async event => {
                         }
 
                         else if (isCleanHistory) {
-                            await addToQueue('cleanHistory', { conversationId: body[0] });
+                            await addToQueue('cleanHistory', { conversationId: body[0], clearedAt: body[2] });
                             queued = true;
                         }
 

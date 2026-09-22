@@ -20,7 +20,7 @@ export default class Navbar {
         this.page = page;
         const navbar = page.locator('nav.navbar');
         this.links = navbar.locator('.nav-links');
-        // Navbar renders these link labels lowercase ("chat", "log out", ...)
+        // Navbar renders these link labels lowercase ("chat", "about", ...)
         // and only capitalizes them visually via a CSS `capitalize` class,
         // which doesn't change the accessible name - so `exact: true` with a
         // capitalized string never matched. A case-insensitive, anchored
@@ -44,7 +44,12 @@ export default class Navbar {
         this.profileLink = navbar.locator(
             '[data-testid="navbar-profile-link"]:visible, [data-testid="navbar-profile-link-mobile"]:visible'
         );
-        this.logOutLink = navbar.getByRole('link', { name: /^log out$/i });
+        // Log out is a button (it ends the session; it does not navigate to
+        // a page). Desktop is icon-only and mobile is labelled, but both
+        // expose the accessible name "Log out". The desktop control lives in
+        // the CSS-hidden row below md, and the mobile one only mounts while
+        // the overlay is open, so getByRole's visibility filter yields one.
+        this.logOutLink = navbar.getByRole('button', { name: /^log out$/i });
         this.menuButton = navbar.getByRole('button', { name: /open menu|close menu/i });
         // Both the desktop (icon) and mobile (labelled) ThemeToggle are
         // always in the DOM - only CSS display toggles between them per

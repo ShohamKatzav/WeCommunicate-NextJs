@@ -3,6 +3,7 @@ import { Socket } from 'socket.io-client';
 import Message from '@/types/message';
 import ChatUser from '@/types/chatUser';
 import Conversation from '@/types/conversation';
+import { PendingClears } from './usePendingCleanHistory';
 
 interface UseChatRoomProps {
     socket: Socket | null;
@@ -11,6 +12,7 @@ interface UseChatRoomProps {
     conversationsForBar: Conversation[];
     setMobileChatsSidebarOpen: (value: boolean) => void;
     setMobileUsersSidebarOpen: (value: boolean) => void;
+    pendingClearsRef: React.RefObject<PendingClears>;
 }
 
 // A conversation that doesn't exist yet (no id) is keyed by its sorted
@@ -37,7 +39,8 @@ export const useChatRoom = ({
     initialConversations,
     conversationsForBar,
     setMobileChatsSidebarOpen,
-    setMobileUsersSidebarOpen
+    setMobileUsersSidebarOpen,
+    pendingClearsRef
 }: UseChatRoomProps) => {
     const [chat, setChat] = useState<Message[]>([]);
     const [messageToSend, setMessageToSend] = useState<Message>({ text: '' });
@@ -127,9 +130,21 @@ export const useChatRoom = ({
             socket?.emit('message read', { conversationId: currentConversationId.current });
         }
 
-        const sortedMessages = conversation?.messages?.sort((a: Message, b: Message) =>
-            new Date(a.date!).getTime() - new Date(b.date!).getTime()
-        ) || [];
+        // A pending clear this device applied offline but hasn't synced yet
+        // (see usePendingCleanHistory) - the bar/initial-conversations
+        // source above may still carry messages at or before that cutoff
+        // (e.g. right after a reload, before useConversationsManager's own
+        // mount filter has run), so this is filtered again here regardless.
+        const cutoff = currentConversationId.current
+            ? pendingClearsRef.current[currentConversationId.current]
+            : undefined;
+        const cutoffTime = cutoff ? new Date(cutoff).getTime() : undefined;
+
+        const sortedMessages = (conversation?.messages || [])
+            .filter((m: Message) => cutoffTime === undefined || new Date(m.date!).getTime() > cutoffTime)
+            .sort((a: Message, b: Message) =>
+                new Date(a.date!).getTime() - new Date(b.date!).getTime()
+            );
 
         // The 'message read' emit below marks every trailing unread message
         // as read server-side in one batch (there's no per-message read
@@ -179,7 +194,7 @@ export const useChatRoom = ({
 
         setMobileChatsSidebarOpen(false);
         setMobileUsersSidebarOpen(false);
-    }, [socket, userEmail, findConversationByExactParticipants, initialConversations, conversationsForBar, updateChatRef, setMobileChatsSidebarOpen, setMobileUsersSidebarOpen]);
+    }, [socket, userEmail, findConversationByExactParticipants, initialConversations, conversationsForBar, updateChatRef, setMobileChatsSidebarOpen, setMobileUsersSidebarOpen, pendingClearsRef]);
 
     const handleLeaveRoom = useCallback(async () => {
         socket?.emit('leave room', { conversationId: currentConversationId.current });

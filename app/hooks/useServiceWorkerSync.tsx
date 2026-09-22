@@ -4,11 +4,15 @@ import Message from '@/types/message';
 interface ServiceWorkerSyncProps {
     handleServerSavedMessageResponse: (savedMessage: any, tempId: string) => Promise<any>;
     setConversationsForBar: (message: Message | null, mode: string, cleanId?: string) => Promise<void>;
+    onCleanHistorySynced: (conversationId: string) => void;
+    onCleanHistoryRejected: (conversationId: string) => void;
 }
 
 export const useServiceWorkerSync = ({
     handleServerSavedMessageResponse,
     setConversationsForBar,
+    onCleanHistorySynced,
+    onCleanHistoryRejected,
 }: ServiceWorkerSyncProps) => {
 
 
@@ -19,7 +23,15 @@ export const useServiceWorkerSync = ({
             await handleServerSavedMessageResponse(savedMessage, tempId);
             return;
         }
-    }, [handleServerSavedMessageResponse, setConversationsForBar]);
+        if (event.data.type === 'CLEAN_HISTORY_SYNCED') {
+            onCleanHistorySynced(event.data.conversationId);
+            return;
+        }
+        if (event.data.type === 'CLEAN_HISTORY_REJECTED') {
+            onCleanHistoryRejected(event.data.conversationId);
+            return;
+        }
+    }, [handleServerSavedMessageResponse, setConversationsForBar, onCleanHistorySynced, onCleanHistoryRejected]);
 
     useEffect(() => {
         if ('serviceWorker' in navigator) {

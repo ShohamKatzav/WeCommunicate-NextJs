@@ -24,6 +24,7 @@ import { useChatRoom } from '../hooks/useChatRoom';
 import { useMessageHandling } from '../hooks/useMessageHandling';
 import { useConversationsManager } from '../hooks/useConversationsManager';
 import { useSocketEvents } from '../hooks/useSocketEvents';
+import { usePendingCleanHistory } from '../hooks/usePendingCleanHistory';
 
 interface ChatClientProps {
     initialUsers: ChatUser[];
@@ -59,8 +60,12 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
     const hasConsumedShareRef = useRef(false);
     const searchParams = useSearchParams();
 
+    const { pendingClears, pendingClearsRef, setPendingClear, clearPendingClear } = usePendingCleanHistory(user?.email);
+
     const { conversationsForBar, updateConversationsBar } = useConversationsManager({
         initialConversations: initialConversationsWithMessages,
+        pendingClears,
+        pendingClearsRef,
     });
 
     const {
@@ -82,7 +87,8 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
         initialConversations: initialConversationsWithMessages,
         conversationsForBar: conversationsForBar,
         setMobileChatsSidebarOpen,
-        setMobileUsersSidebarOpen
+        setMobileUsersSidebarOpen,
+        pendingClearsRef
     });
 
     // Message handling
@@ -96,7 +102,8 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
         setChat,
         messageToSend,
         setMessageToSend,
-        updateConversationsBar
+        updateConversationsBar,
+        pendingClearsRef
     });
 
     // Socket events
@@ -116,6 +123,17 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
     useServiceWorkerSync({
         handleServerSavedMessageResponse,
         setConversationsForBar: updateConversationsBar,
+        onCleanHistorySynced: clearPendingClear,
+        onCleanHistoryRejected: (conversationId: string) => {
+            // The clear never actually applied server-side (write not
+            // acknowledged, moderation/auth rejection, etc.) - stop hiding
+            // history the server never agreed to hide. A full reload is the
+            // simplest way to reliably bring the real history back, since
+            // conversationsForBar's initial state doesn't resync itself from
+            // a later router refresh once mounted.
+            clearPendingClear(conversationId);
+            window.location.reload();
+        },
     });
 
     // Update message sender when user changes
@@ -263,6 +281,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
                 handleOpenModal={handleOpenModal}
                 getLastMessages={getLastMessages}
                 initialRecentConversations={conversationsForBar}
+                pendingClears={pendingClears}
             />
 
             <div className="flex min-w-0 flex-1 flex-col">
@@ -277,6 +296,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
                     updateConversationsBar={updateConversationsBar}
                     typingUsers={typingUsers}
                     activeSocketUsers={chatListActiveUsers}
+                    setPendingClear={setPendingClear}
                 />
 
                 <ChatWindow
@@ -286,6 +306,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
                     onReply={handleReply}
                     conversationId={currentConversationId.current}
                     firstUnreadMessageId={firstUnreadMessageId}
+                    clearedAt={currentConversationId.current ? pendingClears[currentConversationId.current] : undefined}
                 />
 
                 {participants.current && (
