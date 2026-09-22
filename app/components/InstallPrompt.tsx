@@ -35,14 +35,30 @@ interface NavigatorWithRelatedApps extends Navigator {
 // Chromium (Chrome/Edge desktop and Android) the event simply hasn't fired
 // yet - install criteria not met, or a signal the fallback timer can't see -
 // and showing manual instructions there is misleading, not helpful.
-function neverFiresBeforeInstallPrompt(navigator: Navigator): boolean {
-    const isIOS =
+function isIOSDevice(navigator: Navigator): boolean {
+    return (
         /iP(hone|od|ad)/.test(navigator.userAgent) ||
         // iPadOS 13+ reports as "Macintosh" but is touch-capable, unlike a
         // real Mac.
-        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+    );
+}
+
+function neverFiresBeforeInstallPrompt(navigator: Navigator): boolean {
     const isFirefox = /firefox/i.test(navigator.userAgent);
-    return isIOS || isFirefox || isSamsungInternet(navigator.userAgent);
+    return isIOSDevice(navigator) || isFirefox || isSamsungInternet(navigator.userAgent);
+}
+
+type ManualInstallPlatform = "ios" | "samsung" | "other";
+
+// iOS has no "Add to Home Screen" in a browser menu - in Safari (and, since
+// iOS 16.4, Chrome/Edge/Firefox on iOS too) it lives in the Share sheet, so
+// the generic "open your browser menu" wording sent people looking in the
+// wrong place.
+function manualInstallMessage(platform: ManualInstallPlatform): string {
+    if (platform === "ios") return "Install WeCommunicate: tap Share, then Add to Home Screen";
+    if (platform === "samsung") return "Samsung: menu → Add page to → Home screen";
+    return "Install WeCommunicate: open your browser menu and choose Add to Home screen";
 }
 
 export default function InstallPrompt() {
@@ -50,7 +66,7 @@ export default function InstallPrompt() {
     const [showInstallButton, setShowInstallButton] = useState(false);
     const [isInstalled, setIsInstalled] = useState(false);
     const [showManualFallback, setShowManualFallback] = useState(false);
-    const [isSamsung, setIsSamsung] = useState(false);
+    const [manualPlatform, setManualPlatform] = useState<ManualInstallPlatform>("other");
     const [canFallBackToManualInstall, setCanFallBackToManualInstall] = useState(false);
     // Read inside the fallback timer instead of showInstallButton state - the
     // timer closure is captured once, on mount, so it must not depend on a
@@ -65,7 +81,9 @@ export default function InstallPrompt() {
             (window.navigator as Navigator & { standalone?: boolean }).standalone === true ||
             document.referrer.startsWith("android-app://");
 
-        setIsSamsung(isSamsungInternet(window.navigator.userAgent));
+        setManualPlatform(
+            isIOSDevice(window.navigator) ? "ios" : isSamsungInternet(window.navigator.userAgent) ? "samsung" : "other"
+        );
         setCanFallBackToManualInstall(neverFiresBeforeInstallPrompt(window.navigator));
 
         if (isStandalone) {
@@ -171,9 +189,7 @@ export default function InstallPrompt() {
         return (
             <PromptBar
                 icon={<Download className="h-5 w-5 text-cyan-300" />}
-                message={isSamsung
-                    ? "Samsung: menu → Add page to → Home screen"
-                    : "Install WeCommunicate: open your browser menu and choose Add to Home screen"}
+                message={manualInstallMessage(manualPlatform)}
                 onDismiss={dismissFallback}
                 dismissLabel="Dismiss install instructions"
                 queuedCount={fallbackQueuedBehind}

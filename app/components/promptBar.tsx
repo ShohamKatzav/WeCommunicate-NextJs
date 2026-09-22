@@ -22,8 +22,10 @@ interface PromptBarProps {
 // Shared chrome for every bottom prompt: one slim, full-bleed row instead of
 // a floating card, so N stacked prompts never cost more height than one of
 // them (BottomPromptStack only ever renders the front of the queue - see
-// usePromptSlot). Content beyond the message truncates rather than wrapping,
-// which is what keeps the row's height fixed regardless of message length.
+// usePromptSlot). The message wraps (capped at three lines) rather than
+// truncating: on a narrow phone a single-line ellipsis cut instructions like
+// "tap Share, then Add to Home Screen" off mid-sentence with no way to read
+// the rest, and this bar has no tooltip or expand affordance on touch.
 export default function PromptBar({
     icon,
     message,
@@ -38,7 +40,7 @@ export default function PromptBar({
         <div className={`pointer-events-auto w-full ${accentClassName}`}>
             <div className="mx-auto flex max-w-4xl items-center gap-3 px-3 py-2.5 sm:px-4">
                 <span className="shrink-0" aria-hidden="true">{icon}</span>
-                <p className="min-w-0 flex-1 truncate text-sm font-medium">{message}</p>
+                <p className="min-w-0 flex-1 line-clamp-3 break-words text-sm font-medium leading-snug">{message}</p>
                 {queuedCount > 0 && (
                     <span className="hidden shrink-0 rounded-full bg-black/15 px-2 py-0.5 text-xs font-semibold sm:inline-block">
                         +{queuedCount} more

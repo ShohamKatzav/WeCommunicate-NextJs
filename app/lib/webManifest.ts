@@ -65,6 +65,10 @@ export function wantsPostShareTarget(userAgent: string | null): boolean {
 export function buildWebManifest(userAgent: string | null) {
     const postShare = wantsPostShareTarget(userAgent);
     return {
+        // Explicit, but identical to what browsers derive from start_url when
+        // it's absent - so existing installs keep the same identity, and it no
+        // longer shifts if start_url ever gets a query string.
+        id: '/',
         name: 'WeCommunicate',
         short_name: 'WeCommunicate',
         description: 'WeCommunicate is a chat app',
