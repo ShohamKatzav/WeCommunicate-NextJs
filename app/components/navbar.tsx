@@ -29,8 +29,8 @@ function LogOutButton({
       title="Log out"
       className={
         variant === "icon"
-          ? "flex h-9 w-9 items-center justify-center rounded-md text-zinc-400 hover:bg-white/5 hover:text-white transition-colors"
-          : "flex items-center justify-center gap-3 text-3xl capitalize text-zinc-300 hover:text-white transition-colors"
+          ? "flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors"
+          : "flex items-center justify-center gap-3 text-3xl capitalize text-muted-foreground hover:text-foreground transition-colors"
       }
     >
       <LogOut className={variant === "icon" ? "h-5 w-5" : "h-7 w-7"} aria-hidden="true" />
@@ -128,8 +128,8 @@ const Navbar = () => {
     return [
       "nav-links rounded-md px-2 py-1.5 text-sm font-medium capitalize transition-colors duration-200 lg:px-3",
       active
-        ? "bg-white/10 text-white"
-        : "text-zinc-400 hover:bg-white/5 hover:text-white",
+        ? "bg-foreground/10 text-foreground"
+        : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
       extra,
     ].join(" ");
   };
@@ -149,11 +149,18 @@ const Navbar = () => {
 
   return (
     <div className='container z-1'>
-      {/* Height belongs to the .navbar rule in bars.css: it is unlayered, so it
-          wins over any Tailwind h-* utility set here, which made the ones that
-          used to be on this element dead code. */}
+      {/* Height and text color belong to the .navbar rule in bars.css: it is
+          unlayered, so it wins over any Tailwind h- or text- utility set
+          here, which made the ones that used to be on this element dead
+          code. */}
       <nav
-        className="navbar flex items-center text-white bg-zinc-950/95 backdrop-blur-md nav wrap-break-word border-b border-white/10"
+        // bg-bar-background: its own token (globals.css), not --background
+        // (same as the page - no visible edge) and not --card (the same
+        // white as a content tile, and lighter than the page in dark mode
+        // rather than darker). Solid, no opacity/blur, so nothing scrolling
+        // underneath shows through - shadow-md casts down onto the page to
+        // read as a lifted band, and the gradient strip below is the seam.
+        className="navbar flex items-center bg-bar-background shadow-md nav wrap-break-word"
         aria-label="Main"
       >
         <div className="flex w-full items-center justify-between px-3 md:px-5">
@@ -198,7 +205,7 @@ const Navbar = () => {
                 <Link
                   href="/profile/edit"
                   data-testid="navbar-profile-link"
-                  className="flex max-w-36 items-center gap-1.5 truncate rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs font-medium text-zinc-300 hover:bg-white/10 hover:text-white transition-colors"
+                  className="flex max-w-36 items-center gap-1.5 truncate rounded-full border border-border bg-foreground/5 px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-foreground/10 hover:text-foreground transition-colors"
                   title={displayName}
                 >
                   <Avatar avatarUrl={user?.avatarUrl} nickname={user?.nickname} email={user?.email} size={20} />
@@ -216,7 +223,7 @@ const Navbar = () => {
           <button
             type="button"
             onClick={() => toggleNav()}
-            className="relative z-50 cursor-pointer rounded-md p-2 text-zinc-300 hover:bg-white/10 hover:text-white md:hidden"
+            className="relative z-50 cursor-pointer rounded-md p-2 text-muted-foreground hover:bg-foreground/10 hover:text-foreground md:hidden"
             aria-label={nav ? "Close menu" : "Open menu"}
             aria-expanded={nav}
           >
@@ -234,7 +241,7 @@ const Navbar = () => {
           // longer fits, while still centering it when it does.
           <ul
             data-testid="mobile-nav-overlay"
-            className="absolute inset-x-0 top-0 z-40 flex h-[100dvh] flex-col items-center gap-1 overflow-y-auto py-8 [justify-content:safe_center] bg-linear-to-b from-zinc-950 to-zinc-900 text-zinc-300"
+            className="absolute inset-x-0 top-0 z-40 flex h-[100dvh] flex-col items-center gap-1 overflow-y-auto py-8 [justify-content:safe_center] bg-background text-muted-foreground"
           >
             {links.map((item) => (
               shouldDisplayLink(item) &&
@@ -246,7 +253,7 @@ const Navbar = () => {
                   onClick={() => { item.action(); toggleNav() }}
                   href={item.link}
                   prefetch={!DYNAMIC_OFFLINE_LINKS.includes(item.link)}
-                  className={item.link !== "/" && isActiveLink(item.link) ? "text-white" : "hover:text-white"}
+                  className={item.link !== "/" && isActiveLink(item.link) ? "text-foreground" : "hover:text-foreground"}
                   aria-current={item.link !== "/" && isActiveLink(item.link) ? "page" : undefined}
                 >
                   {item.text}
@@ -269,7 +276,7 @@ const Navbar = () => {
                   onClick={() => toggleNav()}
                   href="/profile/edit"
                   data-testid="navbar-profile-link-mobile"
-                  className="flex items-center gap-2 text-3xl hover:text-white"
+                  className="flex items-center gap-2 text-3xl hover:text-foreground"
                 >
                   <Avatar avatarUrl={user?.avatarUrl} nickname={user?.nickname} email={user?.email} size={28} />
                   <span className="max-w-[60vw] truncate">{displayName}</span>
@@ -290,7 +297,7 @@ const Navbar = () => {
           </ul>
         )}
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-linear-to-r from-pink-400 via-indigo-500 to-indigo-700"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px] bg-linear-to-r from-pink-400 via-indigo-500 to-indigo-700"
           aria-hidden="true"
         />
       </nav>
