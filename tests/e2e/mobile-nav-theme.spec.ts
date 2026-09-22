@@ -35,6 +35,12 @@ customTest.describe('Mobile hamburger menu - theme control alignment', () => {
         expect(menuBox!.x).toBeGreaterThanOrEqual(0);
         expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(375);
 
+        // It overlays whatever is under it, so it needs a solid background -
+        // a translucent one would let those rows show through underneath it.
+        const backgroundColor = await menu.evaluate((el) => getComputedStyle(el).backgroundColor);
+        const alpha = Number(backgroundColor.match(/[\d.]+/g)?.[3] ?? '1');
+        expect(alpha).toBe(1);
+
         // Theme still actually changes.
         await page.getByRole('menuitemradio', { name: 'Dark' }).click();
         await expect(page.locator('html')).toHaveClass(/dark/);
@@ -50,6 +56,54 @@ customTest.describe('Mobile hamburger menu - theme control alignment', () => {
         // very short viewport it only becomes visible by scrolling.
         await nav.mobileThemeToggleButton.scrollIntoViewIfNeeded();
         await expect(nav.mobileThemeToggleButton).toBeVisible();
+    });
+
+    customTest.describe('Signed in - rows below the theme row', () => {
+        customTest.use({ storageState: 'tests/state1.json' });
+
+        customTest('Opening the theme menu overlays profile and log out instead of pushing them down', async ({ page }) => {
+            // Signed-in visitors hitting "/" get redirected straight to
+            // /chat (see proxy.ts) - going there directly avoids racing
+            // that redirect, which would otherwise remount the navbar and
+            // silently close the overlay right after it opens. Waiting for
+            // the chat sidebar to render first sidesteps a second remount:
+            // the page's own concurrent mount-time server actions can
+            // otherwise reset the navbar's open state right after it opens.
+            await page.goto('/chat');
+            await expect(page.getByRole('heading', { name: 'Chats' })).toBeVisible();
+            const nav = new Navbar(page);
+
+            await nav.openMobileMenu();
+            await expect(nav.mobileThemeToggleButton).toBeVisible();
+            await expect(nav.profileLink).toBeVisible();
+            await expect(nav.logOutLink).toBeVisible();
+
+            const profileBoxBeforeOpen = await nav.profileLink.boundingBox();
+            const logOutBoxBeforeOpen = await nav.logOutLink.boundingBox();
+            expect(profileBoxBeforeOpen).not.toBeNull();
+            expect(logOutBoxBeforeOpen).not.toBeNull();
+
+            await nav.mobileThemeToggleButton.click();
+            const menu = page.getByRole('menu', { name: 'Theme' });
+            await expect(menu).toBeVisible();
+
+            const profileBoxWhileOpen = await nav.profileLink.boundingBox();
+            const logOutBoxWhileOpen = await nav.logOutLink.boundingBox();
+            expect(profileBoxWhileOpen).not.toBeNull();
+            expect(logOutBoxWhileOpen).not.toBeNull();
+            expect(profileBoxWhileOpen!.y).toBeCloseTo(profileBoxBeforeOpen!.y, 0);
+            expect(logOutBoxWhileOpen!.y).toBeCloseTo(logOutBoxBeforeOpen!.y, 0);
+
+            // Closing it again leaves both rows exactly where they started.
+            await nav.mobileThemeToggleButton.click();
+            await expect(menu).toBeHidden();
+            const profileBoxAfterClose = await nav.profileLink.boundingBox();
+            const logOutBoxAfterClose = await nav.logOutLink.boundingBox();
+            expect(profileBoxAfterClose).not.toBeNull();
+            expect(logOutBoxAfterClose).not.toBeNull();
+            expect(profileBoxAfterClose!.y).toBeCloseTo(profileBoxBeforeOpen!.y, 0);
+            expect(logOutBoxAfterClose!.y).toBeCloseTo(logOutBoxBeforeOpen!.y, 0);
+        });
     });
 });
 
