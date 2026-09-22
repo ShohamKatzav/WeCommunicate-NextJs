@@ -116,9 +116,14 @@ const Footer = () => {
         // "short page" case - the shell above is sized to leave exactly
         // this footer's height, so the prompt bar lands in the gap between
         // the composer and the footer instead of over either one.)
-        <footer ref={footerRef} className={`footer bg-zinc-950 text-zinc-300${isAppShell ? " is-app-shell" : ""}`}>
+        // bg-bar-background (see navbar.tsx/globals.css): its own solid
+        // token, not --background (same as the page) and not --card
+        // (lighter than the page in dark mode, not darker). shadow-[0_-...]
+        // is shadow-md's shape flipped upward, since the footer needs to
+        // look lifted off the page above it rather than below it.
+        <footer ref={footerRef} className={`footer bg-bar-background shadow-[0_-4px_8px_rgba(0,0,0,0.15)]${isAppShell ? " is-app-shell" : ""}`}>
             <div
-                className="h-0.5 bg-linear-to-r from-pink-400 via-indigo-500 to-indigo-700"
+                className="h-[3px] bg-linear-to-r from-pink-400 via-indigo-500 to-indigo-700"
                 aria-hidden="true"
             />
             <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10 lg:px-8 md:py-12">
@@ -133,11 +138,11 @@ const Footer = () => {
                                 height={36}
                                 className="h-9 w-9 shrink-0 rounded-lg"
                             />
-                            <span className="text-lg font-semibold tracking-tight text-white">
+                            <span className="text-lg font-semibold tracking-tight text-foreground">
                                 WeCommunicate
                             </span>
                         </Link>
-                        <p className="mt-3 max-w-xs text-sm leading-relaxed text-zinc-400 sm:mt-4">
+                        <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground sm:mt-4">
                             Real-time chat with voice notes, disappearing messages, and full
                             offline support - free, in your browser.
                         </p>
@@ -151,7 +156,7 @@ const Footer = () => {
                         unchanged from the desktop layout below. */}
                     <div className="grid grid-cols-2 gap-6 sm:contents">
                         <div>
-                            <h2 className="text-xs font-semibold tracking-widest text-zinc-400 uppercase">
+                            <h2 className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
                                 Explore
                             </h2>
                             <ul className="mt-3 space-y-2 sm:mt-4 sm:space-y-2.5">
@@ -159,7 +164,7 @@ const Footer = () => {
                                     <li key={item.href}>
                                         <Link
                                             href={item.href}
-                                            className="text-sm text-zinc-300 transition-colors hover:text-white"
+                                            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                                         >
                                             {item.label}
                                         </Link>
@@ -169,7 +174,7 @@ const Footer = () => {
                         </div>
 
                         <div>
-                            <h2 className="text-xs font-semibold tracking-widest text-zinc-400 uppercase">
+                            <h2 className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
                                 Account
                             </h2>
                             <ul className="mt-3 space-y-2 sm:mt-4 sm:space-y-2.5">
@@ -178,7 +183,7 @@ const Footer = () => {
                                         <li>
                                             <Link
                                                 href="/chat"
-                                                className="text-sm text-zinc-300 transition-colors hover:text-white"
+                                                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                                             >
                                                 Open chat
                                             </Link>
@@ -187,7 +192,7 @@ const Footer = () => {
                                             <li>
                                                 <Link
                                                     href="/moderator"
-                                                    className="text-sm text-zinc-300 transition-colors hover:text-white"
+                                                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                                                 >
                                                     Moderator
                                                 </Link>
@@ -199,7 +204,7 @@ const Footer = () => {
                                         <li>
                                             <Link
                                                 href="/login"
-                                                className="text-sm text-zinc-300 transition-colors hover:text-white"
+                                                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                                             >
                                                 Log in
                                             </Link>
@@ -207,7 +212,7 @@ const Footer = () => {
                                         <li>
                                             <Link
                                                 href="/sign-up"
-                                                className="text-sm text-zinc-300 transition-colors hover:text-white"
+                                                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                                             >
                                                 Create an account
                                             </Link>
@@ -219,7 +224,7 @@ const Footer = () => {
                     </div>
 
                     <div>
-                        <h2 className="text-xs font-semibold tracking-widest text-zinc-400 uppercase">
+                        <h2 className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
                             Connect
                         </h2>
                         {/* flex-nowrap: only 4 icons, so they always fit one
@@ -237,18 +242,18 @@ const Footer = () => {
                                             : {})}
                                         aria-label={item.label}
                                         title={item.label}
-                                        className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-zinc-300 transition-colors hover:border-white/20 hover:bg-white/10 hover:text-white"
+                                        className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border/40 bg-foreground/5 text-muted-foreground transition-colors hover:border-border hover:bg-foreground/10 hover:text-foreground"
                                     >
                                         <Icon className="h-4 w-4" aria-hidden="true" />
                                     </a>
                                 );
                             })}
                         </div>
-                        <p className="mt-3 text-sm text-zinc-400 sm:mt-4">
+                        <p className="mt-3 text-sm text-muted-foreground sm:mt-4">
                             Questions or feedback?{" "}
                             <Link
                                 href="/contact"
-                                className="font-medium text-indigo-300 underline-offset-2 hover:text-white hover:underline"
+                                className="font-medium text-primary underline-offset-2 hover:underline"
                             >
                                 Get in touch
                             </Link>
@@ -256,7 +261,7 @@ const Footer = () => {
                     </div>
                 </div>
 
-                <div className="mt-6 flex flex-col gap-2 border-t border-white/10 pt-4 text-xs text-zinc-400 sm:mt-10 sm:flex-row sm:items-center sm:justify-between sm:pt-6">
+                <div className="mt-6 flex flex-col gap-2 border-t border-border/40 pt-4 text-xs text-muted-foreground sm:mt-10 sm:flex-row sm:items-center sm:justify-between sm:pt-6">
                     <p>&copy; {year} WeCommunicate. Built by Shoham Katzav.</p>
                     <p>A real-time chat app running on free-tier infrastructure.</p>
                 </div>
