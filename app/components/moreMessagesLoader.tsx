@@ -11,9 +11,10 @@ interface LoadMoreProps {
   oldMessages: Message[];
   participants: ChatUser[];
   onReply: (message: Message) => void;
+  clearedAt?: string;
 }
 
-export default function MoreMessagesLoader({ oldMessages, participants, onReply }: LoadMoreProps) {
+export default function MoreMessagesLoader({ oldMessages, participants, onReply, clearedAt }: LoadMoreProps) {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [page, setPage] = useState(1);
@@ -64,7 +65,14 @@ export default function MoreMessagesLoader({ oldMessages, participants, onReply 
         setAllDataFetched(true);
       }
 
-      const newMessages = res?.chat ?? [];
+      // Drop any row at or before a pending local clear (see
+      // usePendingCleanHistory) - the server doesn't know about this cutoff
+      // yet while it's only queued locally, so it would otherwise still
+      // return these rows.
+      const rawMessages = res?.chat ?? [];
+      const newMessages = clearedAt
+        ? rawMessages.filter((m: Message) => new Date(m.date!).getTime() > new Date(clearedAt).getTime())
+        : rawMessages;
       if (newMessages.length > 0) {
         setNewMessagesCount(newMessages.length);
         setMessages((prevMessages: Message[]) => {
@@ -128,6 +136,21 @@ export default function MoreMessagesLoader({ oldMessages, participants, onReply 
 
     return () => clearTimeout(timeout);
   }, [participants]);
+
+  // A clear applying to the open conversation permanently hides everything
+  // at or before it - there's no more older history to page in, ever, so
+  // this both drops whatever older pages were already loaded and stops
+  // further fetches for this room (matches allDataFetched staying true even
+  // after the clear syncs and the local pending record is dropped - the
+  // server's own cutoff, read via getMessages' cleanHistoryTime filter,
+  // keeps enforcing the same thing from then on).
+  useEffect(() => {
+    if (!clearedAt) return;
+    setMessages([]);
+    setPage(1);
+    setAllDataFetched(true);
+    setFetching(false);
+  }, [clearedAt]);
 
   const messagesPerPage = parseInt((process.env.NEXT_PUBLIC_MESSAGES_PER_PAGE) || '5');
 

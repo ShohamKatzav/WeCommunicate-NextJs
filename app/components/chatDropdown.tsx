@@ -20,6 +20,7 @@ interface ChatDropdownProps {
     participants: RefObject<ChatUser[] | null | undefined>;
     updateConversationsBar: (message: Message | null, mode?: string, cleanId?: string) => Promise<void>;
     onDisappearingMessagesChange?: (seconds: number) => void;
+    setPendingClear: (conversationId: string, clearedAt: string) => void;
 }
 
 const ChatDropdown = ({
@@ -29,7 +30,8 @@ const ChatDropdown = ({
     conversationId,
     participants,
     updateConversationsBar,
-    onDisappearingMessagesChange
+    onDisappearingMessagesChange,
+    setPendingClear
 }: ChatDropdownProps) => {
 
     const isMobile = useIsMobile();
@@ -62,15 +64,41 @@ const ChatDropdown = ({
     const handleCleanHistory = async () => {
         if (chat.length === 0) return;
 
+        // Captured now, not at flush time - this is what actually drives
+        // what stays hidden (see the cutoff rules in
+        // CleanHistoryRepository.updateCleanHistory / app/api/cleanhistory/
+        // route.ts). Passed to the server action purely so the service
+        // worker can pull it out of the request body and queue it; the live
+        // online call below ignores it and always writes server time.
+        const clearedAt = new Date().toISOString();
+
         try {
-            const result = await cleanHistory(conversationId, "cleanHistory");
+            const result = await cleanHistory(conversationId, "cleanHistory", clearedAt);
             if (result.success) {
                 setChat([]);
                 updateConversationsBar(null, "Clean", conversationId);
             }
         } catch (error: any) {
-            if (!navigator.onLine || error.name === 'TypeError') {
-                toast.info("Offline right now - I’ll clear your chat history when you’re back online.");
+            // Same offline signals useMessageHandling's handleSendMessage
+            // uses, plus the "Unexpected response" case a server action can
+            // throw under the service worker's queued 503 (see
+            // moreMessagesLoader.tsx's loadMoreMessages, which treats it the
+            // same way).
+            const isOffline = (typeof navigator !== 'undefined' && !navigator.onLine)
+                || error?.name === 'TypeError'
+                || error?.message?.includes('Failed to fetch')
+                || error?.message?.includes('Unexpected response');
+
+            if (isOffline) {
+                // No optimistic update was enough on its own here - without
+                // a locally-persisted cutoff, every other surface that reads
+                // this conversation's history (rehydration, pagination,
+                // search, incoming/synced messages) would keep showing what
+                // was "cleared" until the offline queue actually flushes.
+                setPendingClear(conversationId, clearedAt);
+                setChat([]);
+                updateConversationsBar(null, "Clean", conversationId);
+                toast.info("Offline right now - history is cleared on this device and will sync once you’re back online.");
             } else {
                 toast.error("Failed to clear history");
             }

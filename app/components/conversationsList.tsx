@@ -5,11 +5,13 @@ import ConversationSummary from "./conversationSummary";
 import Conversation from "@/types/conversation";
 import MessageSearchResult from "@/types/messageSearchResult";
 import { searchMessages } from "@/app/lib/chatActions";
+import { PendingClears } from "@/app/hooks/usePendingCleanHistory";
 
 interface ConversationsListProps {
     getLastMessages: (participantFromList: ChatUser[]) => Promise<void>;
     query: string;
     initialConversations: Conversation[];
+    pendingClears: PendingClears;
 }
 
 const SEARCH_DEBOUNCE_MS = 350;
@@ -17,7 +19,8 @@ const SEARCH_DEBOUNCE_MS = 350;
 const ConversationsList =
     ({ getLastMessages,
         query,
-        initialConversations }: ConversationsListProps) => {
+        initialConversations,
+        pendingClears }: ConversationsListProps) => {
 
         // Only the most recently loaded message per conversation is present in
         // initialConversations (see ConversationRepository.GetRecentConversations'
@@ -74,7 +77,23 @@ const ConversationsList =
                                 // loaded and goes stale the moment a new message arrives.
                                 const lastMessage = conversation.messages?.[conversation.messages.length - 1];
                                 const messageIncludeQuery = lastMessage?.text?.toUpperCase().includes(query.toUpperCase());
-                                const remoteMatch = query.trim() ? remoteMatches.get(conversation._id) : undefined;
+                                const rawRemoteMatch = query.trim() ? remoteMatches.get(conversation._id) : undefined;
+                                // remoteMatches is fetched independently of the bar
+                                // (see its own comment above) and can still hold a
+                                // stale hit from at or before a clear this device
+                                // applied offline but hasn't synced yet - unlike
+                                // the bar-derived lastMessage check above, that
+                                // staleness isn't fixed just by conversationsForBar
+                                // being filtered elsewhere, so it's filtered again
+                                // here.
+                                const pendingClearedAt = conversation._id ? pendingClears[conversation._id] : undefined;
+                                const remoteMatch = rawRemoteMatch && pendingClearedAt
+                                    ? (() => {
+                                        const cutoffTime = new Date(pendingClearedAt).getTime();
+                                        const matches = rawRemoteMatch.matches.filter(m => new Date(m.date).getTime() > cutoffTime);
+                                        return matches.length > 0 ? { ...rawRemoteMatch, matches } : undefined;
+                                    })()
+                                    : rawRemoteMatch;
                                 const show = query.trim() === '' || (membersEmailsIncludeQuery || messageIncludeQuery || !!remoteMatch);
                                 if (!show) return null;
 

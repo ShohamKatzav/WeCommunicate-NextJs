@@ -14,9 +14,10 @@ interface ChatWindowProps {
     onReply: (message: Message) => void;
     conversationId: string;
     firstUnreadMessageId?: string;
+    clearedAt?: string;
 }
 
-const ChatWindow = ({ messages, participants, isMobile, onReply, conversationId, firstUnreadMessageId }: ChatWindowProps) => {
+const ChatWindow = ({ messages, participants, isMobile, onReply, conversationId, firstUnreadMessageId, clearedAt }: ChatWindowProps) => {
     const [loadNew, setLoadNew] = useState(true);
     const chatBox = useRef<HTMLDivElement | null>(null);
     const dividerRef = useRef<HTMLDivElement | null>(null);
@@ -96,7 +97,7 @@ const ChatWindow = ({ messages, participants, isMobile, onReply, conversationId,
                                     }
                                 </div>
                                 {(messages?.length === parseInt(process.env.NEXT_PUBLIC_MESSAGES_PER_PAGE!) || loadNew) &&
-                                    <MoreMessagesLoader oldMessages={messages} participants={participants.current} onReply={onReply} />
+                                    <MoreMessagesLoader oldMessages={messages} participants={participants.current} onReply={onReply} clearedAt={clearedAt} />
                                 }
                             </div>
                         </div>

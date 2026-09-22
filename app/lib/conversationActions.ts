@@ -7,13 +7,13 @@ import { Types } from "mongoose";
 import ConversationRepository from "@/repositories/ConversationRepository";
 import { DISAPPEARING_MESSAGES_OPTIONS } from "@/app/config/limits";
 
-export const cleanHistory = async (conversationId: string, type: string = "cleanHistory") => {
+const applyCleanHistory = async (conversationId: string, cutoff: number) => {
     if (!conversationId) throw new Error("Invalid Conversation Id")
     try {
         await connectDB();
         const userID = await extractUserIDFromCoockie();
 
-        const result = await CleanHistoryRepository.updateCleanHistory(userID, conversationId);
+        const result = await CleanHistoryRepository.updateCleanHistory(userID, conversationId, cutoff);
         // Ensure write is committed (if using MongoDB, check writeConcern)
         if (result.acknowledged) {
             revalidatePath('/chat');
@@ -26,6 +26,20 @@ export const cleanHistory = async (conversationId: string, type: string = "clean
         console.error('Failed to clean history', err);
         return { success: false, error: 'Failed to clean history' };
     }
+}
+
+// `clearedAt` only ever rides along so the service worker can pick it out of
+// this action's marshalled request body and queue it when offline (see
+// isCleanHistory in public/service-worker.js) - this live/online path always
+// writes server time, exactly like before that argument existed. Only the
+// queued replay (app/api/cleanhistory/route.ts, via applyCleanHistory above)
+// ever applies a client-supplied cutoff.
+export const cleanHistory = async (conversationId: string, type: string = "cleanHistory", clearedAt?: string) => {
+    return applyCleanHistory(conversationId, Date.now());
+}
+
+export const cleanHistoryReplay = async (conversationId: string, cutoff: number) => {
+    return applyCleanHistory(conversationId, cutoff);
 }
 
 export const getDisappearingMessagesSetting = async (conversationId: string) => {
