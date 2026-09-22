@@ -16,6 +16,7 @@ interface UsersListClientProps {
     isMobileUsersSidebarOpen: boolean;
     blockedUserIds: string[];
     onToggleBlock: (targetUserId: string, shouldBlock: boolean) => Promise<void>;
+    lastSeenByEmail: Record<string, string>;
 }
 
 export default function UsersListClient({
@@ -26,6 +27,7 @@ export default function UsersListClient({
     isMobileUsersSidebarOpen,
     blockedUserIds,
     onToggleBlock,
+    lastSeenByEmail,
 }: UsersListClientProps) {
 
     const { user } = useUser();
@@ -68,6 +70,11 @@ export default function UsersListClient({
         window.addEventListener("resize", setVh);
         return () => window.removeEventListener("resize", setVh);
     }, []);
+
+    // A user who has gone offline since this page loaded has a fresher
+    // timestamp on the socket than the one the row was rendered with.
+    const lastSeenFor = (chatUser: ChatUser) =>
+        (chatUser.email ? lastSeenByEmail[chatUser.email.toLowerCase()] : undefined) ?? chatUser.lastSeen;
 
     const isUserActive = (user: ChatUser) => {
         return chatListActiveUsers?.some(u =>
@@ -131,6 +138,7 @@ export default function UsersListClient({
                                 active={false}
                                 isBlocked={blockedUserIds.includes(chatUser._id)}
                                 onToggleBlock={onToggleBlock}
+                                lastSeen={lastSeenFor(chatUser)}
                             />
                         ))
                         :

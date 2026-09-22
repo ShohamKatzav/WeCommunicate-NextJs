@@ -5,6 +5,8 @@ import FileDTO from "@/types/FileDTO";
 import { Send, X } from "lucide-react";
 import { UploadFileButton, UploadFileProvider, UploadFileStatus } from "./uploadFile";
 import VoiceRecorder from "./voiceRecorder";
+import ShareLocationButton from "./shareLocationButton";
+import MessageLocation from "@/types/messageLocation";
 import useIsMobile from "../hooks/useIsMobile";
 import { MAX_MESSAGE_LENGTH } from "../config/limits";
 import { AsShortName } from "../utils/stringFormat";
@@ -14,7 +16,7 @@ interface MessageInputProps {
     message: Message;
     setMessage: Dispatch<SetStateAction<Message>>;
     participants: RefObject<ChatUser[] | null | undefined>;
-    handleSendMessage: (overrideFile?: FileDTO) => Promise<void>;
+    handleSendMessage: (overrideFile?: FileDTO, overrideLocation?: MessageLocation) => Promise<void>;
     handleTyping: () => void;
     isBlocked: boolean;
 }
@@ -46,6 +48,13 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
     // A voice message sends itself as soon as recording is uploaded - it
     // doesn't go through the normal draft/attach-then-click-send flow.
     const handleVoiceRecorded = useCallback((file: FileDTO) => handleSendMessage(file), [handleSendMessage]);
+
+    // Same shape as a voice message: the pin is the whole message, so it
+    // sends the moment it's picked up rather than being staged as a draft.
+    const handleLocationShared = useCallback(
+        (location: MessageLocation) => handleSendMessage(undefined, location),
+        [handleSendMessage]
+    );
 
     return (
         <UploadFileProvider message={message} setMessage={setMessage} suspended={isRecordingVoice}>
@@ -109,6 +118,9 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
                         )}
                         <div className="flex items-center gap-2">
                             <UploadFileButton />
+                            {!isRecordingVoice && (
+                                <ShareLocationButton participants={participants} onShare={handleLocationShared} disabled={isBlocked} />
+                            )}
                             <VoiceRecorder participants={participants} onRecorded={handleVoiceRecorded} onStatusChange={setIsRecordingVoice} />
                             {!isRecordingVoice && (
                                 <button
@@ -128,6 +140,9 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
                 ) : (
                     <div className="flex items-center gap-3">
                         <UploadFileButton />
+                        {!isRecordingVoice && (
+                            <ShareLocationButton participants={participants} onShare={handleLocationShared} disabled={isBlocked} />
+                        )}
                         {!isRecordingVoice && (
                             <input
                                 className="flex-1 p-3 rounded-xl bg-gray-100 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 border border-transparent dark:border-gray-600 transition-all"

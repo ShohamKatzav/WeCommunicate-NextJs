@@ -39,7 +39,7 @@ export default class MessageRepository {
 
     static async SaveMessage(data: MessageDTO, userID: string) {
         try {
-            const { date, sender, participantID, text, file, replyTo } = data;
+            const { date, sender, participantID, text, file, location, replyTo } = data;
             const participantIDArray = Array.isArray(participantID) ? participantID : [];
 
             const memberIDs = [
@@ -72,7 +72,7 @@ export default class MessageRepository {
                     _id: replyTo.messageId,
                     conversation: conversation._id,
                     status: { $ne: 'revoked' }
-                }).select('sender text file').populate('file', 'pathname').lean();
+                }).select('sender text file location').populate('file', 'pathname').lean();
 
                 if (repliedMessage) {
                     replyToSnapshot = {
@@ -80,7 +80,9 @@ export default class MessageRepository {
                         sender: repliedMessage.sender,
                         snippet: repliedMessage.text
                             ? repliedMessage.text.slice(0, REPLY_SNIPPET_LENGTH)
-                            : (repliedMessage.file ? `sent file ${(repliedMessage.file as any).pathname}` : ''),
+                            : (repliedMessage.file
+                                ? `sent file ${(repliedMessage.file as any).pathname}`
+                                : (repliedMessage.location ? 'Shared a location' : '')),
                         hasFile: !!repliedMessage.file
                     };
                 }
@@ -99,6 +101,7 @@ export default class MessageRepository {
                 sender,
                 text,
                 file: newFileId,
+                location,
                 conversation: conversation._id,
                 replyTo: replyToSnapshot,
                 expiresAt
@@ -205,6 +208,45 @@ export default class MessageRepository {
         }
     }
 
+    // A sender holds at most one reaction per message, so picking a second
+    // emoji replaces the first rather than adding to it. The pull/push pair
+    // is scoped to this sender's own entry, which keeps two people reacting
+    // at the same moment from overwriting each other the way writing back a
+    // whole recomputed array would.
+    static async ToggleReaction(messageId: string, senderEmail: string, emoji: string, memberID: Types.ObjectId) {
+        try {
+            const message: any = await Message.findOne({ _id: messageId, status: { $ne: 'revoked' } })
+                .select('conversation reactions')
+                .lean();
+            if (!message) return null;
+
+            // Only someone actually in the conversation may react to what's
+            // in it - message ids are otherwise guessable, and this would
+            // let any logged-in user annotate a stranger's messages.
+            const isMember = await Conversation.exists({ _id: message.conversation, members: memberID });
+            if (!isMember) return null;
+
+            const existing = (message.reactions || []).find(
+                (reaction: any) => reaction.sender?.toLowerCase() === senderEmail.toLowerCase()
+            );
+            const isRemoving = existing?.emoji === emoji;
+
+            await Message.updateOne({ _id: messageId }, { $pull: { reactions: { sender: senderEmail } } });
+            if (!isRemoving) {
+                await Message.updateOne({ _id: messageId }, { $push: { reactions: { emoji, sender: senderEmail } } });
+            }
+
+            const updated: any = await Message.findById(messageId).select('reactions').lean();
+            return {
+                reactions: updated?.reactions || [],
+                conversationId: message.conversation.toString()
+            };
+        } catch (err) {
+            console.error('Failed to toggle reaction:', err);
+            throw err;
+        }
+    }
+
     static async deleteMessage(id: string) {
         try {
             const requestSenderEmail = await extractUsersEmailFromCoockie();
@@ -223,7 +265,7 @@ export default class MessageRepository {
                 { _id: messageObjectId },
                 {
                     $set: { status: "revoked" },
-                    $unset: { text: "", file: "" }
+                    $unset: { text: "", file: "", location: "", reactions: "" }
                 }
             );
         } catch (err) {

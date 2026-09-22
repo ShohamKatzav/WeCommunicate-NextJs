@@ -4,6 +4,7 @@ import Message from '@/types/message';
 import MessageDTO from '@/types/messageDTO';
 import ChatUser from '@/types/chatUser';
 import FileDTO from '@/types/FileDTO';
+import MessageLocation from '@/types/messageLocation';
 import { saveMessage, revalidateChatRoute } from '@/app/lib/chatActions';
 import { toast } from "sonner";
 import { PendingClears } from './usePendingCleanHistory';
@@ -124,7 +125,11 @@ export const useMessageHandling = ({
     // back off `messageToSend` immediately after setting it would still see
     // the stale pre-update closure value, since this callback's identity
     // only refreshes on the next render.
-    const handleSendMessage = useCallback(async (overrideFile?: FileDTO) => {
+    // `overrideLocation` follows the same pattern for a pin shared straight
+    // from the composer (see shareLocationButton.tsx) - it's never staged as
+    // a draft the way text and attachments are, so it can't be read back off
+    // `messageToSend` either.
+    const handleSendMessage = useCallback(async (overrideFile?: FileDTO, overrideLocation?: MessageLocation) => {
         // A random id, not a timestamp - two sends in the same millisecond
         // (or a burst of offline-queued sends flushing together) used to
         // produce colliding temp ids, which handleServerSavedMessageResponse
@@ -139,6 +144,7 @@ export const useMessageHandling = ({
                 sender: messageToSend.sender || "",
                 text: messageToSend.text?.trim(),
                 file: overrideFile || messageToSend?.file || undefined,
+                location: overrideLocation,
                 participantID: messageToSend.participantID || [],
                 conversationID: messageToSend.conversationID || "",
                 replyTo: messageToSend.replyTo

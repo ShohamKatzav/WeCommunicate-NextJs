@@ -4,6 +4,7 @@ import { SetStateAction, useEffect, useState } from "react";
 import { HiChatBubbleLeftRight, HiUsers } from "react-icons/hi2";
 import { Timer } from "lucide-react";
 import { AsShortName } from "../utils/stringFormat";
+import { formatLastSeen } from "../utils/lastSeen";
 import { useUser } from "../hooks/useUser";
 import ChatDropdown from "./chatDropdown";
 import Avatar from "./avatar";
@@ -23,6 +24,8 @@ interface ChatHeaderProps {
     typingUsers: Record<string, boolean>;
     activeSocketUsers: ChatUser[];
     setPendingClear: (conversationId: string, clearedAt: string) => void;
+    lastSeenByEmail: Record<string, string>;
+    isBlocked: boolean;
 }
 
 const ChatHeader = ({
@@ -36,7 +39,9 @@ const ChatHeader = ({
     updateConversationsBar,
     typingUsers,
     activeSocketUsers,
-    setPendingClear }: ChatHeaderProps) => {
+    setPendingClear,
+    lastSeenByEmail,
+    isBlocked }: ChatHeaderProps) => {
 
     const { user } = useUser();
 
@@ -66,6 +71,17 @@ const ChatHeader = ({
 
     const disappearingLabel = DISAPPEARING_MESSAGES_OPTIONS
         .find(option => option.seconds === disappearingSeconds && option.seconds !== 0)?.label;
+
+    // 1:1 only - a group has several people with several last-seen times,
+    // and the header already summarises those as "N of M members online".
+    // Never shown for a blocked user, matching the users list.
+    const otherParticipant = participants.current?.length === 1 ? participants.current[0] : undefined;
+    const lastSeenText = (!otherParticipant || isBlocked)
+        ? null
+        : formatLastSeen(
+            (otherParticipant.email ? lastSeenByEmail[otherParticipant.email.toLowerCase()] : undefined)
+            ?? otherParticipant.lastSeen
+        );
 
     const getOnlineParticipantsInRoom = () => {
         if (!participants.current) return [];
@@ -128,12 +144,18 @@ const ChatHeader = ({
                         ) : (
 
                             participants.current && (
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                    <span className={`w-1.5 h-1.5 rounded-full ${onlineCount > 0 ? 'bg-green-500' : 'bg-gray-500'}`}></span>
-                                    {participants.current.length > 1 ? `${onlineCount} of ${participants.current.length} members online` :
-                                            `${onlineCount > 0 ? `${participants.current[0]?.nickname || AsShortName(participants.current[0]?.email as string)} online` :
-                                            `${participants.current[0]?.nickname || AsShortName(participants.current[0]?.email as string)} isn't here right now`}`
-                                    }
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground min-w-0">
+                                    <span className={`w-1.5 h-1.5 shrink-0 rounded-full ${onlineCount > 0 ? 'bg-green-500' : 'bg-gray-500'}`}></span>
+                                    <span className="truncate">
+                                        {participants.current.length > 1
+                                            ? `${onlineCount} of ${participants.current.length} members online`
+                                            : onlineCount > 0
+                                                ? `${otherParticipant?.nickname || AsShortName(otherParticipant?.email as string)} online`
+                                                : lastSeenText
+                                                    ? `${otherParticipant?.nickname || AsShortName(otherParticipant?.email as string)} · Last seen ${lastSeenText}`
+                                                    : `${otherParticipant?.nickname || AsShortName(otherParticipant?.email as string)} isn't here right now`
+                                        }
+                                    </span>
                                 </div>
                             )
                         )}

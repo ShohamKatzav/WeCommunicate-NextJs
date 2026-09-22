@@ -83,24 +83,31 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                 <div className="w-full text-left p-2 flex gap-3 items-center hover:bg-gray-50 dark:hover:bg-white/5">
                 {otherMembers.length === 1 ? (
                     <Avatar avatarUrl={otherMembers[0].avatarUrl} nickname={otherMembers[0].nickname} email={otherMembers[0].email} size={48} />
-                ) : (
-                    <div className="w-12 h-12 rounded-full bg-linear-to-r from-amber-400 to-red-500 flex items-center justify-center">
-                        {otherMembers.length > 0 ? (
-                            otherMembers.map((member, index) => {
-                                const letter = (member.nickname || member.email || "U")[0].toUpperCase();
-                                const isLast = index === otherMembers.length - 1;
-
-                                return (
-                                    index < 3 &&
-                                    <span key={index} className="text-white font-bold">
-                                        {letter}
-                                        {!isLast && ","}
-                                    </span>
-                                );
-                            })
-                        ) : (
-                            <span className="text-white text-xs">No members in this conversation.</span>
+                ) : otherMembers.length > 0 ? (
+                    // A group row shows who's actually in it, the same way the
+                    // 1:1 row above does - it used to be a single circle of
+                    // comma-separated initials, which said far less at a
+                    // glance than the members' own pictures.
+                    <div className="flex shrink-0 items-center -space-x-3">
+                        {otherMembers.slice(0, 3).map(member => (
+                            <Avatar
+                                key={member._id || member.email}
+                                avatarUrl={member.avatarUrl}
+                                nickname={member.nickname}
+                                email={member.email}
+                                size={36}
+                                className="ring-2 ring-white dark:ring-gray-800"
+                            />
+                        ))}
+                        {otherMembers.length > 3 && (
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold text-gray-700 ring-2 ring-white dark:bg-gray-600 dark:text-gray-100 dark:ring-gray-800">
+                                +{otherMembers.length - 3}
+                            </span>
                         )}
+                    </div>
+                ) : (
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-200 text-center text-[10px] leading-tight text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                        No one
                     </div>
                 )}
 
@@ -163,9 +170,11 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                             <div className="text-sm text-muted-foreground break-all col-span-2">{lastMessage.status?.includes("revoked")
                                 ? "Message deleted"
                                 : (lastMessage.text
-                                    || (lastMessage.file?.pathname?.includes("voice-message")
-                                        ? "Voice message"
-                                        : "sent file " + lastMessage.file?.pathname))}
+                                    || (lastMessage.location
+                                        ? "Shared a location"
+                                        : lastMessage.file?.pathname?.includes("voice-message")
+                                            ? "Voice message"
+                                            : "sent file " + lastMessage.file?.pathname))}
                             </div>
                         </div>
                         :

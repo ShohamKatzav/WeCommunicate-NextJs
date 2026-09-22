@@ -8,12 +8,24 @@ interface IReplyTo {
     hasFile: boolean;
 }
 
+interface IMessageLocation {
+    latitude: number;
+    longitude: number;
+}
+
+interface IMessageReaction {
+    emoji: string;
+    sender: string;
+}
+
 interface IMessage extends Document {
     date: Date;
     sender: string;
     text?: string;
     status?: string;
     file?: Schema.Types.ObjectId;
+    location?: IMessageLocation;
+    reactions?: IMessageReaction[];
     conversation: Schema.Types.ObjectId;
     replyTo?: IReplyTo;
     expiresAt?: Date;
@@ -43,6 +55,30 @@ const MessageSchema = new Schema<IMessage>({
         type: Schema.Types.ObjectId,
         ref: 'FileModel',
         required: false
+    },
+    // A pin the sender dropped into the conversation from the composer -
+    // stored inline rather than as a reference, because unlike a Location
+    // document (models/Location.ts, one live position per account, kept
+    // up to date) this is a fixed snapshot of one moment that must never
+    // move afterwards.
+    location: {
+        type: {
+            latitude: { type: Number, required: true, min: -90, max: 90 },
+            longitude: { type: Number, required: true, min: -180, max: 180 }
+        },
+        required: false,
+        _id: false
+    },
+    // At most one entry per sender - see MessageRepository.ToggleReaction,
+    // which replaces a sender's existing entry rather than appending.
+    reactions: {
+        type: [{
+            emoji: { type: String, required: true },
+            sender: { type: String, required: true }
+        }],
+        required: false,
+        default: undefined,
+        _id: false
     },
     conversation: {
         type: Schema.Types.ObjectId,

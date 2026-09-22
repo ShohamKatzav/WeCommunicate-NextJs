@@ -1,5 +1,7 @@
 import FileDTO from '@/types/FileDTO'
 import ReplyTo from '@/types/replyTo'
+import MessageLocation from '@/types/messageLocation'
+import MessageReaction from '@/types/messageReaction'
 
 export default interface Message {
     _id?: string | undefined;
@@ -8,6 +10,8 @@ export default interface Message {
     text?: string | undefined;
     status?: string | undefined;
     file?: FileDTO | undefined | null;
+    location?: MessageLocation | undefined | null;
+    reactions?: MessageReaction[] | undefined;
     participantID?: string[] | undefined;
     conversationID?: string | undefined;
     replyTo?: ReplyTo | undefined;

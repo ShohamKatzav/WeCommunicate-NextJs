@@ -13,6 +13,7 @@ import AccentColorPicker from "../../components/accentColorPicker";
 import PhoneNumberEditor from "../../components/phoneNumberEditor";
 import EmailAddressEditor from "../../components/emailAddressEditor";
 import AvatarCameraCapture from "../../components/avatarCameraCapture";
+import ImageCropper from "../../components/imageCropper";
 import Loading from "../../components/loading";
 import { ABOUT_MAX_LENGTH, DEFAULT_ACCENT_COLOR } from "../../config/limits";
 
@@ -41,6 +42,10 @@ export default function EditProfilePage() {
     const [canEditPhone, setCanEditPhone] = useState(false);
     const [saving, setSaving] = useState(false);
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
+    // Set once a picked or captured photo has passed validation and is
+    // waiting on the crop step - clearing it (Skip or Cancel) is what
+    // decides whether the original or the cropped square gets uploaded.
+    const [fileToCrop, setFileToCrop] = useState<File | null>(null);
 
     // `user?.token` - not `user?.email` - is the actual "am I logged in"
     // signal: a session stays valid even for an account whose `email` field
@@ -76,8 +81,10 @@ export default function EditProfilePage() {
         return () => { cancelled = true; };
     }, [loadingUser, user?.token]);
 
-    const processAvatarFile = async (rawFile: File) => {
-        if (!user?.token) return;
+    // Validation runs before the crop, not after it: a file that was never
+    // going to be accepted shouldn't first make the user frame it.
+    const prepareAvatarFile = async (rawFile: File) => {
+        if (!user?.token) return null;
 
         let file = rawFile;
         if (!file.type || file.type === "image/heic" || file.type === "image/heif") {
@@ -86,24 +93,36 @@ export default function EditProfilePage() {
             } catch (err) {
                 console.error("HEIC conversion failed:", err);
                 toast.error("Please choose a JPG, PNG, or WEBP image");
-                return;
+                return null;
             }
         }
 
         if (!AVATAR_TYPES.includes(file.type)) {
             toast.error("Please choose a JPG, PNG, or WEBP image");
-            return;
+            return null;
         }
         if (file.size > AVATAR_MAX_SIZE) {
             toast.error("Image must be smaller than 10MB");
-            return;
+            return null;
         }
 
+        return file;
+    };
+
+    const offerCrop = async (rawFile: File) => {
+        const prepared = await prepareAvatarFile(rawFile);
+        if (prepared) setFileToCrop(prepared);
+    };
+
+    const uploadAvatarFile = async (file: File) => {
+        if (!user?.token) return;
+
+        setFileToCrop(null);
         setUploadingAvatar(true);
         try {
-            file = await compressImageIfWorthwhile(file);
+            const compressed = await compressImageIfWorthwhile(file);
 
-            const blob = await upload(file.name, file, {
+            const blob = await upload(compressed.name, compressed, {
                 access: "public",
                 handleUploadUrl: "/api/send-file",
                 headers: {
@@ -134,7 +153,7 @@ export default function EditProfilePage() {
     const handleAvatarChange = () => {
         const file = fileInputRef.current?.files?.[0];
         if (fileInputRef.current) fileInputRef.current.value = "";
-        if (file) void processAvatarFile(file);
+        if (file) void offerCrop(file);
     };
 
     const handleRemoveAvatar = async () => {
@@ -187,6 +206,15 @@ export default function EditProfilePage() {
 
     return (
         <div className="max-w-md mx-auto px-4 py-8">
+            {fileToCrop && (
+                <ImageCropper
+                    file={fileToCrop}
+                    busy={uploadingAvatar}
+                    onCropped={(cropped) => void uploadAvatarFile(cropped)}
+                    onSkip={() => void uploadAvatarFile(fileToCrop)}
+                    onCancel={() => setFileToCrop(null)}
+                />
+            )}
             <div className="bg-card text-card-foreground rounded-xl shadow-md p-6">
                 <h1 className="text-xl font-semibold mb-6 text-center">Edit profile</h1>
 
@@ -210,7 +238,7 @@ export default function EditProfilePage() {
                             onChange={handleAvatarChange}
                         />
                         <AvatarCameraCapture
-                            onCapture={(file) => void processAvatarFile(file)}
+                            onCapture={(file) => void offerCrop(file)}
                             disabled={uploadingAvatar}
                         />
                     </div>
