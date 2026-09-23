@@ -6,7 +6,6 @@ import CleanHistoryRepository from "./CleanHistoryRepository";
 import { Schema, Types } from 'mongoose';
 import MessageDTO from '@/types/messageDTO';
 import MessageSearchResult from '@/types/messageSearchResult';
-import { extractUsersEmailFromCoockie } from "@/app/lib/cookieActions";
 import { MAX_SEARCH_MATCHES_SCANNED, MAX_SEARCH_RESULTS, MAX_MATCHES_PER_CONVERSATION, REPLY_SNIPPET_LENGTH } from '@/app/config/limits';
 
 type ChatQuery = {
@@ -247,15 +246,17 @@ export default class MessageRepository {
         }
     }
 
-    static async deleteMessage(id: string) {
+    // requesterEmail must come from a verified identity (the caller's
+    // account), never from anything the client sent.
+    static async deleteMessage(id: string, requesterEmail: string) {
         try {
-            const requestSenderEmail = await extractUsersEmailFromCoockie();
+            if (!requesterEmail) return null;
             const messageObjectId = new Types.ObjectId(id);
 
             const messageToDelete = await Message.findOne({ _id: messageObjectId });
             if (!messageToDelete) return null;
 
-            if (messageToDelete.sender !== requestSenderEmail) return null;
+            if (messageToDelete.sender?.toLowerCase() !== requesterEmail.toLowerCase()) return null;
 
             // Actually strip the content, not just mark it revoked - the
             // client only hides revoked messages in its UI, so leaving text

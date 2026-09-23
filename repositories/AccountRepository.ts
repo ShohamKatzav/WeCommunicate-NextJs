@@ -246,7 +246,7 @@ export default class AccountRepository {
 
     // Checked in both directions - if either side has blocked the other,
     // messaging between them is stopped. Used to gate 1:1 sends (see
-    // chatActions.saveMessage and socket/handlers.js's handlePublishMessage).
+    // chatActions.saveMessage and socket/handlers.ts's handlePublishMessage).
     static async isBlockedEitherWay(idA: string, idB: string): Promise<boolean> {
         try {
             const objA = new Types.ObjectId(idA);

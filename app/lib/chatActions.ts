@@ -287,7 +287,13 @@ export const deleteMessage = async (id: string, type: string = "message") => {
         if (typeof userID !== 'string') {
             throw new Error('Unauthorized');
         }
-        const result = await MessageRepository.deleteMessage(id);
+        // Ownership is checked against the verified account's email, same
+        // identity saveMessage stamps as the sender.
+        const requesterEmail = await AccountRepository.getEmailById(new Types.ObjectId(userID));
+        if (!requesterEmail) {
+            throw new Error('Unauthorized');
+        }
+        const result = await MessageRepository.deleteMessage(id, requesterEmail);
         if (result) {
             revalidatePath('/chat');
             return { success: true, message: "Message deleted" };
@@ -303,7 +309,7 @@ export const deleteMessage = async (id: string, type: string = "message") => {
 
 // Adds the caller's reaction to a message, or removes it when they pick the
 // one they already have. Never revalidates /chat: reactions reach everyone
-// else over the socket (see 'react to message' in socket/handlers.js), and a
+// else over the socket (see 'react to message' in socket/handlers.ts), and a
 // full route revalidation per tap would be wildly out of proportion.
 export const toggleMessageReaction = async (messageId: string, emoji: string) => {
     try {

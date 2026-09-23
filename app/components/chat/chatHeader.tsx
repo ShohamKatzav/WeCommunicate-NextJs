@@ -95,7 +95,7 @@ const ChatHeader = ({
             ?? otherParticipant.lastSeen
         );
 
-    // Calls are 1:1 only (see the call handlers in socket/handlers.js) and
+    // Calls are 1:1 only (see the call handlers in socket/handlers.ts) and
     // never reach a blocked user. They don't require a conversation to
     // exist yet - onStartCall creates one on demand (ensureConversationId)
     // if this is a brand-new chat with no messages.

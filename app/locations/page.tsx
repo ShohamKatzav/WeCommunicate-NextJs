@@ -8,29 +8,12 @@ import useLocation from '../hooks/useLocation';
 import LocationAccessInformation from '../components/locations/locationAccessStatus';
 import { useUser } from '../hooks/useUser';
 import LocationsTable, { FriendDistanceRow } from '../components/locations/locationsTable';
+import { getDistanceKm } from '../utils/geolocation';
 
 
 const center = {
   lat: 31.4117257,
   lng: 35.0818155
-};
-
-const EARTH_RADIUS_KM = 6371;
-
-const toRad = (value: number) => (value * Math.PI) / 180;
-
-const getDistanceKm = (from: { lat: number; lng: number }, to: { lat: number; lng: number }) => {
-  const dLat = toRad(to.lat - from.lat);
-  const dLng = toRad(to.lng - from.lng);
-  const fromLat = toRad(from.lat);
-  const toLat = toRad(to.lat);
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.sin(dLng / 2) * Math.sin(dLng / 2) * Math.cos(fromLat) * Math.cos(toLat);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return EARTH_RADIUS_KM * c;
 };
 
 const formatDistance = (distanceKm: number) => {
@@ -43,7 +26,7 @@ const formatDistance = (distanceKm: number) => {
 
 
 function Locations() {
-  const { locationAccessinfo } = useLocation();
+  const { position: myFix, locationAccessinfo, requestLocation } = useLocation();
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!
@@ -67,6 +50,8 @@ function Locations() {
   }), []);
 
   const currentUserPosition = useMemo(() => {
+    // This device's own live fix is fresher than whatever was last saved.
+    if (myFix.latitude != null && myFix.longitude != null) return myFix;
     if (!positions?.length || !user?.email) return null;
 
     return positions.find(
@@ -76,7 +61,7 @@ function Locations() {
         position.longitude != null &&
         !position.loading
     ) || null;
-  }, [positions, user?.email]);
+  }, [myFix, positions, user?.email]);
 
   const friendsWithDistance = useMemo<FriendDistanceRow[]>(() => {
     if (!positions?.length) return [];
@@ -130,11 +115,26 @@ function Locations() {
       setPositions(data);
     };
 
+    // Our own save, echoed back once it's persisted - replaced in place so
+    // the other pins (and their open info windows) keep their indexes.
+    const updateOwnPosition = (saved: Location) => {
+      setPositions(prev => {
+        const list = prev ?? [];
+        const index = list.findIndex(p => ciEquals(p.username || '', saved.username || ''));
+        if (index === -1) return [...list, saved];
+        const next = [...list];
+        next[index] = saved;
+        return next;
+      });
+    };
+
     socket?.on("get locations", updatePositions);
+    socket?.on("location saved", updateOwnPosition);
     getPositions();
 
     return () => {
       socket?.off("get locations", updatePositions);
+      socket?.off("location saved", updateOwnPosition);
     };
   }, [loadingSocket, socket]);
 
@@ -147,16 +147,26 @@ function Locations() {
     setMap(null)
   }, [])
 
-  if (locationAccessinfo !== "granted") return <LocationAccessInformation information={locationAccessinfo} />
+  const hasFix = myFix.latitude != null && myFix.longitude != null;
 
-  return isLoaded ? (
+  // Friends' pins and the distance table don't depend on this device's GPS,
+  // so the page always renders - location access only decides the banner.
+  return (
     <section className="mx-auto w-full max-w-6xl px-3 pb-8 pt-2 sm:px-4">
       <h1 className="mb-4 text-center text-2xl font-extrabold text-gray-900 dark:text-white sm:text-4xl lg:text-5xl">
         <span className="text-transparent bg-clip-text bg-linear-to-r to-blue-900 from-teal-700 dark:to-blue-400 dark:from-teal-300">Friends&apos; locations</span>
       </h1>
 
+      <LocationAccessInformation
+        information={locationAccessinfo}
+        hasFix={hasFix}
+        locating={myFix.loading}
+        error={myFix.error}
+        onEnable={requestLocation}
+      />
+
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white/70 shadow-xs dark:border-gray-700 dark:bg-gray-900/60">
-        <GoogleMap
+        {isLoaded ? <GoogleMap
           mapContainerStyle={containerStyle}
           center={center}
           zoom={8}
@@ -204,7 +214,7 @@ function Locations() {
               </Marker>)
             )
           }
-        </GoogleMap>
+        </GoogleMap> : <div style={containerStyle} />}
       </div>
 
       <div className="mt-4 rounded-xl border border-gray-200 bg-white p-3 shadow-xs dark:border-gray-700 dark:bg-gray-900 sm:p-4">
@@ -217,8 +227,8 @@ function Locations() {
 
         <LocationsTable friendsWithDistance={friendsWithDistance} />
       </div>
-    </section>)
-    : <></>
+    </section>
+  );
 }
 
 export default Locations;

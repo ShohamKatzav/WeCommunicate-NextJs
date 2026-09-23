@@ -20,7 +20,8 @@ export async function SaveLocations(email: string, location: any) {
         // another user's location.
         const account = await AccountRepository.getUserByEmail(email);
         if (!account) throw new Error(`Account not found for ${email}`);
-        return await LocationRepository.updateLocation(account._id, { ...location, username: email });
+        const saved = await LocationRepository.updateLocation(account._id, { ...location, username: email }, account.location);
+        return { ...saved, username: account.email };
     } catch (err) {
         console.error('Failed to save location:', err);
         throw err;
