@@ -85,7 +85,7 @@ const AccountSchema = new Schema<IAccount>({
     accentColor: { type: String, required: false },
 
     // Written when a user's *last* socket goes away (see handleDisconnect in
-    // socket/handlers.js) - closing one of several open tabs isn't leaving.
+    // socket/handlers.ts) - closing one of several open tabs isn't leaving.
     // Only meaningful while they're offline: presence, not this, is what says
     // whether someone is here right now.
     lastSeen: { type: Date, required: false }

@@ -1,25 +1,102 @@
+import type { DefaultEventsMap, Server, Socket } from 'socket.io';
 import RedisService from '@/services/RedisService';
 import ModerationService from '@/services/ModerationService';
 import { GetLocations, SaveLocations } from "@/app/lib/locationActions";
+import { isSameSpot, shouldPersistFix, type SavedFix } from "@/app/utils/geolocation";
 import Conversation from '@/models/Conversation'
 import Message from '@/models/Message'
 import Account from '@/models/Account'
 import { sendPushToEmails } from '@/services/PushService';
 
-async function isConversationMember(conversationId, email) {
+interface SocketData {
+    email: string;
+    userId: string;
+    typingIn?: Set<string>;
+}
+
+type AppServer = Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, SocketData>;
+type AppSocket = Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, SocketData>;
+
+interface EmailMember {
+    email?: string | null;
+}
+
+interface LeanAccount {
+    _id: { toString(): string };
+    email?: string | null;
+    blocked?: { toString(): string }[];
+    isModerator?: boolean;
+    nickname?: string | null;
+}
+
+interface LeanMessage {
+    _id: { toString(): string };
+    conversation: { toString(): string };
+    reactions?: { emoji: string; sender: string }[];
+}
+
+interface ClientMessage {
+    conversationID?: string;
+    conversation?: unknown;
+    sender?: string;
+    _id?: unknown;
+}
+
+interface CallSignal {
+    callId?: unknown;
+    conversationId?: unknown;
+    video?: unknown;
+    reason?: unknown;
+    description?: unknown;
+    candidate?: unknown;
+}
+
+interface ActiveCall {
+    callId: string;
+    conversationId: string;
+    caller: string;
+    callee: string;
+    callerSocketId: string;
+    calleeSocketId: string | null;
+    state: 'ringing' | 'active';
+    video: boolean;
+    candidates: number;
+    descriptions: number;
+    calleeWasReachable: boolean;
+    ringTimer: ReturnType<typeof setTimeout> | null;
+    ended: boolean;
+}
+
+interface SessionDescription {
+    type: 'offer' | 'answer';
+    sdp: string;
+}
+
+interface IceCandidate {
+    candidate: string;
+    sdpMid: string | null;
+    sdpMLineIndex: number | null;
+    usernameFragment?: string;
+}
+
+function membersOf(conversation: { members?: unknown }): EmailMember[] {
+    return conversation.members as EmailMember[];
+}
+
+async function isConversationMember(conversationId: unknown, email?: string) {
     if (!conversationId || !email) return false;
     try {
-        const conversation = await Conversation.findById(conversationId).populate('members', 'email');
+        const conversation = await Conversation.findById(conversationId as string).populate('members', 'email');
         if (!conversation) return false;
-        return conversation.members.some(member => member.email?.toLowerCase() === email.toLowerCase());
+        return membersOf(conversation).some(member => member.email?.toLowerCase() === email.toLowerCase());
     } catch {
         return false;
     }
 }
 
-async function isModerator(email) {
+async function isModerator(email?: string) {
     if (!email) return false;
-    const account = await Account.findOne({ email }).select('isModerator').lean();
+    const account = await Account.findOne({ email }).select('isModerator').lean<LeanAccount | null>();
     return Boolean(account?.isModerator);
 }
 
@@ -27,11 +104,11 @@ async function isModerator(email) {
 // chatActions.saveMessage) - duplicated here rather than imported because
 // this file works with models directly, not repositories, and the check is
 // small. If either side has blocked the other, messaging between them stops.
-async function isBlockedEitherWay(emailA, emailB) {
+async function isBlockedEitherWay(emailA?: string | null, emailB?: string | null) {
     if (!emailA || !emailB) return false;
     const [accountA, accountB] = await Promise.all([
-        Account.findOne({ email: emailA }).select('_id blocked').lean(),
-        Account.findOne({ email: emailB }).select('_id blocked').lean()
+        Account.findOne({ email: emailA }).select('_id blocked').lean<LeanAccount | null>(),
+        Account.findOne({ email: emailB }).select('_id blocked').lean<LeanAccount | null>()
     ]);
     if (!accountA || !accountB) return false;
     const idA = accountA._id.toString();
@@ -41,7 +118,7 @@ async function isBlockedEitherWay(emailA, emailB) {
     return blockedByA || blockedByB;
 }
 
-export default async function handleSocketConnection(io, socket) {
+export default async function handleSocketConnection(io: AppServer, socket: AppSocket) {
     // The authenticated identity comes from authMiddleware, which verifies
     // the JWT - never from client-supplied handshake headers.
     const email = socket.data.email;
@@ -70,7 +147,7 @@ export default async function handleSocketConnection(io, socket) {
         socket.on('notifications update', () => handleNotificationsUpdate(socket, email));
         socket.on("notifications checked", (roomID) => handleNotificationsChecked(roomID, email));
         socket.on('get locations', () => handleGetLocation(io, socket));
-        socket.on('save location', (location) => handleSaveLocation(io, socket, location));
+        socket.on('save location', (location, ack) => handleSaveLocation(io, socket, location, ack));
         socket.on('leave room', (body) => handleLeaveRoom(body, socket));
         socket.on('ban user', (data) => handleBanUser(io, socket, data));
         socket.on('unban user', (data) => handleUnbanUser(io, socket, data));
@@ -102,7 +179,7 @@ export default async function handleSocketConnection(io, socket) {
     }
 }
 
-async function handleJoinRoom(body, socket) {
+async function handleJoinRoom(body: { conversationId?: unknown } | undefined, socket: AppSocket) {
     const conversationId = body?.conversationId;
     if (!conversationId) return;
 
@@ -124,7 +201,7 @@ async function handleJoinRoom(body, socket) {
 // group conversation this fires as soon as ANY other member has read a
 // message, not "read by everyone" - a per-member "seen by" list is a
 // bigger feature than this first pass covers.
-async function handleMessageRead(io, socket, data) {
+async function handleMessageRead(io: AppServer, socket: AppSocket, data: { conversationId?: unknown } | undefined) {
     const conversationId = data?.conversationId;
     const readerEmail = socket.data.email;
     if (!conversationId || !readerEmail) return;
@@ -152,7 +229,7 @@ async function handleMessageRead(io, socket, data) {
 // own presence from them, only theirs from you, matching how the message
 // block itself already only rejects sends, not visibility of the blocker).
 // One query for however many users are online, not one per viewer.
-async function handleUpdateConnectedUsers(io) {
+async function handleUpdateConnectedUsers(io: AppServer) {
     const allOnline = await RedisService.getOnlineUsers();
     const sockets = await io.fetchSockets();
     if (sockets.length === 0) return;
@@ -165,20 +242,24 @@ async function handleUpdateConnectedUsers(io) {
     const onlineEmails = allOnline.map(u => u.email);
     const accounts = await Account.find({ email: { $in: onlineEmails } })
         .select('email blocked')
-        .lean();
-    const emailById = new Map(
-        accounts.flatMap(a => a.email ? [[a._id.toString(), a.email.toLowerCase()]] : [])
+        .lean<LeanAccount[]>();
+    const emailById = new Map<string, string>(
+        accounts.flatMap(a => a.email ? [[a._id.toString(), a.email.toLowerCase()] as [string, string]] : [])
     );
 
     // targetEmail -> set of emails that have blocked them.
-    const blockersOf = new Map();
+    const blockersOf = new Map<string, Set<string>>();
     for (const account of accounts) {
         if (!account.email) continue;
         for (const blockedId of account.blocked || []) {
             const targetEmail = emailById.get(blockedId.toString());
             if (!targetEmail) continue; // the account they blocked isn't online right now
-            if (!blockersOf.has(targetEmail)) blockersOf.set(targetEmail, new Set());
-            blockersOf.get(targetEmail).add(account.email.toLowerCase());
+            let blockers = blockersOf.get(targetEmail);
+            if (!blockers) {
+                blockers = new Set<string>();
+                blockersOf.set(targetEmail, blockers);
+            }
+            blockers.add(account.email.toLowerCase());
         }
     }
 
@@ -186,13 +267,13 @@ async function handleUpdateConnectedUsers(io) {
         const viewerEmail = s.data.email?.toLowerCase();
         const blockers = viewerEmail ? blockersOf.get(viewerEmail) : undefined;
         const filtered = blockers
-            ? allOnline.filter(u => !blockers.has(u.email?.toLowerCase()))
+            ? allOnline.filter(u => !blockers.has(u.email.toLowerCase()))
             : allOnline;
         s.emit('update connected users', filtered);
     }
 }
 
-async function handlePublishMessage(io, socket, message) {
+async function handlePublishMessage(io: AppServer, socket: AppSocket, message: ClientMessage | undefined) {
     if (!message?.conversationID || !message?.sender) return;
     // The sender the message is published as must match the authenticated
     // caller - otherwise a client could spoof messages "from" anyone else.
@@ -202,7 +283,8 @@ async function handlePublishMessage(io, socket, message) {
     const conversation = await Conversation.findById(message.conversationID).populate('members', 'email');
     if (!conversation) return;
 
-    const isMember = conversation.members.some(
+    const members = membersOf(conversation);
+    const isMember = members.some(
         member => member.email?.toLowerCase() === socket.data.email?.toLowerCase()
     );
     if (!isMember) return;
@@ -212,8 +294,8 @@ async function handlePublishMessage(io, socket, message) {
     // saveMessage server action (which already rejects blocked 1:1 sends
     // before they're ever persisted) - defense in depth, not the primary
     // enforcement point. 1:1 only, same scope as saveMessage's own check.
-    if (conversation.members.length === 2) {
-        const otherMember = conversation.members.find(
+    if (members.length === 2) {
+        const otherMember = members.find(
             member => member.email?.toLowerCase() !== socket.data.email?.toLowerCase()
         );
         if (otherMember && await isBlockedEitherWay(message.sender, otherMember.email)) {
@@ -221,7 +303,7 @@ async function handlePublishMessage(io, socket, message) {
         }
     }
 
-    for (const member of conversation.members) {
+    for (const member of members) {
         // A member whose email was removed from the account can't be routed
         // by the email-keyed socket registry. Skip them instead of throwing,
         // so everyone else in the conversation still receives the message.
@@ -247,7 +329,7 @@ async function handlePublishMessage(io, socket, message) {
     }
 }
 
-async function handleDeleteMessage(io, socket, message) {
+async function handleDeleteMessage(io: AppServer, socket: AppSocket, message: ClientMessage | undefined) {
     // The client's own stored copy of a message it just sent carries
     // `conversation` (the raw Mongoose field name, from the saveMessage
     // response) rather than `conversationID` (the client Message type) -
@@ -260,16 +342,16 @@ async function handleDeleteMessage(io, socket, message) {
 
     // Only the message's actual sender may broadcast its deletion -
     // otherwise any client could make any message vanish for everyone.
-    const messageDoc = await Message.findById(message._id).select('sender');
+    const messageDoc = await Message.findById(message._id as string).select('sender');
     if (!messageDoc || messageDoc.sender?.toLowerCase() !== socket.data.email?.toLowerCase()) return;
 
     const room = `chat_room_${conversationId}`;
     io.to(room).emit('delete message', message);
 
-    const conversation = await Conversation.findById(conversationId).populate('members', 'email');
+    const conversation = await Conversation.findById(conversationId as string).populate('members', 'email');
     if (conversation) {
-        for (const member of conversation.members) {
-            const memberSocketIds = await RedisService.getUserSocketsByEmail(member.email);
+        for (const member of membersOf(conversation)) {
+            const memberSocketIds = await RedisService.getUserSocketsByEmail(member.email ?? '');
             const roomSockets = await io.in(room).allSockets();
             const isAnySocketInRoom = memberSocketIds?.some(id => roomSockets.has(id));
             if (!isAnySocketInRoom) {
@@ -286,11 +368,11 @@ async function handleDeleteMessage(io, socket, message) {
 // has the conversation open. The reactions broadcast are re-read from the
 // document rather than taken from the client payload, so a client can't
 // announce reactions that were never stored.
-async function handleReactToMessage(io, socket, data) {
+async function handleReactToMessage(io: AppServer, socket: AppSocket, data: { messageId?: unknown } | undefined) {
     const messageId = data?.messageId;
     if (!messageId) return;
 
-    const message = await Message.findById(messageId).select('conversation reactions').lean();
+    const message = await Message.findById(messageId as string).select('conversation reactions').lean<LeanMessage | null>();
     if (!message) return;
 
     const conversationId = message.conversation.toString();
@@ -307,12 +389,12 @@ async function handleReactToMessage(io, socket, data) {
 // Tracked so a tab that closes (or leaves the room) mid-sentence gets its
 // 'stop typing' sent for it - before, only the sender's own idle timer ever
 // sent one, so a closed tab left "X is typing..." on screen for good.
-function typingConversations(socket) {
+function typingConversations(socket: AppSocket) {
     if (!socket.data.typingIn) socket.data.typingIn = new Set();
     return socket.data.typingIn;
 }
 
-function handleStartTyping(socket, data) {
+function handleStartTyping(socket: AppSocket, data: { conversationId?: unknown } | undefined) {
     const conversationId = data?.conversationId;
     if (typeof conversationId !== 'string' || !conversationId) return;
     typingConversations(socket).add(conversationId);
@@ -325,7 +407,7 @@ function handleStartTyping(socket, data) {
     });
 }
 
-function handleStopTyping(socket, data) {
+function handleStopTyping(socket: AppSocket, data: { conversationId?: unknown } | undefined) {
     const conversationId = data?.conversationId;
     if (typeof conversationId !== 'string' || !conversationId) return;
     announceStopTyping(socket, conversationId);
@@ -333,7 +415,7 @@ function handleStopTyping(socket, data) {
 
 // nsp.to().except() rather than socket.to(): this also runs from the
 // disconnect handler, after the socket itself has gone.
-function announceStopTyping(socket, conversationId) {
+function announceStopTyping(socket: AppSocket, conversationId: string) {
     typingConversations(socket).delete(conversationId);
     socket.nsp.to(`chat_room_${conversationId}`).except(socket.id).emit("stop typing", {
         email: socket.data.email,
@@ -341,32 +423,67 @@ function announceStopTyping(socket, conversationId) {
     });
 }
 
-function stopAllTyping(socket) {
+function stopAllTyping(socket: AppSocket) {
     for (const conversationId of [...typingConversations(socket)]) {
         announceStopTyping(socket, conversationId);
     }
 }
 
-async function handleNotificationsUpdate(socket, email) {
+async function handleNotificationsUpdate(socket: AppSocket, email: string) {
     const notifications = await RedisService.getNotifications(email);
     socket.emit("notifications update", notifications);
 }
 
-async function handleNotificationsChecked(roomID, email) {
+async function handleNotificationsChecked(roomID: string, email: string) {
     await RedisService.clearNotification(email, roomID);
 }
 
-async function handleGetLocation(io, socket) {
+async function handleGetLocation(io: AppServer, socket: AppSocket) {
     const positions = await GetLocations();
     io.to(socket.id).emit('get locations', positions);
 }
 
-async function handleSaveLocation(io, socket, location) {
-    await SaveLocations(socket.data.email, location);
-    await handleGetLocation(io, socket);
+// email -> the last fix actually written for that account. The client already
+// throttles, but several open tabs (or a misbehaving client) each emitting on
+// their own schedule shouldn't add up to more writes than one tab would make.
+const lastSavedLocations = new Map<string, SavedFix>();
+
+// Acks whether the stored position now matches this fix - false only when it
+// was held back for being too soon after the last write (or the write
+// failed), so the client knows to offer it again rather than assume it's in.
+async function handleSaveLocation(io: AppServer, socket: AppSocket, location: { latitude?: unknown; longitude?: unknown; accuracy?: unknown } | undefined, ack?: unknown) {
+    const reply = typeof ack === 'function' ? ack as (saved: boolean) => void : () => { };
+    const email = socket.data.email;
+    const latitude = Number(location?.latitude);
+    const longitude = Number(location?.longitude);
+    const accuracy = Number(location?.accuracy);
+    if (!email || !Number.isFinite(latitude) || !Number.isFinite(longitude) || !Number.isFinite(accuracy)) return reply(false);
+
+    const key = email.toLowerCase();
+    const previous = lastSavedLocations.get(key);
+    const fix = { latitude, longitude, accuracy, at: Date.now() };
+    if (previous && isSameSpot(previous, fix)) return reply(true);
+    if (!shouldPersistFix(previous, fix)) return reply(false);
+
+    // Claimed before the write so a second emit arriving mid-write is
+    // measured against this one rather than slipping through.
+    lastSavedLocations.set(key, fix);
+    try {
+        const saved = await SaveLocations(email, { latitude, longitude, accuracy, time: new Date(fix.at) });
+        reply(true);
+        // Just the saver's new position, not the whole list - 'get locations'
+        // (on page load) is what fetches everyone else's.
+        io.to(socket.id).emit('location saved', saved);
+    } catch {
+        if (lastSavedLocations.get(key) === fix) {
+            if (previous) lastSavedLocations.set(key, previous);
+            else lastSavedLocations.delete(key);
+        }
+        reply(false);
+    }
 }
 
-async function handleBanUser(io, socket, data) {
+async function handleBanUser(io: AppServer, socket: AppSocket, data: { userEmail?: string; message?: string } | undefined) {
     const { userEmail, message } = data || {};
     const callerEmail = socket.data.email;
     if (!userEmail || !callerEmail) return;
@@ -401,7 +518,7 @@ async function handleBanUser(io, socket, data) {
     }
 }
 
-async function handleUnbanUser(io, socket, data) {
+async function handleUnbanUser(io: AppServer, socket: AppSocket, data: { userEmail?: string } | undefined) {
     const { userEmail } = data || {};
     if (!userEmail) return;
     if (!(await isModerator(socket.data.email))) return;
@@ -410,7 +527,7 @@ async function handleUnbanUser(io, socket, data) {
 }
 
 
-async function handleLeaveRoom(body, socket) {
+async function handleLeaveRoom(body: { conversationId?: unknown } | undefined, socket: AppSocket) {
     const conversationId = body?.conversationId;
     // Leaving a conversation mid-sentence ends the indicator there, even if
     // the client's own 'stop typing' never arrives.
@@ -420,7 +537,7 @@ async function handleLeaveRoom(body, socket) {
     socket.leave(`chat_room_${conversationId}`);
 }
 
-async function handleDisconnect(io, email, socketId) {
+async function handleDisconnect(io: AppServer, email: string, socketId: string) {
     handleCallSocketDisconnect(io, email, socketId);
     await RedisService.removeUserSocket(email, socketId);
 
@@ -440,18 +557,18 @@ async function handleDisconnect(io, email, socketId) {
 // this user has blocked, mirroring how handleUpdateConnectedUsers already
 // hides a blocker's presence from the person they blocked - "last seen 2
 // minutes ago" is the same information presence is.
-async function recordLastSeen(io, email) {
+async function recordLastSeen(io: AppServer, email?: string) {
     if (!email) return;
 
     const lastSeen = new Date();
     const account = await Account.findOneAndUpdate(
         { email },
         { $set: { lastSeen } }
-    ).select('_id blocked').lean();
+    ).select('_id blocked').lean<LeanAccount | null>();
     if (!account) return;
 
     const blockedAccounts = (account.blocked || []).length
-        ? await Account.find({ _id: { $in: account.blocked } }).select('email').lean()
+        ? await Account.find({ _id: { $in: account.blocked } }).select('email').lean<LeanAccount[]>()
         : [];
     const hiddenFrom = new Set(
         blockedAccounts.flatMap(blocked => blocked.email ? [blocked.email.toLowerCase()] : [])
@@ -481,7 +598,7 @@ async function recordLastSeen(io, email) {
 // chat list, hasn't joined that room but still has to see the call ringing.
 // ---------------------------------------------------------------------------
 
-const activeCalls = new Map(); // lowercased email -> call (both sides share one record)
+const activeCalls = new Map<string, ActiveCall>(); // lowercased email -> call (both sides share one record)
 
 const CALL_RING_TIMEOUT_MS = 30 * 1000;
 // Long enough for connectionStateRecovery to bring a socket back after a
@@ -506,8 +623,11 @@ const OBJECT_ID_PATTERN = /^[0-9a-f]{24}$/i;
 // Only the message is logged - a stack or payload could carry SDP. fn runs
 // synchronously up to its first await, which the busy check in
 // handleCallInvite relies on.
-function safely(fn) {
-    const logError = error => console.error('Call signaling error:', error?.message);
+function safely(fn: () => unknown) {
+    const logError = (error: unknown) => {
+        const message = typeof error === 'object' && error !== null && 'message' in error ? error.message : undefined;
+        console.error('Call signaling error:', message);
+    };
     try {
         Promise.resolve(fn()).catch(logError);
     } catch (error) {
@@ -515,11 +635,11 @@ function safely(fn) {
     }
 }
 
-function normalizeEmail(email) {
+function normalizeEmail(email: unknown) {
     return typeof email === 'string' ? email.toLowerCase() : '';
 }
 
-function parseCallIds(data) {
+function parseCallIds(data: CallSignal | undefined) {
     const callId = data?.callId;
     const conversationId = data?.conversationId;
     if (typeof callId !== 'string' || !UUID_PATTERN.test(callId)) return null;
@@ -529,39 +649,41 @@ function parseCallIds(data) {
 
 // The sender's call, only when the event names that exact call - a stale
 // event from a previous call (or a guessed id) never touches the current one.
-function findCall(email, ids) {
+function findCall(email: string, ids: { callId: string; conversationId: string }) {
     const call = activeCalls.get(email);
     if (!call || call.callId !== ids.callId || call.conversationId !== ids.conversationId) return null;
     return call;
 }
 
-function isBoundSocket(call, email, socketId) {
+function isBoundSocket(call: ActiveCall, email: string, socketId: string) {
     return email === call.caller
         ? call.callerSocketId === socketId
         : call.calleeSocketId === socketId;
 }
 
-function peerSocketId(call, email) {
+function peerSocketId(call: ActiveCall, email: string) {
     return email === call.caller ? call.calleeSocketId : call.callerSocketId;
 }
 
 // The other member's email, only when `email` is a member of a conversation
 // with exactly two members - v1 calls are 1:1 only.
-async function getOneToOnePeerEmail(conversationId, email) {
+async function getOneToOnePeerEmail(conversationId: string, email: string) {
     try {
         const conversation = await Conversation.findById(conversationId).populate('members', 'email');
-        if (!conversation || conversation.members.length !== 2) return null;
-        if (!conversation.members.some(member => normalizeEmail(member.email) === email)) return null;
-        const other = conversation.members.find(member => normalizeEmail(member.email) !== email);
+        if (!conversation) return null;
+        const members = membersOf(conversation);
+        if (members.length !== 2) return null;
+        if (!members.some(member => normalizeEmail(member.email) === email)) return null;
+        const other = members.find(member => normalizeEmail(member.email) !== email);
         return other?.email ? normalizeEmail(other.email) : null;
     } catch {
         return null;
     }
 }
 
-function clearCall(call) {
+function clearCall(call: ActiveCall) {
     call.ended = true;
-    clearTimeout(call.ringTimer);
+    if (call.ringTimer !== null) clearTimeout(call.ringTimer);
     for (const email of [call.caller, call.callee]) {
         if (activeCalls.get(email) === call) activeCalls.delete(email);
     }
@@ -570,12 +692,12 @@ function clearCall(call) {
 // The Redis registry can outlive the sockets it lists (a server restart
 // never runs their disconnect handlers), so "is the callee reachable" is
 // answered from the sockets this process actually holds.
-async function getLiveSocketIds(io, email) {
+async function getLiveSocketIds(io: AppServer, email: string) {
     const socketIds = await RedisService.getUserSocketsByEmail(email);
     return socketIds.filter(id => io.sockets.sockets.has(id));
 }
 
-async function emitToCalleeSockets(io, call, event, payload, exceptSocketId) {
+async function emitToCalleeSockets(io: AppServer, call: ActiveCall, event: string, payload: unknown, exceptSocketId?: string) {
     const socketIds = (await getLiveSocketIds(io, call.callee))
         .filter(id => id !== exceptSocketId);
     if (socketIds.length > 0) io.to(socketIds).emit(event, payload);
@@ -584,7 +706,7 @@ async function emitToCalleeSockets(io, call, event, payload, exceptSocketId) {
 // Server-side end (block, a socket that never came back, a replaced call) -
 // tells both sides. clearCall runs before the first await so nothing else
 // can act on this call in the meantime.
-async function endCall(io, call, reason) {
+async function endCall(io: AppServer, call: ActiveCall, reason: string) {
     if (call.ended) return;
     const wasRinging = call.state === 'ringing';
     clearCall(call);
@@ -592,12 +714,12 @@ async function endCall(io, call, reason) {
     io.to(call.callerSocketId).emit('call hangup', payload);
     if (wasRinging) {
         await emitToCalleeSockets(io, call, 'call cancel', payload);
-    } else {
+    } else if (call.calleeSocketId) {
         io.to(call.calleeSocketId).emit('call hangup', payload);
     }
 }
 
-function inviteFor(call) {
+function inviteFor(call: ActiveCall) {
     return {
         callId: call.callId,
         conversationId: call.conversationId,
@@ -606,9 +728,9 @@ function inviteFor(call) {
     };
 }
 
-async function handleCallInvite(io, socket, data) {
+async function handleCallInvite(io: AppServer, socket: AppSocket, data: CallSignal | undefined) {
     const ids = parseCallIds(data);
-    if (!ids || typeof data.video !== 'boolean') return;
+    if (!ids || typeof data?.video !== 'boolean') return;
     const email = normalizeEmail(socket.data.email);
 
     const peerEmail = await getOneToOnePeerEmail(ids.conversationId, email);
@@ -634,7 +756,7 @@ async function handleCallInvite(io, socket, data) {
         return;
     }
 
-    const call = {
+    const call: ActiveCall = {
         ...ids,
         caller: email,
         callee: peerEmail,
@@ -664,12 +786,12 @@ async function handleCallInvite(io, socket, data) {
 
 // A push can't carry the call - it only gets the callee to open the app,
 // where 'call sync' picks up the invite if it's still ringing.
-async function notifyOfflineCallee(call) {
+async function notifyOfflineCallee(call: ActiveCall) {
     const allowed = await RedisService.checkRateLimit(
         'call-push', call.caller, CALL_PUSHES_PER_WINDOW, CALL_PUSH_WINDOW_SECONDS
     );
     if (!allowed) return;
-    const caller = await Account.findOne({ email: call.caller }).select('nickname').lean();
+    const caller = await Account.findOne({ email: call.caller }).select('nickname').lean<LeanAccount | null>();
     const callerName = caller?.nickname || call.caller.split('@')[0];
     await sendPushToEmails([call.callee], {
         title: call.video ? 'Incoming video call' : 'Incoming voice call',
@@ -677,7 +799,7 @@ async function notifyOfflineCallee(call) {
     });
 }
 
-async function handleCallRingTimeout(io, call) {
+async function handleCallRingTimeout(io: AppServer, call: ActiveCall) {
     if (call.ended || call.state !== 'ringing') return;
     clearCall(call);
     const ids = { callId: call.callId, conversationId: call.conversationId };
@@ -688,7 +810,7 @@ async function handleCallRingTimeout(io, call) {
     await emitToCalleeSockets(io, call, 'call cancel', { ...ids, reason: 'missed' });
 }
 
-async function handleCallAccept(io, socket, data) {
+async function handleCallAccept(io: AppServer, socket: AppSocket, data: CallSignal | undefined) {
     const ids = parseCallIds(data);
     if (!ids) return;
     const email = normalizeEmail(socket.data.email);
@@ -702,14 +824,14 @@ async function handleCallAccept(io, socket, data) {
     // Another tab answered, or the caller cancelled, during that await.
     if (call.ended || call.state !== 'ringing') return;
 
-    clearTimeout(call.ringTimer);
+    if (call.ringTimer !== null) clearTimeout(call.ringTimer);
     call.state = 'active';
     call.calleeSocketId = socket.id;
     io.to(call.callerSocketId).emit('call accept', ids);
     await emitToCalleeSockets(io, call, 'call cancel', { ...ids, reason: 'answered-elsewhere' }, socket.id);
 }
 
-async function handleCallDecline(io, socket, data) {
+async function handleCallDecline(io: AppServer, socket: AppSocket, data: CallSignal | undefined) {
     const ids = parseCallIds(data);
     if (!ids) return;
     const email = normalizeEmail(socket.data.email);
@@ -721,7 +843,7 @@ async function handleCallDecline(io, socket, data) {
     await emitToCalleeSockets(io, call, 'call cancel', { ...ids, reason: 'declined-elsewhere' }, socket.id);
 }
 
-async function handleCallCancel(io, socket, data) {
+async function handleCallCancel(io: AppServer, socket: AppSocket, data: CallSignal | undefined) {
     const ids = parseCallIds(data);
     if (!ids) return;
     const email = normalizeEmail(socket.data.email);
@@ -732,7 +854,7 @@ async function handleCallCancel(io, socket, data) {
     await emitToCalleeSockets(io, call, 'call cancel', { ...ids, reason: 'cancelled' });
 }
 
-async function handleCallHangup(io, socket, data) {
+async function handleCallHangup(io: AppServer, socket: AppSocket, data: CallSignal | undefined) {
     const ids = parseCallIds(data);
     if (!ids) return;
     const email = normalizeEmail(socket.data.email);
@@ -751,60 +873,74 @@ async function handleCallHangup(io, socket, data) {
     // 'failed' lets the other side offer a retry too, instead of a plain
     // "call ended" for a call that never managed to connect. Nothing else
     // from the client is passed through.
-    const reason = data.reason === 'failed' ? 'failed' : 'hangup';
-    io.to(peerSocketId(call, email)).emit('call hangup', { ...ids, reason });
+    const reason = data?.reason === 'failed' ? 'failed' : 'hangup';
+    const peerId = peerSocketId(call, email);
+    if (!peerId) return;
+    io.to(peerId).emit('call hangup', { ...ids, reason });
 }
 
-function sanitizeDescription(description) {
+function sanitizeDescription(description: unknown): SessionDescription | null {
     if (!description || typeof description !== 'object') return null;
-    const { type, sdp } = description;
+    const { type, sdp } = description as { type?: unknown; sdp?: unknown };
     if (type !== 'offer' && type !== 'answer') return null;
     if (typeof sdp !== 'string' || sdp.length === 0 || sdp.length > CALL_MAX_SDP_LENGTH) return null;
     return { type, sdp };
 }
 
-function sanitizeCandidate(candidate) {
+function sanitizeCandidate(candidate: unknown): IceCandidate | null {
     if (!candidate || typeof candidate !== 'object') return null;
-    const { candidate: line, sdpMid, sdpMLineIndex, usernameFragment } = candidate;
+    const { candidate: line, sdpMid, sdpMLineIndex, usernameFragment } = candidate as {
+        candidate?: unknown;
+        sdpMid?: unknown;
+        sdpMLineIndex?: unknown;
+        usernameFragment?: unknown;
+    };
     if (typeof line !== 'string' || line.length > CALL_MAX_CANDIDATE_LENGTH) return null;
     if (sdpMid != null && (typeof sdpMid !== 'string' || sdpMid.length > 64)) return null;
-    if (sdpMLineIndex != null && (!Number.isInteger(sdpMLineIndex) || sdpMLineIndex < 0 || sdpMLineIndex > 64)) return null;
+    if (sdpMLineIndex != null && (typeof sdpMLineIndex !== 'number' || !Number.isInteger(sdpMLineIndex) || sdpMLineIndex < 0 || sdpMLineIndex > 64)) return null;
     if (usernameFragment != null && (typeof usernameFragment !== 'string' || usernameFragment.length > 256)) return null;
     return {
         candidate: line,
-        sdpMid: sdpMid ?? null,
-        sdpMLineIndex: sdpMLineIndex ?? null,
-        ...(usernameFragment != null ? { usernameFragment } : {})
+        sdpMid: typeof sdpMid === 'string' ? sdpMid : null,
+        sdpMLineIndex: typeof sdpMLineIndex === 'number' ? sdpMLineIndex : null,
+        ...(typeof usernameFragment === 'string' ? { usernameFragment } : {})
     };
 }
 
 // SDP and candidates are never logged - they carry the peers' IP addresses.
-function handleCallSignal(io, socket, data) {
+function handleCallSignal(io: AppServer, socket: AppSocket, data: CallSignal | undefined) {
     const ids = parseCallIds(data);
     if (!ids) return;
     const email = normalizeEmail(socket.data.email);
     const call = findCall(email, ids);
     if (!call || call.state !== 'active' || !isBoundSocket(call, email, socket.id)) return;
 
-    const relay = { ...ids };
-    if (data.description != null) {
+    const relay: {
+        callId: string;
+        conversationId: string;
+        description?: SessionDescription;
+        candidate?: IceCandidate;
+    } = { ...ids };
+    if (data?.description != null) {
         const description = sanitizeDescription(data.description);
         if (!description || ++call.descriptions > CALL_MAX_DESCRIPTIONS) return;
         relay.description = description;
-    } else if (data.candidate != null) {
+    } else if (data?.candidate != null) {
         const candidate = sanitizeCandidate(data.candidate);
         if (!candidate || ++call.candidates > CALL_MAX_CANDIDATES) return;
         relay.candidate = candidate;
     } else {
         return;
     }
-    io.to(peerSocketId(call, email)).emit('call signal', relay);
+    const peerId = peerSocketId(call, email);
+    if (!peerId) return;
+    io.to(peerId).emit('call signal', relay);
 }
 
 // A tab that opens the chat while a call to this account is still ringing -
 // typically from the call push above, or a reload - asks for the invite it
 // missed.
-function handleCallSync(socket) {
+function handleCallSync(socket: AppSocket) {
     const email = normalizeEmail(socket.data.email);
     const call = activeCalls.get(email);
     if (!call || call.state !== 'ringing' || call.callee !== email) return;
@@ -816,7 +952,7 @@ function handleCallSync(socket) {
 // that tab, so another tab of the same account staying open doesn't keep it
 // alive. A ringing callee isn't bound yet; ringing just continues on any
 // other tab until the timeout.
-function handleCallSocketDisconnect(io, email, socketId) {
+function handleCallSocketDisconnect(io: AppServer, email: string, socketId: string) {
     const normalized = normalizeEmail(email);
     const call = activeCalls.get(normalized);
     if (!call || !isBoundSocket(call, normalized, socketId)) return;
@@ -828,7 +964,7 @@ function handleCallSocketDisconnect(io, email, socketId) {
     }, CALL_DISCONNECT_GRACE_MS);
 }
 
-async function handleCallBlockCheck(io, email) {
+async function handleCallBlockCheck(io: AppServer, email: string) {
     const call = activeCalls.get(normalizeEmail(email));
     if (!call) return;
     if (await isBlockedEitherWay(call.caller, call.callee)) {

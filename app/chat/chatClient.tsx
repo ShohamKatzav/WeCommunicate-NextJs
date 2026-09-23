@@ -314,7 +314,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
             return;
         }
         // Presence is only ever recomputed server-side on connect/disconnect
-        // (see socket/handlers.js's handleUpdateConnectedUsers) - a block
+        // (see socket/handlers.ts's handleUpdateConnectedUsers) - a block
         // relationship changing doesn't fire either of those, so without
         // this nudge, a blocked user who's already online would keep seeing
         // the blocker's presence until their next reconnect. Reuses the

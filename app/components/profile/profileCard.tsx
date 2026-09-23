@@ -23,7 +23,7 @@ const ProfileCard = ({ profile, isOwn }: ProfileCardProps) => {
     const { socket, loadingSocket } = useSocket();
     const [isOnline, setIsOnline] = useState(false);
     // Overrides the value the page loaded with once a live update arrives
-    // (see 'user last seen' in socket/handlers.js) - otherwise leaving this
+    // (see 'user last seen' in socket/handlers.ts) - otherwise leaving this
     // page open across the other person disconnecting would show a stale
     // "still online" until the next reload.
     const [liveLastSeen, setLiveLastSeen] = useState<string | undefined>(undefined);

@@ -40,7 +40,7 @@ export const getProfile = async (identifier: string) => {
         const callerID = await extractUserIDFromCoockie().catch(() => null);
         const isOwn = typeof callerID === 'string' && callerID === profile._id.toString();
 
-        // Mirrors the presence hiding in socket/handlers.js's
+        // Mirrors the presence hiding in socket/handlers.ts's
         // recordLastSeen: blocking someone hides their last-seen from you,
         // same as it already hides their online dot, so this page can't be
         // used to see around that.
@@ -351,7 +351,7 @@ export const confirmEmailChange = async (newEmail: string, otp: string) => {
         if (!updated) return { success: false, error: 'Failed to update email' };
 
         // Conversation membership is by account id, but message authorship is
-        // the email string (socket/handlers.js compares message.sender to
+        // the email string (socket/handlers.ts compares message.sender to
         // socket.data.email) - without this, this account's prior messages
         // and any reply snapshot quoting them stop showing as theirs.
         if (oldEmail && oldEmail !== normalized) {

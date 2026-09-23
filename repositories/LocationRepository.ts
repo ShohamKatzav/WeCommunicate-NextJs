@@ -55,7 +55,11 @@ export default class LocationRepository {
         }
     }
 
-    static async updateLocation(accountId: Types.ObjectId, location: LocationData): Promise<void> {
+    static async updateLocation(
+        accountId: Types.ObjectId,
+        location: Omit<LocationData, 'accountId'>,
+        currentLocationId?: Types.ObjectId | null
+    ) {
         try {
             // A single atomic upsert instead of a manual "read, then decide
             // update-vs-create" guarded by an in-memory lock. That lock never
@@ -72,10 +76,16 @@ export default class LocationRepository {
                 { upsert: true, new: true, setDefaultsOnInsert: true }
             );
 
-            await Account.updateOne({ _id: accountId }, {
-                $set: { location: savedLocation._id }
-            });
+            // After the first save the account already points here - no
+            // need to rewrite it on every location update.
+            if (!currentLocationId || !savedLocation._id.equals(currentLocationId)) {
+                await Account.updateOne({ _id: accountId }, {
+                    $set: { location: savedLocation._id }
+                });
+            }
 
+            const { latitude, longitude, accuracy, error, time } = savedLocation;
+            return { latitude, longitude, accuracy, error, time };
         } catch (err) {
             console.error('Failed to update location:', err);
             throw err;

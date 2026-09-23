@@ -212,7 +212,7 @@ export const useChatRoom = ({
 
         // The 'message read' emit below marks every trailing unread message
         // as read server-side in one batch (there's no per-message read
-        // position - see handleMessageRead in socket/handlers.js), so "how
+        // position - see handleMessageRead in socket/handlers.ts), so "how
         // far back does the unread streak go from the end" has to be read
         // off the data as loaded, before that happens. Revoked messages are
         // skipped rather than treated as a boundary or as unread - their

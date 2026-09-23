@@ -6,7 +6,6 @@
       "dom.iterable",
       "esnext"
     ],
-    "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
@@ -26,7 +25,8 @@
       "@/*": [
         "./*"
       ]
-    }
+    },
+    "allowJs": true
   },
   "include": [
     "next-env.d.ts",
@@ -36,8 +36,6 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts",
     "app/global-not-found.tsx",
-    "socket/authMIddleware.js",
-    "socket/handlers.js",
     ".next\\dev/types/**/*.ts"
   ],
   "exclude": [

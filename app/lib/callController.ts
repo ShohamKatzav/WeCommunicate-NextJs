@@ -4,7 +4,7 @@ import { describeMediaError } from './mediaDeviceError';
 
 // Client side of 1:1 calls. Media is a single RTCPeerConnection between the
 // two browsers; the socket only carries the ringing events and the SDP/ICE
-// relay (see the call handlers at the bottom of socket/handlers.js).
+// relay (see the call handlers at the bottom of socket/handlers.ts).
 //
 // A plain class rather than hook state: RTCPeerConnection callbacks and
 // socket listeners fire outside React, and every one of them needs the
