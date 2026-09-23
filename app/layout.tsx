@@ -3,10 +3,10 @@ import { Geist, Geist_Mono } from "next/font/google";
 import ClientProviders from "./context/clientProviders";
 import ThemeProvider from "./context/themeProvider";
 import { BottomPromptProvider } from "./context/bottomPromptProvider";
-import InstallPrompt from "./components/InstallPrompt";
-import BottomPromptStack from "./components/bottomPromptStack";
-import OfflineHandler from "./components/offlineHandler";
-import ServiceWorkerRegistrar from "./components/serviceWorkerRegistrar";
+import InstallPrompt from "./components/offline/InstallPrompt";
+import BottomPromptStack from "./components/shell/bottomPromptStack";
+import OfflineHandler from "./components/offline/offlineHandler";
+import ServiceWorkerRegistrar from "./components/offline/serviceWorkerRegistrar";
 import "./globals.css";
 
 const geistSans = Geist({

@@ -5,9 +5,9 @@ import { useSocket } from '../hooks/useSocket';
 import Location from '@/types/location';
 import ciEquals from '../utils/ciEqual';
 import useLocation from '../hooks/useLocation';
-import LocationAccessInformation from '../components/locationAccessStatus';
+import LocationAccessInformation from '../components/locations/locationAccessStatus';
 import { useUser } from '../hooks/useUser';
-import LocationsTable, { FriendDistanceRow } from '../components/locationsTable';
+import LocationsTable, { FriendDistanceRow } from '../components/locations/locationsTable';
 
 
 const center = {

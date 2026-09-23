@@ -1,5 +1,5 @@
 import Link from "next/link";
-import CollapsibleSection from "../components/collapsibleSection";
+import CollapsibleSection from "../components/ui/collapsibleSection";
 import {
     MessageSquare,
     CheckCheck,

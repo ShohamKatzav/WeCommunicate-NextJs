@@ -15,7 +15,7 @@ export default class ProfilePage {
     saveButton: Locator;
     cancelButton: Locator;
 
-    // Phone number editor (see app/components/phoneNumberEditor.tsx) - a
+    // Phone number editor (see app/components/profile/phoneNumberEditor.tsx) - a
     // three-step widget (view -> enter new number -> enter emailed OTP)
     // rather than a plain input, so it gets its own set of locators. Scoped
     // to its own data-testid root: the email editor below shares the same
@@ -29,7 +29,7 @@ export default class ProfilePage {
     confirmPhoneButton: Locator;
     resendPhoneCodeButton: Locator;
 
-    // Email address editor (see app/components/emailAddressEditor.tsx) - a
+    // Email address editor (see app/components/profile/emailAddressEditor.tsx) - a
     // four-step widget (view -> enter new address -> verify current contact
     // -> verify new address).
     emailEditor: Locator;

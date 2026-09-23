@@ -1,6 +1,6 @@
 "use client"
 
-import OTPProcess from "../components/OTPProcess";
+import OTPProcess from "../components/auth/OTPProcess";
 
 function SignUp() {
 
