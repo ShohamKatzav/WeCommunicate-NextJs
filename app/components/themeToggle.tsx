@@ -94,6 +94,15 @@ export default function ThemeToggle({ variant = "icon", className = "" }: ThemeT
                             // z-50 on this menu and on the open container paints it
                             // over them; bg-card is opaque so they stay hidden.
                             : "absolute left-1/2 top-full z-50 mt-1 w-48 -translate-x-1/2 overflow-hidden rounded-md border border-border bg-card py-1 shadow-lg"
+                            // in-flow: an in-flow menu here used to grow the mobile
+                            // overlay's flex column, pushing profile/log out further
+                            // down every time it opened. Anchoring it to exactly the
+                            // trigger's own width keeps it on-screen on a narrow phone
+                            // without guessing a fixed width, and bg-card (not the
+                            // translucent bg-white/5 this replaced) is needed since it
+                            // now paints over the rows below instead of them reflowing
+                            // out of the way.
+                            : "absolute left-0 top-full mt-1 w-full overflow-hidden rounded-md border border-border bg-card py-1 shadow-lg z-50"
                     }
                 >
                     {OPTIONS.map(({ value, label, Icon }) => (
