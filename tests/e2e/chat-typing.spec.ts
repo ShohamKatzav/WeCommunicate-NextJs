@@ -17,11 +17,15 @@ customTest.describe('Typing indicator', () => {
         await otherChat.messageInput.pressSequentially('half a sentence', { delay: 50 });
         await expect(chat.typingIndicator).toBeVisible();
 
-        // A closed tab never sends its own 'stop typing'. The server sends it
-        // on disconnect, well inside the 8s the receiver would otherwise wait
-        // before expiring the indicator (TYPING_EXPIRE_MS).
+        // Closing the page like a user closing the tab (pagehide runs) sends
+        // 'stop typing' right away. The allowance still covers the
+        // receiver's own expiry (TYPING_EXPIRE_MS, 8s): on the live site the
+        // socket disconnect can reach the server late (Render's proxy keeps
+        // the connection open for a while), so the expiry is the guarantee
+        // this checks - the indicator never sticks.
+        await otherChat.page.close();
         await otherChat.page.context().close();
-        await expect(chat.typingIndicator).toHaveCount(0, { timeout: 3000 });
+        await expect(chat.typingIndicator).toHaveCount(0, { timeout: 10_000 });
     });
 
     customTest('Reaches a conversation reopened after deleting it', async ({ authPage, browser, loginData }) => {
