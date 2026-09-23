@@ -254,12 +254,25 @@ export const useChatRoom = ({
         // sending in it right now. There's nothing visible to load (deleting
         // it set a history cutoff, and any newer message would have put it
         // back in the list), so only the id and the room are missing.
-        if (!currentConversationId.current && roomParticipants.length > 0) {
-            const result = await findConversationId(roomParticipants.map(p => p._id!));
-            // Another chat was opened (or this one left) while the lookup
-            // was in flight, or a first message already supplied the id.
-            if (openSequence !== openSequenceRef.current || currentConversationId.current) return;
-            if (result.success && result.conversationId) adoptConversationId(result.conversationId);
+        // Deliberately not awaited: callers wait for getLastMessages before
+        // closing UI (the "Select a friend" modal closes only after it
+        // returns), so a slow or failed request here must never hold that
+        // up. Offline it skips the request entirely - the service worker
+        // answers an unrecognised server action with a 503, which throws.
+        // Either way the chat still works id-less, as it did before this
+        // lookup existed, and the first message sent finds the conversation.
+        if (!currentConversationId.current && roomParticipants.length > 0 && navigator.onLine) {
+            findConversationId(roomParticipants.map(p => p._id!))
+                .then(result => {
+                    // Another chat was opened (or this one left) while the
+                    // lookup was in flight, or a first message already
+                    // supplied the id.
+                    if (openSequence !== openSequenceRef.current || currentConversationId.current) return;
+                    if (result.success && result.conversationId) adoptConversationId(result.conversationId);
+                })
+                .catch(() => {
+                    // Went offline mid-request, or the server failed - see above.
+                });
         }
     }, [socket, userEmail, findConversationByExactParticipants, initialConversations, conversationsForBar, updateChatRef, setMobileChatsSidebarOpen, setMobileUsersSidebarOpen, pendingClearsRef, stopLocalTyping, adoptConversationId]);
 
@@ -275,7 +288,16 @@ export const useChatRoom = ({
         if (!participants.current?.length) return "";
 
         const openSequence = openSequenceRef.current;
-        const result = await getOrCreateConversationId(participants.current.map(p => p._id!));
+        let result;
+        try {
+            result = await getOrCreateConversationId(participants.current.map(p => p._id!));
+        } catch {
+            // Offline: the service worker answers this server action with a
+            // 503 (it isn't a queueable shape), which throws. "" is the
+            // failure value callers already handle (a toast, the button
+            // re-enabled) - a thrown error would leave them stuck.
+            return "";
+        }
         if (!result.success || !result.conversationId) return "";
         // The id belongs to the chat this was asked for - if another one has
         // been opened since, it must not be applied to that one.
