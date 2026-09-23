@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { X } from "lucide-react";
 
@@ -33,8 +33,16 @@ export default function ImageCropper({ file, onCropped, onSkip, onCancel, busy }
     const [zoom, setZoom] = useState(1);
     const [offset, setOffset] = useState({ x: 0, y: 0 });
 
-    const objectUrl = useMemo(() => URL.createObjectURL(file), [file]);
-    useEffect(() => () => URL.revokeObjectURL(objectUrl), [objectUrl]);
+    // Created and revoked in the same effect: a useMemo'd URL survives Strict
+    // Mode's mount/unmount/remount while the effect's cleanup revokes it,
+    // leaving the <img> pointing at a dead blob URL (just the alt text shows).
+    const [objectUrl, setObjectUrl] = useState<string | null>(null);
+    useEffect(() => {
+        const url = URL.createObjectURL(file);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setObjectUrl(url);
+        return () => URL.revokeObjectURL(url);
+    }, [file]);
 
     // Scale that makes the image just cover the square frame - the floor for
     // zoom, so there's never a gap inside the crop.
