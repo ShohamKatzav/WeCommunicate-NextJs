@@ -84,6 +84,17 @@ export const useChatRoom = ({
         typingConversationRef.current = "";
     }, [socket]);
 
+    // Closing or reloading the tab mid-sentence sends the stop itself. The
+    // server also sends one when the socket disconnects, but behind Render's
+    // proxy a closed tab's WebSocket isn't reported as disconnected for a
+    // while, so without this the other side kept "typing..." until their
+    // own expiry (TYPING_EXPIRE_MS). A frame sent here still goes out
+    // before the connection is torn down.
+    useEffect(() => {
+        window.addEventListener('pagehide', stopLocalTyping);
+        return () => window.removeEventListener('pagehide', stopLocalTyping);
+    }, [stopLocalTyping]);
+
     const handleTyping = useCallback(() => {
         const conversationId = currentConversationId.current;
         if (!conversationId || !socket) return;
