@@ -5,6 +5,7 @@ import User from '@/types/user';
 import jwt from 'jsonwebtoken';
 import connectDB from '@/app/lib/MongoDb';
 import AccountRepository from '@/repositories/AccountRepository';
+import { Types } from 'mongoose';
 
 interface DecodedToken {
   _id: string;
@@ -74,10 +75,13 @@ export const getCurrentUser = async (): Promise<User> => {
     const decoded = jwt.verify(user.token, env.JWT_SECRET_KEY) as DecodedToken;
     await connectDB();
     const profile = await AccountRepository.getProfileByIdentifier(decoded._id) as
-      { nickname?: string; avatarUrl?: string; accentColor?: string } | null;
+      { email?: string; nickname?: string; avatarUrl?: string; accentColor?: string } | null;
     if (!profile) return user;
     return {
       ...user,
+      // The cookie's email isn't signed - show the account's, not whatever
+      // the cookie claims.
+      email: profile.email ?? user.email,
       nickname: profile.nickname,
       avatarUrl: profile.avatarUrl || undefined,
       accentColor: profile.accentColor,
@@ -100,14 +104,24 @@ export async function extractUserIDFromCoockie(): Promise<any> {
   }
 }
 
-export async function extractUsersEmailFromCoockie(): Promise<any> {
+// The cookie's own `email` field is never read here: only the token is
+// signed, and the rest of the cookie is whatever the browser sends - a valid
+// token next to someone else's email would otherwise act as them. The email
+// comes from the account the verified token points to, same identity sends
+// and reactions use (and the one kept current by an email change).
+// Returns null instead of throwing, so callers' `if (!email)` checks turn a
+// missing/invalid cookie into their normal unauthorized response.
+export async function extractUsersEmailFromCoockie(): Promise<string | null> {
   try {
     const user = await getUserObJFromCoockie();
-    if (!user) return null;
-    return user.email;
+    if (!user.token) return null;
+    const decoded = jwt.verify(user.token, env.JWT_SECRET_KEY) as unknown as DecodedToken;
+    if (!decoded._id || !Types.ObjectId.isValid(decoded._id)) return null;
+    await connectDB();
+    return await AccountRepository.getEmailById(new Types.ObjectId(decoded._id)) || null;
   }
   catch {
-    throw new Error("Failed retrieving users email");
+    return null;
   }
 }
 
