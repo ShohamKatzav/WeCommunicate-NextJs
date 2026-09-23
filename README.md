@@ -1,152 +1,152 @@
 # WeCommunicate
 
-A modern real-time chat application built with Next.js, featuring group chats, file sharing, real-time notifications, and seamless deployment on Render.
+A real-time chat app built with Next.js. It supports one-to-one and group conversations, media and location sharing, voice and video calls, and offline use as an installable PWA. Production runs on Render.
 
-## 🚀 Features
+## Features
 
-- **Real-time Messaging** - Instant message delivery via WebSocket connections
-- **Group Chats** - Create and manage group conversations with multiple participants
-- **File Sharing** - Upload and share files within conversations
-- **Location Sharing** - Share your current location with Google Maps integration
-- **Push Notifications** - Real-time notifications for new messages and updates
-- **Modular Architecture** - Clean separation of concerns with dedicated handlers
-- **Secure Authentication** - Built-in auth middleware for socket connections
-- **Rate Limiting** - Protection against abuse with Upstash-powered rate limiting
-- **Server Actions** - Modern Next.js server actions for efficient data handling
-- **Optimized Proxy** - Custom proxy configuration for seamless routing
+- **Real-time messaging** — Socket.IO delivery, typing indicators, read receipts, and per-conversation drafts
+- **Conversations** — Direct and group chats, replies, reactions, full-text search, an unread divider, and disappearing messages
+- **Voice and video** — 1:1 WebRTC calls, plus voice messages with a playback progress bar
+- **Media and location** — File uploads (images compressed in the browser), and current-location sharing with Google Maps
+- **Profiles** — Avatar (upload, camera, or crop), about text, accent color, phone number, and email. Last seen is shown in chat
+- **Safety** — Block another user, automatic content moderation, and a moderator page for bans and role changes
+- **Auth** — Email or SMS one-time codes. Email is optional on the account
+- **Appearance** — Light, dark, and system themes
+- **PWA and offline** — Install prompt, Web Share Target, push notifications, an offline outbox, and local history that still works when a server call is slow or cut off
 
-## 🛠️ Technologies Used
+## Technologies
 
-### Frontend
-- **Next.js** - React framework for production
-- **React** - UI component library
-- **TypeScript** - Type-safe development
+- **Next.js 16** and **React 19** (App Router, Server Actions)
+- **TypeScript**
+- **Tailwind CSS 4**
+- **Socket.IO** for chat, presence, and call signaling
+- **WebRTC** for 1:1 voice and video (Google STUN, optional TURN)
+- **MongoDB** via Mongoose
+- **Upstash Redis** for presence and rate limiting
+- **Vercel Blob** for uploaded files
+- **Brevo** for email and SMS
+- **web-push** for notifications
+- **OpenAI** for content moderation
+- **Playwright** and **Allure** for end-to-end tests
 
-### Backend
-- **Socket.IO** - Real-time bidirectional communication
-- **Server Actions** - Next.js server-side operations
-- **Custom Middleware** - Authentication and rate limiting
+## Installation
 
-### Deployment
-- **Render** - Cloud platform for deployment
-- **Node.js** - Runtime environment
-
-## 📦 Installation
+This repo uses pnpm (`pnpm-lock.yaml`; CI pins pnpm 10.25.0).
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/ShohamKatzav/WeCommunicate-NextJs.git
 cd WeCommunicate-NextJs
 ```
 
 2. Install dependencies:
+
 ```bash
-npm install
-# or
-yarn install
-# or
 pnpm install
 ```
 
-3. Set up environment variables:
-```bash
-cp .env.example .env.local
-```
+3. Create `.env.local` in the repo root. There is no `.env.example`; these are the variables `app/config/env.ts` requires:
 
-Add your environment variables:
 ```env
+NEXT_PUBLIC_BASE_ADDRESS=<Public URL used to initialize the socket, including https>
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=<Google Maps API key>
+NEXT_PUBLIC_MESSAGES_PER_PAGE=<Messages loaded per page; defaults to 30, minimum 5>
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=<Web Push VAPID public key>
 
-NEXT_PUBLIC_BASE_ADDRESS=<Deployment URL used to intialize socket>
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=<In order to access google maps api - create one on google cloud console>
-NEXT_PUBLIC_MESSAGES_PER_PAGE=<Number of messages to load per page (default 5)>
-JWT_SECRET_KEY=<Secrete for signing user auth tokens>
+JWT_SECRET_KEY=<At least 32 characters, used to sign auth tokens>
 DB_URI=<MongoDB connection string>
 
-BLOB_READ_WRITE_TOKEN=<Token for Vercel blob from their dashboard>
-VERCEL_BLOB_CALLBACK_URL=<Deployment URL (Public/Ngrok) for testing - vercel blob will update this url when file uploading done>
+BLOB_READ_WRITE_TOKEN=<Vercel Blob read/write token>
+VERCEL_BLOB_CALLBACK_URL=<Public URL Vercel Blob calls when an upload finishes>
 
-UPSTASH_REDIS_REST_URL=<Private URL endpoint used to create connection to upstash -> upstash dashboard>
-UPSTASH_REDIS_REST_TOKEN=<Token for upstash -> Upstash dashboard>
+UPSTASH_REDIS_REST_URL=<Upstash Redis REST URL>
+UPSTASH_REDIS_REST_TOKEN=<Upstash Redis REST token>
 
-BREVO_API_KEY=<Breavo api key for mail sending from their dashboard>
-SMTP_USER=<The email address from which emails will be sent>
+BREVO_API_KEY=<Brevo API key>
+SMTP_USER=<From address for email>
+BREVO_SMS_SENDER=<SMS sender name, max 11 characters; defaults to WeCommunicate>
 
+VAPID_PRIVATE_KEY=<Web Push VAPID private key>
+OPENAI_API_KEY=<Used by content moderation>
 ```
 
-4. Run the development server:
+Optional. Calls work on most home and mobile networks with STUN alone. Set all three to add a TURN relay for symmetric NATs and strict networks:
+
+```env
+TURN_URL=<Comma-separated TURN URLs>
+TURN_USERNAME=<TURN username>
+TURN_CREDENTIAL=<TURN credential>
+```
+
+`E2E_TEST` and `TEST_BYPASS_KEY` are only needed when running the Playwright suite.
+
+4. Start the dev server. `pnpm dev` runs Next with experimental HTTPS:
+
 ```bash
-npm run dev
-# or
-yarn dev
-# or
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [https://localhost:3000](https://localhost:3000).
 
-## 📁 Project Structure
+## Project structure
 
 ```
 ├── app/
-│   ├── api/              # API routes (Send files route is here)
-│   ├── components/       # React components
-│   ├── hooks/            # Hooks allow easy access to main contexts (User, Socket and more)
-│   ├── lib/              # Server actions
-│   ├── socket/
-│   │   ├── handlers/     # Socket event handlers
-│   │   ├── middleware/   # Auth middleware
-│   │   └── ratelimiter/  # Rate limiting logic
-│   └──utils/             # Utility functions
-├── types/                # TypeScript types
-├── models/               # Mongodb schemas
-├── repositories/         # DAL layer
-└── public/               # Static assets
+│   ├── api/                 # Route handlers (file upload, clean history, web manifest)
+│   ├── chat/                # Chat page and client
+│   ├── components/
+│   │   ├── auth/            # OTP / login UI
+│   │   ├── chat/            # Thread, composer, calls, messages
+│   │   ├── locations/       # Location sharing UI
+│   │   ├── offline/         # Install prompt, outbox, service worker, push
+│   │   ├── people/          # User lists
+│   │   ├── profile/         # Avatar, crop, phone, email, accent
+│   │   ├── shell/           # Navbar, footer, bottom prompts
+│   │   └── ui/              # Shared controls (theme toggle, spinner, upload)
+│   ├── config/              # Env schema and limits
+│   ├── context/             # User, theme, socket, and prompt providers
+│   ├── hooks/               # Chat, calls, offline, and message hooks
+│   ├── lib/                 # Server actions (chat, profile, calls, push, moderation)
+│   ├── profile/             # Own profile, edit, and public profile pages
+│   └── utils/
+├── socket/                  # Socket.IO auth, rate limit, and event handlers
+├── models/                  # Mongoose schemas
+├── repositories/            # Data access
+├── services/                # Redis, push, moderation
+├── pages/api/socket/        # Socket.IO server endpoint
+├── public/                  # Service worker, offline page, icons
+├── tests/                   # Playwright specs, page objects, and Allure output
+└── types/
 ```
 
-## 🚀 Deployment on Render
+## Deployment
 
-### Live Deployement
+Live app: [https://wecommunicate-nextjs.onrender.com/](https://wecommunicate-nextjs.onrender.com/)
 
-[https://wecommunicate-nextjs.onrender.com/](https://wecommunicate-nextjs.onrender.com/)
+Pushes to `main` deploy on Render. The Playwright workflow then waits for that deploy and runs the e2e suite against production. Allure reports are published to the `gh-pages` branch.
 
-Connection Information for example:
-
-- Username: Shoham@gmail.com
-- Password: 12345678
-
-
-
-## 🔧 Configuration
-
-### Socket Configuration
-Socket handlers are organized in `lib/socket/handlers/`. Each handler manages specific events and includes:
-- Authentication checks via middleware
-- Rate limiting per connection
-- Error handling and validation
-
-### Server Actions
-API routes have been converted to server actions for better performance and type safety. Find them in `app/lib/`.
-
-## 📝 Scripts
+## Scripts
 
 ```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run start        # Start production server
+pnpm dev            # HTTPS dev server
+pnpm build          # Production build
+pnpm start          # Production server
+pnpm lint           # ESLint
+pnpm test           # Playwright (sets E2E_TEST=true)
+pnpm test-ui        # Playwright UI mode
+pnpm test-debug     # Playwright inspector
+pnpm allure:report  # Build the Allure HTML report from the last run
 ```
 
-## 🤝 Contributing
+## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Pull requests are welcome.
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License.
 
-## 👤 Author
+## Author
 
-Shoham Katzav - [GitHub](https://github.com/ShohamKatzav)
-
----
-
-Built with ❤️ using Next.js and deployed on Render
+Shoham Katzav — [GitHub](https://github.com/ShohamKatzav)
