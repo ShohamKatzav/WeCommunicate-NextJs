@@ -3,7 +3,7 @@ import './login.css'
 import { useEffect, useState } from "react";
 import { useRouter } from 'next/navigation';
 import { useUser } from '../hooks/useUser';
-import Loading from '../components/loading';
+import Loading from '../components/ui/loading';
 import { isExist, authenticateUser } from '@/app/lib/accountActions'
 import { Eye, EyeOff } from 'lucide-react';
 

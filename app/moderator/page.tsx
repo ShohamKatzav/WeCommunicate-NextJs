@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getAllUsers, banUser, unbanUser, promoteToModerator, demoteFromModerator } from '../lib/moderatorActions';
 import { Shield, Ban, CheckCircle, UserX, UserCheck, ShieldOff, ShieldPlus } from 'lucide-react';
 import { toast } from 'sonner';
-import Loading from '../components/loading';
+import Loading from '../components/ui/loading';
 import { useSocket } from '../hooks/useSocket';
 
 function sessionUserId(token?: string): string | null {

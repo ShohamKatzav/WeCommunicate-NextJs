@@ -68,7 +68,7 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* The navbar is position: fixed (see app/components/bars.css), so it does not
+/* The navbar is position: fixed (see app/components/shell/bars.css), so it does not
    reserve space in flow. The space above page content is reserved instead by
    --content-top-offset, applied in exactly one place (the navbar wrapper's
    margin-bottom) so a view that needs to cancel it can. On a desktop window

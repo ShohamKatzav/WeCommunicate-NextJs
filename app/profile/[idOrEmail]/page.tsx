@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser } from "../../hooks/useUser";
 import { getProfile } from "../../lib/profileActions";
-import ProfileCard from "../../components/profileCard";
-import Loading from "../../components/loading";
+import ProfileCard from "../../components/profile/profileCard";
+import Loading from "../../components/ui/loading";
 import Profile from "@/types/profile";
 
 export default function OtherUserProfilePage() {

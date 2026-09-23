@@ -1,4 +1,4 @@
-import OTPProcess from "../components/OTPProcess";
+import OTPProcess from "../components/auth/OTPProcess";
 
 
 const ForgotPassword = () => {
