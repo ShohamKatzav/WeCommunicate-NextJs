@@ -3,6 +3,8 @@ import { env } from '@/app/config/env';
 import { cookies } from 'next/headers';
 import User from '@/types/user';
 import jwt from 'jsonwebtoken';
+import connectDB from '@/app/lib/MongoDb';
+import AccountRepository from '@/repositories/AccountRepository';
 
 interface DecodedToken {
   _id: string;
@@ -55,6 +57,34 @@ export const getUserObJFromCoockie = async (): Promise<User> => {
   } catch (error) {
     console.error("Error fetching user data:", error);
   } finally {
+    return user;
+  }
+}
+
+// The cookie is per-device and only rewritten on login or a local profile
+// edit, so a nickname/avatar/accent change made on another device would stay
+// stale here forever (and the old avatar blob is deleted on change, so the
+// stale URL 404s). Overlay those display fields from the DB on every load.
+// Done inside the same server action as the cookie read on purpose - see
+// userProvider.tsx; a second mount-time action can cause a spurious remount.
+export const getCurrentUser = async (): Promise<User> => {
+  const user = await getUserObJFromCoockie();
+  if (!user.token) return user;
+  try {
+    const decoded = jwt.verify(user.token, env.JWT_SECRET_KEY) as DecodedToken;
+    await connectDB();
+    const profile = await AccountRepository.getProfileByIdentifier(decoded._id) as
+      { nickname?: string; avatarUrl?: string; accentColor?: string } | null;
+    if (!profile) return user;
+    return {
+      ...user,
+      nickname: profile.nickname,
+      avatarUrl: profile.avatarUrl || undefined,
+      accentColor: profile.accentColor,
+    };
+  } catch (error) {
+    // Fall back to the cookie's copy - stale display fields beat no user.
+    console.error("Failed to refresh user profile:", error);
     return user;
   }
 }

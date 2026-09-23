@@ -2,7 +2,7 @@
 import { ReactNode, useEffect, useState, useCallback } from "react";
 import User from "@/types/user";
 import UserContext from "./userContext";
-import { getUserObJFromCoockie, createUserCoockie, deleteUserCoockie } from "../lib/cookieActions";
+import { getCurrentUser, createUserCoockie, deleteUserCoockie } from "../lib/cookieActions";
 
 type UserProviderProps = {
     children: ReactNode;
@@ -14,7 +14,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
 
     const fetchUserHandler = useCallback(async () => {
         try {
-            const userObject = await getUserObJFromCoockie();
+            const userObject = await getCurrentUser();
             setUser(userObject);
         } catch (error) {
             console.error("Failed to fetch user:", error);
