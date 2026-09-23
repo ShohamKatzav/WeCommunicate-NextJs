@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Socket } from 'socket.io-client';
 import { usePathname } from 'next/navigation';
 import ChatUser from '@/types/chatUser';
 import Message from '@/types/message';
 import { revalidateChatRoute } from '@/app/lib/chatActions';
 import { useUser } from './useUser';
+import { TYPING_EXPIRE_MS } from '../config/limits';
 
 interface UseSocketEventsProps {
     socket: Socket | null;
@@ -29,7 +30,10 @@ export const useSocketEvents = ({
 }: UseSocketEventsProps) => {
 
     const [chatListActiveUsers, setChatListActiveUsers] = useState<ChatUser[]>([]);
-    const [typingUsers, setTypingUsers] = useState<Record<string, boolean>>({});
+    // conversationId -> emails typing there. Scoped per conversation so an
+    // indicator from one chat can never show up in another's header.
+    const [typingByConversation, setTypingByConversation] = useState<Record<string, Record<string, boolean>>>({});
+    const typingExpiryTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
     // Overrides whatever last-seen value the page was server-rendered with,
     // for anyone who has gone offline since it loaded.
     const [lastSeenByEmail, setLastSeenByEmail] = useState<Record<string, string>>({});
@@ -53,25 +57,50 @@ export const useSocketEvents = ({
     useEffect(() => {
         if (!socket || loadingSocket) return;
 
-        const onStartTyping = (data: { email: string }) => {
-            setTypingUsers(prev => ({ ...prev, [data.email]: true }));
+        // conversationId|email -> the timer that drops that indicator if no
+        // refresh arrives (see TYPING_EXPIRE_MS in limits.ts).
+        const expiryTimers = typingExpiryTimers.current;
+        const timerKey = (conversationId: string, email: string) => `${conversationId}|${email}`;
+
+        const removeTyper = (conversationId: string, email: string) => {
+            const key = timerKey(conversationId, email);
+            clearTimeout(expiryTimers.get(key));
+            expiryTimers.delete(key);
+            setTypingByConversation(prev => {
+                if (!prev[conversationId]?.[email]) return prev;
+                const typers = { ...prev[conversationId] };
+                delete typers[email];
+                const next = { ...prev };
+                if (Object.keys(typers).length > 0) next[conversationId] = typers;
+                else delete next[conversationId];
+                return next;
+            });
         };
 
-        const onStopTyping = (data: { email: string }) => {
-            setTypingUsers(prev => {
-                const newState = { ...prev };
-                delete newState[data.email];
-                return newState;
-            });
+        const onStartTyping = (data: { email?: string; conversationId?: string }) => {
+            const { email, conversationId } = data || {};
+            if (!email || !conversationId) return;
+            // This account typing in another of its own tabs isn't news.
+            if (email.toLowerCase() === userEmail?.toLowerCase()) return;
+
+            const key = timerKey(conversationId, email);
+            clearTimeout(expiryTimers.get(key));
+            expiryTimers.set(key, setTimeout(() => removeTyper(conversationId, email), TYPING_EXPIRE_MS));
+            setTypingByConversation(prev => prev[conversationId]?.[email]
+                ? prev
+                : { ...prev, [conversationId]: { ...prev[conversationId], [email]: true } });
+        };
+
+        const onStopTyping = (data: { email?: string; conversationId?: string }) => {
+            const { email, conversationId } = data || {};
+            if (!email || !conversationId) return;
+            removeTyper(conversationId, email);
         };
 
         const onSyncRequest = () => {
             // Check the Ref from useChatRoom
             if (isLocalTypingRef.current && currentConversationId.current) {
-                socket.emit('start typing', {
-                    email: userEmail,
-                    conversationId: currentConversationId.current
-                });
+                socket.emit('start typing', { conversationId: currentConversationId.current });
             }
         };
 
@@ -83,8 +112,10 @@ export const useSocketEvents = ({
             socket.off("start typing", onStartTyping);
             socket.off("stop typing", onStopTyping);
             socket.off("request typing status", onSyncRequest);
+            expiryTimers.forEach(timer => clearTimeout(timer));
+            expiryTimers.clear();
         };
-    }, [socket, loadingSocket, userEmail]);
+    }, [socket, loadingSocket, userEmail, isLocalTypingRef, currentConversationId]);
 
     // Connected users
     useEffect(() => {
@@ -187,7 +218,7 @@ export const useSocketEvents = ({
     }, [socket, loadingSocket, setChat, chatRef, userEmail]);
     return {
         chatListActiveUsers,
-        typingUsers,
+        typingByConversation,
         lastSeenByEmail
     };
 };

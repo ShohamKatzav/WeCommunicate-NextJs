@@ -41,6 +41,9 @@ export default class ChatPage {
     enableNotificationsButton: Locator;
     laterNotificationsButton: Locator;
     dismissNotificationsButton: Locator;
+    startVoiceCallButton: Locator;
+    startVideoCallButton: Locator;
+    typingIndicator: Locator;
 
     constructor(page: Page) {
         this.page = page;
@@ -83,6 +86,12 @@ export default class ChatPage {
         this.enableNotificationsButton = page.getByRole('button', { name: 'Enable' });
         this.laterNotificationsButton = page.getByRole('button', { name: 'Later', exact: true });
         this.dismissNotificationsButton = page.getByRole('button', { name: 'Permanently dismiss notification prompt' });
+        // The accessible name is "Start … call with" while the device is
+        // present, and "Can't start a … call with …: No … was found" when it
+        // isn't. Either way the button is the call control for this chat.
+        this.startVoiceCallButton = page.getByRole('button', { name: /voice call with / });
+        this.startVideoCallButton = page.getByRole('button', { name: /video call with / });
+        this.typingIndicator = page.locator('#ConversationInfo').getByText(/is typing/);
     }
 
     // Playwright Chromium reports Notification.permission as "denied" (the

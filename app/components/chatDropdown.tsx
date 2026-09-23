@@ -3,7 +3,6 @@ import { HiOutlineEllipsisHorizontalCircle, HiOutlineUsers } from "react-icons/h
 import { RiHistoryLine, RiLogoutBoxRLine } from "react-icons/ri";
 import { MdDeleteForever } from "react-icons/md";
 import { Timer } from "lucide-react";
-import useIsMobile from "../hooks/useIsMobile";
 import Message from "@/types/message";
 import ChatUser from "@/types/chatUser";
 import { cleanHistory, deleteConversation } from "../lib/conversationActions";
@@ -17,6 +16,7 @@ interface ChatDropdownProps {
     chat: Message[];
     setChat: (newChat: Message[]) => void;
     conversationId: string;
+    ensureConversationId: () => Promise<string>;
     participants: RefObject<ChatUser[] | null | undefined>;
     updateConversationsBar: (message: Message | null, mode?: string, cleanId?: string) => Promise<void>;
     onDisappearingMessagesChange?: (seconds: number) => void;
@@ -28,19 +28,24 @@ const ChatDropdown = ({
     chat,
     setChat,
     conversationId,
+    ensureConversationId,
     participants,
     updateConversationsBar,
     onDisappearingMessagesChange,
     setPendingClear
 }: ChatDropdownProps) => {
 
-    const isMobile = useIsMobile();
     const dropdownRef = useRef<HTMLDivElement | null>(null);
     const [showDropdown, setShowDropdown] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showParticipantsModal, setShowParticipantsModal] = useState(false);
     const [showDisappearingMessagesModal, setShowDisappearingMessagesModal] = useState(false);
+    // The id resolved (created on demand, if this chat has no messages yet)
+    // when the option is opened - not the conversationId prop, since that's
+    // still empty for a brand-new chat until ensureConversationId runs.
+    const [disappearingMessagesConversationId, setDisappearingMessagesConversationId] = useState<string | null>(null);
+    const [isOpeningDisappearingMessages, setIsOpeningDisappearingMessages] = useState(false);
 
     // Close dropdown when delete modal open/close
     useEffect(() => {
@@ -129,14 +134,20 @@ const ChatDropdown = ({
 
     return (
         <div className="relative" ref={dropdownRef}>
+            {/* Same box as the header's other icon buttons (chatHeader.tsx):
+                44px on phones, 40px from md up. */}
             <button
                 id="dropdown-button"
+                type="button"
                 onClick={() => setShowDropdown(!showDropdown)}
-                className="py-1 md:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg flex items-center justify-center"
+                aria-label="Conversation options"
+                aria-expanded={showDropdown}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-lg outline-none transition-colors hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-purple-500 md:h-10 md:w-10 dark:hover:bg-gray-700"
             >
                 <HiOutlineEllipsisHorizontalCircle
                     color="rgb(152, 65, 249)"
-                    size={isMobile ? 26 : 40}
+                    size={26}
+                    aria-hidden="true"
                 />
             </button>
 
@@ -169,11 +180,22 @@ const ChatDropdown = ({
                     </button>
                     <hr className="my-0 border-stone-200 dark:border-gray-700" />
                     <button
-                        onClick={() => {
-                            setShowDisappearingMessagesModal(true);
+                        onClick={async () => {
                             setShowDropdown(false);
+                            // A chat with no messages yet has no Conversation
+                            // document - create it now instead of leaving
+                            // this option disabled until a first message.
+                            setIsOpeningDisappearingMessages(true);
+                            const id = await ensureConversationId();
+                            setIsOpeningDisappearingMessages(false);
+                            if (!id) {
+                                toast.error("Couldn't open this setting. Please try again.");
+                                return;
+                            }
+                            setDisappearingMessagesConversationId(id);
+                            setShowDisappearingMessagesModal(true);
                         }}
-                        disabled={!conversationId}
+                        disabled={!participants.current?.length || isOpeningDisappearingMessages}
                         className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Timer size={18} /> Disappearing Messages
@@ -201,9 +223,9 @@ const ChatDropdown = ({
                     setShowParticipantsModal={setShowParticipantsModal}
                 />
             )}
-            {showDisappearingMessagesModal && conversationId && (
+            {showDisappearingMessagesModal && disappearingMessagesConversationId && (
                 <DisappearingMessagesModal
-                    conversationId={conversationId}
+                    conversationId={disappearingMessagesConversationId}
                     onClose={() => setShowDisappearingMessagesModal(false)}
                     onSaved={onDisappearingMessagesChange}
                 />

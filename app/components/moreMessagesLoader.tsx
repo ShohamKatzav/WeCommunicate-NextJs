@@ -6,7 +6,7 @@ import ChatUser from "@/types/chatUser";
 import { getMessages } from '@/app/lib/chatActions';
 import { Spinner } from "./spinner";
 import MessageBubble from "./messageBubble";
-import { accentForSender, buildAccentBySender } from "../utils/accentColor";
+import { accentForSender, accentsForReceivedBubbles } from "../utils/accentColor";
 
 interface LoadMoreProps {
   oldMessages: Message[];
@@ -30,7 +30,7 @@ export default function MoreMessagesLoader({ oldMessages, participants, onReply,
   const container = useRef<HTMLDivElement | null>(null);
   const participantsIdRef = useRef<string>('');
 
-  const accentBySender = useMemo(() => buildAccentBySender(participants), [participants]);
+  const accentBySender = useMemo(() => accentsForReceivedBubbles(participants), [participants]);
 
   // Duplicate messages fix - If user sent message and try to load more message, RSC and this component might not sync
   // Create a Set of message IDs from oldMessages to check for duplicates

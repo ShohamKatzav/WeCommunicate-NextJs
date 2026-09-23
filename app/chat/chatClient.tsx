@@ -19,6 +19,11 @@ import ConversationsBar from '../components/conversationsBar';
 import ChatHeader from '../components/chatHeader';
 import UsersList from '../components/usersList';
 import PushNotificationManager from '../components/pushNotificationManager';
+import CallOverlay from '../components/callOverlay';
+import { useCall } from '../hooks/useCall';
+import { CallPeer } from '../lib/callController';
+import type { IceServerConfig } from '../lib/iceServers';
+import { AsShortName } from '../utils/stringFormat';
 import { useServiceWorkerSync } from '../hooks/useServiceWorkerSync';
 import { useChatRoom } from '../hooks/useChatRoom';
 import { useMessageHandling } from '../hooks/useMessageHandling';
@@ -30,9 +35,14 @@ interface ChatClientProps {
     initialUsers: ChatUser[];
     initialConversationsWithMessages: Conversation[];
     initialBlockedUserIds: string[];
+    iceServers: IceServerConfig[];
 }
 
-const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlockedUserIds }: ChatClientProps) => {
+// Only the open conversation's typers reach the header - one stable empty
+// object for "nobody", rather than a new {} on every render.
+const NO_TYPERS: Record<string, boolean> = {};
+
+const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlockedUserIds, iceServers }: ChatClientProps) => {
     const { socket, loadingSocket } = useSocket();
     const { user, loadingUser } = useUser();
     const isMobile = useIsMobile();
@@ -77,6 +87,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
         currentConversationId,
         participants,
         getLastMessages,
+        ensureConversationId,
         handleLeaveRoom,
         handleTyping,
         isLocalTypingRef,
@@ -107,7 +118,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
     });
 
     // Socket events
-    const { chatListActiveUsers, typingUsers, lastSeenByEmail } = useSocketEvents({
+    const { chatListActiveUsers, typingByConversation, lastSeenByEmail } = useSocketEvents({
         socket,
         loadingSocket,
         userEmail: user?.email,
@@ -118,6 +129,73 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
         currentConversationId,
     });
 
+    // 1:1 calls. The caller's name and avatar come from data this page
+    // already has - the invite itself only carries their email.
+    const resolveCallPeer = (email: string): CallPeer => {
+        const target = email.toLowerCase();
+        const known = initialUsers.find(u => u.email?.toLowerCase() === target)
+            ?? conversationsForBar.flatMap(c => c.members).find(m => m.email?.toLowerCase() === target);
+        return { email, nickname: known?.nickname, avatarUrl: known?.avatarUrl };
+    };
+
+    // Answering from another conversation or the chat list opens the call's
+    // conversation, so the call and its chat sit together.
+    const openCallConversation = async (conversationId: string, peerEmail: string) => {
+        const conversation = [...conversationsForBar, ...initialConversationsWithMessages]
+            .find(c => c._id === conversationId);
+        const others = conversation?.members
+            .filter(m => m.email?.toLowerCase() !== user?.email?.toLowerCase()) ?? [];
+        const roomParticipants = others.length > 0
+            ? others
+            : initialUsers.filter(u => u.email?.toLowerCase() === peerEmail.toLowerCase());
+        if (roomParticipants.length > 0) await getLastMessages(roomParticipants);
+    };
+
+    const { call, controller: callController } = useCall({
+        socket,
+        userEmail: user?.email,
+        getIceServers: () => iceServers,
+        resolvePeer: resolveCallPeer,
+        getCurrentConversationId: () => currentConversationId.current,
+        openConversation: openCallConversation,
+        onError: message => toast.error(message),
+        onMissedCall: peer => toast(`Missed call from ${peer.nickname || AsShortName(peer.email)}`),
+    });
+
+    // Switching to another conversation (or leaving this one) hangs up.
+    // currentConversationId is a ref, so this checks after every render -
+    // opening or leaving a room always re-renders via setChat.
+    const lastConversationIdRef = useRef(currentConversationId.current);
+    useEffect(() => {
+        const conversationId = currentConversationId.current;
+        const previousConversationId = lastConversationIdRef.current;
+        if (conversationId === previousConversationId) return;
+        lastConversationIdRef.current = conversationId;
+        // An id-less chat getting its id (first message sent, or the existing
+        // conversation found - see useChatRoom's getLastMessages) is the same
+        // chat, not a switch. Leaving a call's conversation always passes
+        // through a real id first, so nothing is missed by skipping these.
+        if (!previousConversationId) return;
+        callController?.conversationChanged(conversationId);
+    });
+
+    const handleStartCall = async (video: boolean) => {
+        const other = participants.current?.length === 1 ? participants.current[0] : null;
+        if (!other?.email) return;
+        // A chat with no messages yet has no Conversation document - create
+        // it now instead of leaving the call buttons disabled until someone
+        // sends a first message.
+        const conversationId = await ensureConversationId();
+        if (!conversationId) {
+            toast.error("Couldn't start the call. Please try again.");
+            return;
+        }
+        callController?.startCall(
+            { email: other.email, nickname: other.nickname, avatarUrl: other.avatarUrl },
+            conversationId,
+            video
+        );
+    };
 
     // Service worker sync
     useServiceWorkerSync({
@@ -217,6 +295,13 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
     // state left showing would mean a message actually still sends (or vice
     // versa) without the UI reflecting it.
     const handleToggleBlock = async (targetUserId: string, shouldBlock: boolean) => {
+        // A call with someone you're blocking ends right away. The server
+        // ends it too (on the 'update connected users' emit below), which
+        // is what covers a block made from another tab or device.
+        const targetEmail = initialUsers.find(u => u._id === targetUserId)?.email?.toLowerCase();
+        if (shouldBlock && targetEmail && call.peer?.email.toLowerCase() === targetEmail) {
+            callController?.hangUp();
+        }
         setBlockedUserIds(prev =>
             shouldBlock ? [...prev, targetUserId] : prev.filter(id => id !== targetUserId)
         );
@@ -292,7 +377,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
                 pendingClears={pendingClears}
             />
 
-            <div className="flex min-w-0 flex-1 flex-col">
+            <div className="relative flex min-w-0 flex-1 flex-col">
                 <ChatHeader
                     setMobileChatsSidebarOpen={setMobileChatsSidebarOpen}
                     setMobileUsersSidebarOpen={setMobileUsersSidebarOpen}
@@ -302,11 +387,13 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
                     setChat={setChat}
                     conversationId={currentConversationId.current}
                     updateConversationsBar={updateConversationsBar}
-                    typingUsers={typingUsers}
+                    typingUsers={typingByConversation[currentConversationId.current] ?? NO_TYPERS}
                     activeSocketUsers={chatListActiveUsers}
                     setPendingClear={setPendingClear}
                     lastSeenByEmail={lastSeenByEmail}
                     isBlocked={isCurrentChatBlocked}
+                    onStartCall={handleStartCall}
+                    ensureConversationId={ensureConversationId}
                 />
 
                 <ChatWindow
@@ -331,6 +418,11 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
                         />
                     </div>
                 )}
+
+                {/* Covers this column only while a call is on; an incoming
+                    call renders as a floating card instead, so it shows on
+                    top of whatever conversation or list is open. */}
+                <CallOverlay call={call} controller={callController} />
             </div>
 
             <UsersList
