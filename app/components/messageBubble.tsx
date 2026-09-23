@@ -65,16 +65,16 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
   ${isOwnMessage ? "rounded-br-3xl" : "bg-gray-600 rounded-bl-3xl"
     } rounded-tl-3xl rounded-tr-xl text-white wrap-break-word mb-3 md:mb-6
     ${deleted ? "gap-1 flex text-lg md:text-2xl" : "gap-6"}`;
-  // Own bubbles use the sender's chosen accent color (types/user.ts,
+  // Own bubbles use the viewer's chosen accent color (types/user.ts,
   // profileActions.ts) instead of a hardcoded class, falling back to the
   // exact green-700 hex this used to be a Tailwind class for, so a user who
-  // never picked an accent sees today's bubble unchanged. Received bubbles
-  // do the same with the *other* person's accent, resolved from the open
-  // conversation's participants (see utils/accentColor.ts); the inline style
-  // simply overrides the bg-gray-600 class above, which stays in place both
-  // as the fallback for a sender who never picked an accent and because it
-  // is what marks a received bubble in the DOM. Every accent in the palette
-  // is dark enough for the white bubble text either way.
+  // never picked an accent sees today's bubble unchanged. That color stays
+  // on this screen: a 1:1 leaves senderAccentColor unset, so the other
+  // person's bubbles keep bg-gray-600. Group chats pass each sender's accent
+  // (see utils/accentColor.ts) and the inline style overrides that class.
+  // The class stays either way, both as the 1:1 / unset-accent fallback and
+  // because it marks a received bubble in the DOM. Every accent in the
+  // palette is dark enough for the white bubble text either way.
   const bubbleAccentStyle = isOwnMessage
     ? { backgroundColor: user?.accentColor || DEFAULT_ACCENT_COLOR }
     : (senderAccentColor ? { backgroundColor: senderAccentColor } : undefined);

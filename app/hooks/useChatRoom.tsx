@@ -4,6 +4,8 @@ import Message from '@/types/message';
 import ChatUser from '@/types/chatUser';
 import Conversation from '@/types/conversation';
 import { PendingClears } from './usePendingCleanHistory';
+import { findConversationId, getOrCreateConversationId } from '../lib/conversationActions';
+import { TYPING_IDLE_MS, TYPING_REFRESH_MS } from '../config/limits';
 
 interface UseChatRoomProps {
     socket: Socket | null;
@@ -65,28 +67,46 @@ export const useChatRoom = ({
 
     const isLocalTypingRef = useRef<boolean>(false);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    // The conversation 'start typing' was sent for - 'stop typing' goes to
+    // this one, not whichever conversation happens to be open when the idle
+    // timer fires (switching rooms mid-sentence used to send it to the new
+    // room and leave the old one stuck on "typing...").
+    const typingConversationRef = useRef<string>("");
+    const lastTypingSentAtRef = useRef<number>(0);
+
+    const stopLocalTyping = useCallback(() => {
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+        if (isLocalTypingRef.current && typingConversationRef.current) {
+            socket?.emit('stop typing', { conversationId: typingConversationRef.current });
+        }
+        isLocalTypingRef.current = false;
+        typingConversationRef.current = "";
+    }, [socket]);
 
     const handleTyping = useCallback(() => {
-        if (!currentConversationId.current || !socket) return;
+        const conversationId = currentConversationId.current;
+        if (!conversationId || !socket) return;
 
-        // If we weren't already typing, tell the server
-        if (!isLocalTypingRef.current) {
+        // Sent on the first keystroke, then again every TYPING_REFRESH_MS
+        // while typing continues - receivers expire an indicator that stops
+        // being refreshed (useSocketEvents.tsx), which is what clears it when
+        // this tab vanishes without ever sending a stop.
+        const now = Date.now();
+        if (
+            !isLocalTypingRef.current
+            || typingConversationRef.current !== conversationId
+            || now - lastTypingSentAtRef.current >= TYPING_REFRESH_MS
+        ) {
             isLocalTypingRef.current = true;
-            socket.emit('start typing', {
-                conversationId: currentConversationId.current,
-                email: userEmail
-            });
+            typingConversationRef.current = conversationId;
+            lastTypingSentAtRef.current = now;
+            socket.emit('start typing', { conversationId });
         }
-        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
-        typingTimeoutRef.current = setTimeout(() => {
-            isLocalTypingRef.current = false;
-            socket.emit('stop typing', {
-                conversationId: currentConversationId.current,
-                email: userEmail
-            });
-        }, 3000);
-    }, [socket, userEmail]);
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(stopLocalTyping, TYPING_IDLE_MS);
+    }, [socket, stopLocalTyping]);
 
     const updateChatRef = useCallback((newChat: Message[]) => {
         chatRef.current = newChat;
@@ -110,13 +130,46 @@ export const useChatRoom = ({
         [userEmail]
     );
 
+    // Bumped on every open and leave, so an async lookup that finishes after
+    // the user has moved on to another chat can tell, and drop its result.
+    const openSequenceRef = useRef(0);
+
+    // Gives the open, id-less chat its real conversation id: joins the room
+    // (typing, live messages and read receipts all travel through it) and
+    // moves any draft from the id-less key to the conversation's own key.
+    const adoptConversationId = useCallback((conversationId: string) => {
+        currentConversationId.current = conversationId;
+        socket?.emit('join room', { conversationId });
+
+        let draft = '';
+        if (participants.current) {
+            const pendingKey = getDraftKey(participants.current, '');
+            const savedKey = getDraftKey(participants.current, conversationId);
+            const pending = readDraft(pendingKey);
+            draft = pending || readDraft(savedKey);
+            if (pending) {
+                try {
+                    localStorage.setItem(savedKey, pending);
+                    localStorage.removeItem(pendingKey);
+                } catch {
+                    // Private browsing / storage disabled - not fatal, just no drafts.
+                }
+            }
+        }
+
+        // The state update is also what flows the new id into everything
+        // reading currentConversationId.current via a prop - it's a ref, so
+        // nothing re-renders on its own.
+        setMessageToSend(prev => ({ ...prev, conversationID: conversationId, text: prev.text || draft }));
+    }, [socket]);
+
     const getLastMessages = useCallback(async (roomParticipants: ChatUser[]) => {
         if (!roomParticipants) return;
+        const openSequence = ++openSequenceRef.current;
 
         if (currentConversationId.current) {
+            stopLocalTyping();
             socket?.emit('leave room', { conversationId: currentConversationId.current });
-            isLocalTypingRef.current = false;
-            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         }
         let conversation = findConversationByExactParticipants(conversationsForBar, roomParticipants);
         if (!conversation) {
@@ -194,15 +247,55 @@ export const useChatRoom = ({
 
         setMobileChatsSidebarOpen(false);
         setMobileUsersSidebarOpen(false);
-    }, [socket, userEmail, findConversationByExactParticipants, initialConversations, conversationsForBar, updateChatRef, setMobileChatsSidebarOpen, setMobileUsersSidebarOpen, pendingClearsRef]);
+
+        // Not in this device's list doesn't mean it doesn't exist - a
+        // conversation this user deleted is hidden from their list but is
+        // still the same conversation, and the other person may be typing or
+        // sending in it right now. There's nothing visible to load (deleting
+        // it set a history cutoff, and any newer message would have put it
+        // back in the list), so only the id and the room are missing.
+        if (!currentConversationId.current && roomParticipants.length > 0) {
+            const result = await findConversationId(roomParticipants.map(p => p._id!));
+            // Another chat was opened (or this one left) while the lookup
+            // was in flight, or a first message already supplied the id.
+            if (openSequence !== openSequenceRef.current || currentConversationId.current) return;
+            if (result.success && result.conversationId) adoptConversationId(result.conversationId);
+        }
+    }, [socket, userEmail, findConversationByExactParticipants, initialConversations, conversationsForBar, updateChatRef, setMobileChatsSidebarOpen, setMobileUsersSidebarOpen, pendingClearsRef, stopLocalTyping, adoptConversationId]);
+
+    // Some features (calls, disappearing messages) need a real conversation
+    // id to scope themselves to, but a brand-new chat has none yet - no
+    // Conversation document exists until the first message is sent (see
+    // ConversationRepository.GetOrCreateConversationByMembers, used the same
+    // way by MessageRepository.SaveMessage). This creates that document on
+    // demand, the same lazy creation the first message send already does,
+    // so those features work before any message has ever been sent.
+    const ensureConversationId = useCallback(async (): Promise<string> => {
+        if (currentConversationId.current) return currentConversationId.current;
+        if (!participants.current?.length) return "";
+
+        const openSequence = openSequenceRef.current;
+        const result = await getOrCreateConversationId(participants.current.map(p => p._id!));
+        if (!result.success || !result.conversationId) return "";
+        // The id belongs to the chat this was asked for - if another one has
+        // been opened since, it must not be applied to that one.
+        if (openSequence !== openSequenceRef.current) return "";
+
+        // The open-time lookup may have found it first; it's the same
+        // conversation either way.
+        if (!currentConversationId.current) adoptConversationId(result.conversationId);
+        return currentConversationId.current;
+    }, [adoptConversationId]);
 
     const handleLeaveRoom = useCallback(async () => {
+        openSequenceRef.current++;
+        stopLocalTyping();
         socket?.emit('leave room', { conversationId: currentConversationId.current });
         currentConversationId.current = "";
         updateChatRef([]);
         participants.current = null;
         setFirstUnreadMessageId(undefined);
-    }, [socket, updateChatRef]);
+    }, [socket, updateChatRef, stopLocalTyping]);
 
     // Persist the in-progress draft for whichever conversation is open right
     // now on every change - including it being cleared after a send, which
@@ -232,6 +325,7 @@ export const useChatRoom = ({
         currentConversationId,
         participants,
         getLastMessages,
+        ensureConversationId,
         handleLeaveRoom,
         handleTyping,
         isLocalTypingRef,

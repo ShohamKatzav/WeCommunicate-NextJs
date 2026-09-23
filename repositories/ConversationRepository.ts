@@ -16,12 +16,32 @@ export default class ConversationRepository {
         }
     }
 
+    private static sortMemberIDs(members: Types.ObjectId[]) {
+        return members
+            .map(id => id.toString())
+            .sort()
+            .map(id => new Types.ObjectId(id));
+    }
+
+    // The read-only half of GetOrCreateConversationByMembers: the same
+    // sorted exact-members match, so it finds the very document a first
+    // message would be written to - including one the caller deleted
+    // (deletedBy only hides it from their list; it's the same conversation).
+    static async FindConversationIdByMembers(members: Types.ObjectId[]): Promise<string | null> {
+        try {
+            const conversation = await Conversation.findOne({ members: this.sortMemberIDs(members) })
+                .select('_id')
+                .lean<{ _id: Types.ObjectId }>();
+            return conversation ? conversation._id.toString() : null;
+        } catch (error) {
+            console.error('Error in FindConversationIdByMembers:', error);
+            throw new Error('Unable to find conversation');
+        }
+    }
+
     static async GetOrCreateConversationByMembers(members: Types.ObjectId[]) {
         try {
-            const sortedMemberIDs = members
-                .map(id => id.toString())
-                .sort()
-                .map(id => new Types.ObjectId(id));
+            const sortedMemberIDs = this.sortMemberIDs(members);
 
             let conversation = await Conversation.findOneAndUpdate(
                 { members: sortedMemberIDs },

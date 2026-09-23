@@ -6,6 +6,7 @@ import connectDB from "@/app/lib/MongoDb";
 import ConversationRepository from "@/repositories/ConversationRepository";
 import { getUsernames } from '@/app/lib/accountActions';
 import { getBlockedUserIds } from '@/app/lib/blockActions';
+import { getIceServers } from '@/app/lib/iceServers';
 import User from '@/types/user';
 import jwt from 'jsonwebtoken';
 import ChatClient from './chatClient';
@@ -22,6 +23,7 @@ export default async function ChatPage() {
             initialUsers={initialUsers}
             initialConversationsWithMessages={initialConversationsWithMessages}
             initialBlockedUserIds={blockedResult.blockedIds}
+            iceServers={getIceServers()}
         />
     );
 }

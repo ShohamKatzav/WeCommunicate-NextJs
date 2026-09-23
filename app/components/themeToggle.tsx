@@ -53,7 +53,7 @@ export default function ThemeToggle({ variant = "icon", className = "" }: ThemeT
     const CurrentIcon = current.Icon;
 
     return (
-        <div className={`relative ${className}`} ref={containerRef}>
+        <div className={`relative ${open ? "z-50" : ""} ${className}`} ref={containerRef}>
             <button
                 type="button"
                 onClick={() => setOpen(prev => !prev)}
@@ -86,6 +86,14 @@ export default function ThemeToggle({ variant = "icon", className = "" }: ThemeT
                         variant === "icon"
                             ? "absolute right-0 top-full mt-2 w-40 overflow-hidden rounded-md border border-border bg-card py-1 shadow-lg z-50"
                             // Absolutely positioned (like the icon variant) rather than
+                            // in-flow: an in-flow menu grows the mobile overlay's flex
+                            // column and pushes the rows under it (profile, log out)
+                            // down every time it opens. Centered on the trigger and
+                            // wider than that label so it actually covers those rows
+                            // instead of letting their text stick out on both sides.
+                            // z-50 on this menu and on the open container paints it
+                            // over them; bg-card is opaque so they stay hidden.
+                            : "absolute left-1/2 top-full z-50 mt-1 w-48 -translate-x-1/2 overflow-hidden rounded-md border border-border bg-card py-1 shadow-lg"
                             // in-flow: an in-flow menu here used to grow the mobile
                             // overlay's flex column, pushing profile/log out further
                             // down every time it opened. Anchoring it to exactly the

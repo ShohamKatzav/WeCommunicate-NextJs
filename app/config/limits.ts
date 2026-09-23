@@ -68,3 +68,15 @@ export const DISAPPEARING_MESSAGES_OPTIONS = [
     { label: '24 hours', seconds: 24 * 60 * 60 },
     { label: '7 days', seconds: 7 * 24 * 60 * 60 },
 ] as const;
+
+// Typing indicator timing, shared by the sender (useChatRoom.tsx) and the
+// receiver (useSocketEvents.tsx). The sender sends 'stop typing' after
+// TYPING_IDLE_MS without a keystroke, and repeats 'start typing' at most
+// every TYPING_REFRESH_MS while keys keep coming. A receiver drops an
+// indicator it hasn't heard about for TYPING_EXPIRE_MS - long enough to ride
+// out a missed refresh, and the backstop for a sender that vanishes without
+// any stop at all (a phone losing signal is only noticed by the server at
+// its ping timeout, ~45s later).
+export const TYPING_IDLE_MS = 3000;
+export const TYPING_REFRESH_MS = 3000;
+export const TYPING_EXPIRE_MS = 8000;

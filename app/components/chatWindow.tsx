@@ -6,7 +6,7 @@ import MoreMessagesLoader from "./moreMessagesLoader";
 import OfflineOutbox from "./offlineOutbox";
 import ChatUser from "@/types/chatUser";
 import { HiOutlineChatBubbleLeftRight } from "react-icons/hi2";
-import { accentForSender, buildAccentBySender } from "../utils/accentColor";
+import { accentForSender, accentsForReceivedBubbles } from "../utils/accentColor";
 
 interface ChatWindowProps {
     messages: Message[];
@@ -27,7 +27,7 @@ const ChatWindow = ({ messages, participants, isMobile, onReply, conversationId,
     // ever land on the unread divider instead of the bottom.
     const previousConversationId = useRef<string>("");
 
-    const accentBySender = buildAccentBySender(participants.current);
+    const accentBySender = accentsForReceivedBubbles(participants.current);
 
     const handleScroll = () => {
         const el = chatBox.current;

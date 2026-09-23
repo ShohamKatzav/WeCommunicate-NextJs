@@ -24,6 +24,8 @@ customTest.describe('Block a user', () => {
 
         await chat.blockUser(blockedUser);
         await expect(chat.blockedComposerNotice).toBeVisible();
+        await expect(chat.startVoiceCallButton).toHaveCount(0);
+        await expect(chat.startVideoCallButton).toHaveCount(0);
         await chat.messageInput.fill(`should-not-send-${Date.now()}`);
         await expect(chat.sendMessageButton).toBeDisabled();
 
