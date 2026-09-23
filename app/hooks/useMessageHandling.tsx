@@ -19,7 +19,7 @@ interface UseMessageHandlingProps {
     setChat: (messages: Message[]) => void;
     messageToSend: Message;
     setMessageToSend: React.Dispatch<React.SetStateAction<Message>>;
-    updateConversationsBar: (message: Message | null, mode?: string, cleanId?: string) => Promise<void>;
+    updateConversationsBar: (message: Message | null, mode?: string, cleanId?: string, knownMembers?: ChatUser[]) => Promise<void>;
     pendingClearsRef: React.RefObject<PendingClears>;
 }
 
@@ -94,12 +94,23 @@ export const useMessageHandling = ({
 
         tempMessage._id = messageDoc._id;
         let newConversationId;
+        // This save just gave the open chat its conversation - its members
+        // are already known here, so the sidebar can show it right away
+        // instead of waiting on a members lookup that fails if the
+        // connection drops in the meantime.
+        let newConversationMembers: ChatUser[] | undefined;
 
         if (!currentConversationId.current) {
             newConversationId = messageDoc?.conversation;
             currentConversationId.current = newConversationId;
+            newConversationMembers = participants.current ?? undefined;
             socket?.emit('join room', { conversationId: newConversationId });
-            await revalidateChatRoute();
+            // Not awaited: publishing and the sidebar update below don't
+            // depend on it, and a connection lost by now would make it throw
+            // and skip both.
+            revalidateChatRoute().catch(() => {
+                // Offline - the route is refreshed on the next navigation anyway.
+            });
         }
 
         const messageToEmit = {
@@ -115,9 +126,9 @@ export const useMessageHandling = ({
                 conversationID: currentConversationId.current || newConversationId
             };
 
-            updateConversationsBar(finalMessage);
+            updateConversationsBar(finalMessage, "", undefined, newConversationMembers);
         }
-    }, [socket, currentConversationId, chatRef, setChat, updateConversationsBar, pendingClearsRef]);
+    }, [socket, currentConversationId, participants, chatRef, setChat, updateConversationsBar, pendingClearsRef]);
 
     // `overrideFile` lets a caller send a file that was only just produced
     // (e.g. voiceRecorder.tsx, right after its upload finishes) without

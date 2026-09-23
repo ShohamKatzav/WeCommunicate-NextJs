@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Message from '@/types/message';
 import Conversation from '@/types/conversation';
+import ChatUser from '@/types/chatUser';
 import { getConversationMembers } from '@/app/lib/chatActions';
 import { PendingClears } from './usePendingCleanHistory';
 
@@ -122,7 +123,12 @@ export const useConversationsManager = ({
     const updateConversationsBar = useCallback(async (
         message: Message | null,
         mode: string = "",
-        cleanId?: string
+        cleanId?: string,
+        // The other members of a conversation this client just created
+        // (see useMessageHandling's handleServerSavedMessageResponse) - lets
+        // its row appear immediately instead of only after the members
+        // lookup below, which never happens if the connection drops first.
+        knownMembers?: ChatUser[]
     ) => {
         if (mode === "Clean" && cleanId) {
             setConversationsForBar(prev => {
@@ -180,6 +186,15 @@ export const useConversationsManager = ({
                 return updatedConversations;
             });
             return;
+        }
+
+        // New conversation this client created - show it now with the
+        // members it already knows; the lookup below still refreshes them
+        // (full profiles, this user's own entry) once it succeeds.
+        if (knownMembers?.length) {
+            setConversationsForBar(prev => prev.some(c => c._id === conversationId)
+                ? prev
+                : [{ _id: conversationId, members: knownMembers, messages: [message] }, ...prev]);
         }
 
         // New conversation - fetch members before adding to UI.
