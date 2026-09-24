@@ -7,6 +7,7 @@ import Conversation from "@/types/conversation";
 import Message from "@/types/message";
 import MessageSearchResult from "@/types/messageSearchResult";
 import { AsShortName } from "../../utils/stringFormat";
+import { callRecordSummary } from "../../utils/callRecord";
 import Avatar from "../ui/avatar";
 
 interface ConversationConversationSummaryProps {
@@ -169,6 +170,8 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                             </div>
                             <div className="text-sm text-muted-foreground break-all col-span-2">{lastMessage.status?.includes("revoked")
                                 ? "Message deleted"
+                                : lastMessage.call
+                                    ? callRecordSummary(lastMessage.call, lastMessage.sender?.toLowerCase() === user?.email?.toLowerCase())
                                 : (lastMessage.text
                                     || (lastMessage.location
                                         ? "Shared a location"

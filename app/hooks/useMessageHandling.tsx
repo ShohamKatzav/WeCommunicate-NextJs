@@ -65,6 +65,29 @@ export const useMessageHandling = ({
         updateConversationsBar(data);
     }, [userEmail, currentConversationId, chatRef, setChat, updateConversationsBar, socket, pendingClearsRef]);
 
+    // A call's history entry, written by the server when the call ends (see
+    // recordCall in socket/handlers.ts) and sent to both sides - unlike a
+    // message, the caller's own copy arrives this way too, since no tab of
+    // theirs added it optimistically.
+    const handleCallRecord = useCallback((data: Message) => {
+        if (!data?._id || !data.call || !data.conversationID) return;
+        const cutoff = pendingClearsRef.current[data.conversationID];
+        if (isAtOrBeforeCutoff(data.date, cutoff)) return;
+
+        if (data.conversationID.toUpperCase() === currentConversationId.current.toUpperCase()) {
+            if (!chatRef.current.some(msg => msg._id === data._id)) {
+                setChat([...chatRef.current, data].sort((a: Message, b: Message) =>
+                    new Date(a.date!).getTime() - new Date(b.date!).getTime()
+                ));
+            }
+            // A missed call in the conversation that's already open has been
+            // seen - same as an incoming message.
+            if (data.status !== 'read') socket?.emit('message read', { conversationId: data.conversationID });
+        }
+
+        updateConversationsBar(data);
+    }, [currentConversationId, chatRef, setChat, updateConversationsBar, socket, pendingClearsRef]);
+
     const handleServerSavedMessageResponse = useCallback(async (savedMessage: any, tempId: string) => {
         const tempMessage = chatRef.current.find(
             msg => msg._id?.toUpperCase() === tempId.toUpperCase()
@@ -240,6 +263,7 @@ export const useMessageHandling = ({
 
     return {
         handleIncomingMessage,
+        handleCallRecord,
         handleServerSavedMessageResponse,
         handleSendMessage,
     };

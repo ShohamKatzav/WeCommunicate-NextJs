@@ -17,6 +17,7 @@ import FullscreenMediaViewer from './fullscreenMediaViewer';
 import AudioPlayer from './audioPlayer';
 import LocationBubble from './locationBubble';
 import FullscreenLocationViewer from './fullscreenLocationViewer';
+import CallRecordRow from './callRecordRow';
 import { AsShortName } from "../../utils/stringFormat";
 import { linkifyText } from "../../utils/linkify";
 import { DEFAULT_ACCENT_COLOR, MESSAGE_REACTIONS } from "../../config/limits";
@@ -210,6 +211,16 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
   const handleRowMouseLeave = () => {
     if (!isMobile) setHover(false);
   };
+
+  if (message.call) {
+    return (
+      <CallRecordRow
+        call={message.call}
+        isCaller={message.sender?.toLowerCase() === user?.email?.toLowerCase()}
+        date={message.date}
+      />
+    );
+  }
 
   if (deleted) {
     const deletedMessageText = isOwnMessage ? 'You deleted this message' :

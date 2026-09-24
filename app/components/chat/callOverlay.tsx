@@ -6,6 +6,7 @@ import { AsShortName } from '../../utils/stringFormat';
 import { CallController, CallSnapshot } from '../../lib/callController';
 import useMediaDeviceAvailability from '../../hooks/useMediaDeviceAvailability';
 import { unavailableDevicesReason } from '../../lib/mediaDeviceError';
+import { formatCallDuration } from '../../utils/callRecord';
 
 interface CallOverlayProps {
     call: CallSnapshot;
@@ -51,14 +52,6 @@ const useElapsedSeconds = (connectedAt: number | null, running: boolean) => {
         return () => clearInterval(interval);
     }, [connectedAt, running]);
     return connectedAt ? Math.max(0, Math.floor((now - connectedAt) / 1000)) : 0;
-};
-
-const formatDuration = (totalSeconds: number) => {
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    const mmss = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    return hours > 0 ? `${hours}:${mmss}` : mmss;
 };
 
 const FOCUS_RING = 'outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900';
@@ -163,7 +156,7 @@ const CallOverlay = ({ call, controller }: CallOverlayProps) => {
     const statusText = {
         outgoing: 'Ringing…',
         connecting: 'Connecting…',
-        connected: formatDuration(elapsed),
+        connected: formatCallDuration(elapsed),
         reconnecting: 'Reconnecting…',
         failed: call.message || 'Call failed',
         ended: call.message || 'Call ended',

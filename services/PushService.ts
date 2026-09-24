@@ -13,12 +13,47 @@ export interface PushPayload {
     title: string;
     body: string;
     icon?: string;
+    // Picks the notification style in the service worker's push handler
+    // (public/service-worker.js) and the delivery options below.
+    kind?: 'message' | 'call' | 'missed-call' | 'call-handled';
 }
+
+interface SendOptions {
+    // The device that caused this push (e.g. answered the call) - it
+    // already knows.
+    exceptEndpoint?: string;
+}
+
+// All the call kinds share a Topic, so a push service still holding an
+// undelivered ring (a phone in Doze) swaps it for whatever replaced it
+// instead of delivering both.
+const CALL_TOPIC = 'incoming-call';
+
+const DELIVERY_OPTIONS: Partial<Record<NonNullable<PushPayload['kind']>, webpush.RequestOptions>> = {
+    call: {
+        // Matches CALL_RING_TIMEOUT_MS - a ring that can't be delivered
+        // while the call is still ringing is dropped rather than arriving late.
+        TTL: 30,
+        // High urgency is what lets the push service wake a dozing phone
+        // right away (FCM high priority on Android).
+        urgency: 'high',
+        topic: CALL_TOPIC,
+    },
+    'missed-call': {
+        TTL: 24 * 60 * 60,
+        topic: CALL_TOPIC,
+    },
+    // Only replaces a ring - pointless once any ring would have expired.
+    'call-handled': {
+        TTL: 60,
+        topic: CALL_TOPIC,
+    },
+};
 
 // Delivery only - callers decide who may notify whom. Kept out of
 // app/lib/pushActions.ts because every export of a 'use server' file is a
 // client-callable action, and this takes arbitrary recipient emails.
-export async function sendPushToEmails(emails: string[], payload: PushPayload): Promise<number> {
+export async function sendPushToEmails(emails: string[], payload: PushPayload, { exceptEndpoint }: SendOptions = {}): Promise<number> {
     await connectDB();
     // Both Account.email and PushSubscription.email are always stored
     // lowercased already, so a plain $in match is correct - no need to
@@ -32,12 +67,15 @@ export async function sendPushToEmails(emails: string[], payload: PushPayload): 
         email: { $in: normalized }
     }).lean() as unknown as IPushSubscription[];
 
+    const options = payload.kind ? DELIVERY_OPTIONS[payload.kind] : undefined;
     let successCount = 0;
     for (const sub of subscriptions) {
+        if (exceptEndpoint && (sub.data as { endpoint?: string }).endpoint === exceptEndpoint) continue;
         try {
             await webpush.sendNotification(
                 sub.data as webpush.PushSubscription,
-                JSON.stringify({ icon: '/icon.png', ...payload })
+                JSON.stringify({ icon: '/icon.png', ...payload }),
+                options
             );
             successCount++;
         } catch (error: any) {

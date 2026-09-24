@@ -1,5 +1,6 @@
 import { Document, Schema, models, model } from 'mongoose';
 import { MAX_MESSAGE_LENGTH } from '@/app/config/limits';
+import MessageCall, { CALL_OUTCOMES } from '@/types/messageCall';
 
 interface IReplyTo {
     messageId: Schema.Types.ObjectId;
@@ -28,6 +29,7 @@ interface IMessage extends Document {
     reactions?: IMessageReaction[];
     conversation: Schema.Types.ObjectId;
     replyTo?: IReplyTo;
+    call?: MessageCall;
     expiresAt?: Date;
 }
 
@@ -96,6 +98,18 @@ const MessageSchema = new Schema<IMessage>({
             sender: { type: String, required: true },
             snippet: { type: String, required: false },
             hasFile: { type: Boolean, required: false, default: false }
+        },
+        required: false,
+        _id: false
+    },
+    // A call-history entry - only ever written by the socket server when a
+    // call ends (recordCall in socket/handlers.ts), never by saveMessage, so
+    // a client can't fake one.
+    call: {
+        type: {
+            video: { type: Boolean, required: true },
+            outcome: { type: String, enum: CALL_OUTCOMES, required: true },
+            durationSeconds: { type: Number, required: true, min: 0, default: 0 }
         },
         required: false,
         _id: false

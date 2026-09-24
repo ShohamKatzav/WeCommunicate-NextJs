@@ -12,6 +12,7 @@ interface UseSocketEventsProps {
     loadingSocket: boolean;
     userEmail?: string;
     handleIncomingMessage: (data: Message) => void;
+    handleCallRecord: (data: Message) => void;
     setChat: (messages: Message[]) => void;
     chatRef: React.RefObject<Message[]>;
     isLocalTypingRef: React.RefObject<boolean>;
@@ -23,6 +24,7 @@ export const useSocketEvents = ({
     loadingSocket,
     userEmail,
     handleIncomingMessage,
+    handleCallRecord,
     setChat,
     chatRef,
     isLocalTypingRef,
@@ -158,11 +160,13 @@ export const useSocketEvents = ({
         if (!socket || loadingSocket) return;
 
         socket.on("publish message", handleIncomingMessage);
+        socket.on("call record", handleCallRecord);
 
         return () => {
             socket.off("publish message", handleIncomingMessage);
+            socket.off("call record", handleCallRecord);
         };
-    }, [socket, loadingSocket, handleIncomingMessage]);
+    }, [socket, loadingSocket, handleIncomingMessage, handleCallRecord]);
 
     // Message deletion
     useEffect(() => {

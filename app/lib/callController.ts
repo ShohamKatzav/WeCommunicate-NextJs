@@ -1,6 +1,7 @@
 import { Socket } from 'socket.io-client';
 import type { IceServerConfig } from './iceServers';
 import { describeMediaError } from './mediaDeviceError';
+import { closeIncomingCallNotifications, getOwnPushEndpoint, refreshOwnPushEndpoint, takePendingAnswer } from './callNotifications';
 
 // Client side of 1:1 calls. Media is a single RTCPeerConnection between the
 // two browsers; the socket only carries the ringing events and the SDP/ICE
@@ -65,6 +66,7 @@ interface CallIds {
 interface InvitePayload extends CallIds {
     video: boolean;
     from: string;
+    fromName?: string;
 }
 
 interface EndPayload extends CallIds {
@@ -326,7 +328,11 @@ export class CallController {
         // handleSignal), so they reuse the offer's transceivers instead of
         // both sides offering at once.
         this.createPeerConnection(session);
-        this.socket.emit('call accept', { callId: session.callId, conversationId: session.conversationId });
+        this.socket.emit('call accept', {
+            callId: session.callId,
+            conversationId: session.conversationId,
+            pushEndpoint: getOwnPushEndpoint(),
+        });
         this.setSessionTimer(session, () => this.failConnect(session), CONNECT_TIMEOUT_MS);
 
         if (this.hooks.getCurrentConversationId() !== session.conversationId) {
@@ -487,8 +493,12 @@ export class CallController {
         // call - this only guards against the two disagreeing.
         if (this.session || this.starting) return;
         this.clearEndedTimer();
+        refreshOwnPushEndpoint();
 
-        const peer = this.hooks.resolvePeer(data.from);
+        const known = this.hooks.resolvePeer(data.from);
+        // Someone this page has no data on yet (a brand-new chat) still gets
+        // a name instead of an email prefix.
+        const peer = known.nickname || !data.fromName ? known : { ...known, nickname: data.fromName };
         const session = this.createSession({
             callId: data.callId,
             conversationId: data.conversationId,
@@ -504,8 +514,12 @@ export class CallController {
             conversationId: data.conversationId,
             video: session.video,
         });
-        this.startRing();
         this.setSessionTimer(session, () => this.finish('ended', END_MESSAGES.missed, null), RING_TIMEOUT_MS);
+        if (takePendingAnswer(data.callId)) {
+            void this.accept();
+            return;
+        }
+        this.startRing();
     };
 
     private onAccept = (data: CallIds) => {
@@ -850,6 +864,7 @@ export class CallController {
                 conversationId: session.conversationId,
                 // Lets the other side show the failed state (with retry) too.
                 ...(next === 'failed' ? { reason: 'failed' } : {}),
+                ...(notify === 'call decline' ? { pushEndpoint: getOwnPushEndpoint() } : {}),
             });
         }
         this.stopRing();
@@ -941,5 +956,6 @@ export class CallController {
 
     private stopRing() {
         this.ring?.pause();
+        closeIncomingCallNotifications();
     }
 }
