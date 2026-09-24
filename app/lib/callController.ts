@@ -293,17 +293,21 @@ export class CallController {
         this.setSessionTimer(session, () => this.finish('ended', END_MESSAGES['no-answer'], 'call cancel'), RING_TIMEOUT_MS);
     }
 
-    async accept() {
+    async accept(options?: { video?: boolean }) {
         const session = this.session;
         if (!session || session.direction !== 'incoming' || this.snapshot.status !== 'incoming') return;
         this.stopRing();
         this.clearSessionTimers(session);
 
+        // A video invite can be answered with the microphone only when this
+        // device has no camera. The caller's video still arrives; we just
+        // never open a camera here.
+        const withVideo = session.video && options?.video !== false;
         let stream: MediaStream;
         try {
-            stream = await getMedia(true, session.video);
+            stream = await getMedia(true, withVideo);
         } catch (error) {
-            this.hooks.onError(await describeMediaError(error, { audio: true, video: session.video }));
+            this.hooks.onError(await describeMediaError(error, { audio: true, video: withVideo }));
             // Never leave a half-open call - the caller hears a decline.
             if (this.session === session) this.finish('idle', null, 'call decline');
             return;
@@ -316,11 +320,11 @@ export class CallController {
         }
 
         session.localStream = stream;
-        this.lastCall = { peer: session.peer, conversationId: session.conversationId, video: session.video };
+        this.lastCall = { peer: session.peer, conversationId: session.conversationId, video: withVideo };
         this.update({
             status: 'connecting',
             localStream: stream,
-            cameraOn: session.video,
+            cameraOn: withVideo,
         });
         this.refreshCameraCount();
 
@@ -515,8 +519,9 @@ export class CallController {
             video: session.video,
         });
         this.setSessionTimer(session, () => this.finish('ended', END_MESSAGES.missed, null), RING_TIMEOUT_MS);
-        if (takePendingAnswer(data.callId)) {
-            void this.accept();
+        const pending = takePendingAnswer(data.callId);
+        if (pending) {
+            void this.accept(pending.voiceOnly ? { video: false } : undefined);
             return;
         }
         this.startRing();

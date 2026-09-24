@@ -7,6 +7,8 @@ import Avatar from '../ui/avatar';
 import { useSocket } from '../../hooks/useSocket';
 import { AsShortName } from '../../utils/stringFormat';
 import { answerOnArrival, closeIncomingCallNotifications, getOwnPushEndpoint, refreshOwnPushEndpoint } from '../../lib/callNotifications';
+import useMediaDeviceAvailability from '../../hooks/useMediaDeviceAvailability';
+import { unavailableDevicesReason } from '../../lib/mediaDeviceError';
 
 interface Invite {
     callId: string;
@@ -38,6 +40,7 @@ const IncomingCallNotice = () => {
     const { socket } = useSocket();
     const pathname = usePathname();
     const router = useRouter();
+    const devices = useMediaDeviceAvailability();
     const [invite, setInvite] = useState<Invite | null>(null);
     // Read by socket listeners, which outlive any one render.
     const inviteRef = useRef<Invite | null>(null);
@@ -117,12 +120,19 @@ const IncomingCallNotice = () => {
         closeIncomingCallNotifications();
     };
 
-    const answer = () => {
+    const answer = (voiceOnly = false) => {
         clear();
         closeIncomingCallNotifications();
-        answerOnArrival(invite.callId);
+        answerOnArrival(invite.callId, voiceOnly);
         router.push('/chat');
     };
+
+    // Same rules as CallOverlay's incoming card: a video call can still be
+    // answered without a camera, but nothing can be answered without a
+    // microphone - Answer would open the chat only for the call to fail
+    // and auto-decline there.
+    const voiceOnly = invite.video && !devices.hasCamera && devices.hasMicrophone;
+    const unavailableReason = voiceOnly ? null : unavailableDevicesReason({ audio: true, video: invite.video }, devices);
 
     return (
         <div
@@ -145,6 +155,16 @@ const IncomingCallNotice = () => {
                     </p>
                 </div>
             </div>
+            {voiceOnly && (
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                    No camera was found on this device. You can answer with voice only.
+                </p>
+            )}
+            {unavailableReason && (
+                <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+                    {unavailableReason}. You can still decline.
+                </p>
+            )}
             <div className="mt-4 flex gap-3">
                 <button
                     type="button"
@@ -155,15 +175,28 @@ const IncomingCallNotice = () => {
                     <PhoneOff size={18} aria-hidden="true" />
                     Decline
                 </button>
-                <button
-                    type="button"
-                    onClick={answer}
-                    aria-label={`Answer ${kind} call from ${name}`}
-                    className={`flex flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-green-700 ${FOCUS_RING}`}
-                >
-                    {invite.video ? <Video size={18} aria-hidden="true" /> : <Phone size={18} aria-hidden="true" />}
-                    Answer
-                </button>
+                {voiceOnly ? (
+                    <button
+                        type="button"
+                        onClick={() => answer(true)}
+                        aria-label={`Answer voice only, no camera, from ${name}`}
+                        className={`flex flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-green-700 ${FOCUS_RING}`}
+                    >
+                        <Phone size={18} aria-hidden="true" />
+                        Voice only
+                    </button>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={() => answer(false)}
+                        disabled={!!unavailableReason}
+                        aria-label={unavailableReason ? `Can't answer: ${unavailableReason.charAt(0).toLowerCase()}${unavailableReason.slice(1)}` : `Answer ${kind} call from ${name}`}
+                        className={`flex flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-green-600 ${FOCUS_RING}`}
+                    >
+                        {invite.video ? <Video size={18} aria-hidden="true" /> : <Phone size={18} aria-hidden="true" />}
+                        Answer
+                    </button>
+                )}
             </div>
         </div>
     );

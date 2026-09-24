@@ -19,6 +19,7 @@ import ConversationsBar from '../components/chat/conversationsBar';
 import ChatHeader from '../components/chat/chatHeader';
 import UsersList from '../components/people/usersList';
 import PushNotificationManager from '../components/offline/pushNotificationManager';
+import SamsungNotificationGuide from '../components/offline/samsungNotificationGuide';
 import CallOverlay from '../components/chat/callOverlay';
 import { useCall } from '../hooks/useCall';
 import { CallPeer } from '../lib/callController';
@@ -369,6 +370,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
     return (
         <div className="viewport-between-bars flex overflow-hidden bg-linear-to-br bg-white dark:from-gray-900 dark:to-gray-800">
             <PushNotificationManager />
+            <SamsungNotificationGuide />
 
             <ConversationsBar
                 isMobileChatsSidebarOpen={isMobileChatsSidebarOpen}
