@@ -5,7 +5,6 @@ import { useUser } from "../hooks/useUser";
 import SocketContext from "./socketContext";
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { deleteUserCoockie } from "../lib/cookieActions";
 
 type SocketProviderProps = {
     children: ReactNode;
@@ -46,10 +45,9 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
                     setLoadingSocket(false);
                 });
                 newSocket.on("banned", async (data) => {
-                    updateUser(null);
                     setSocket(null);
                     newSocket.disconnect();
-                    await deleteUserCoockie();
+                    await updateUser(null);
                     router.push('/login');
                     setLoadingSocket(false);
                     toast.error(

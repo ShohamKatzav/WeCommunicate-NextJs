@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from 'next/navigation';
 import { LogOut, Menu, X } from "lucide-react";
-import { deleteUserCoockie } from '../../lib/cookieActions';
 import { useUser } from "../../hooks/useUser";
 import { useSocket } from "../../hooks/useSocket";
 import { AsShortName } from "../../utils/stringFormat";
@@ -57,11 +56,10 @@ const Navbar = () => {
 
   const handleLogOut = async () => {
     try {
-      updateUser(null);
       if (socket?.connected) {
         socket.disconnect();
       }
-      await deleteUserCoockie();
+      await updateUser(null);
 
       // Clear service worker cache
       if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
