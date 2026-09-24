@@ -34,15 +34,16 @@ export const getOwnPushEndpoint = () => ownPushEndpoint;
 // chat, whose CallController picks the call up with 'call sync' and answers
 // it straight away instead of making the user tap Accept a second time.
 const ANSWER_HANDOFF_MS = 20_000;
-let pendingAnswer: { callId: string; at: number } | null = null;
+let pendingAnswer: { callId: string; at: number; voiceOnly: boolean } | null = null;
 
-export function answerOnArrival(callId: string) {
-    pendingAnswer = { callId, at: Date.now() };
+export function answerOnArrival(callId: string, voiceOnly = false) {
+    pendingAnswer = { callId, at: Date.now(), voiceOnly };
 }
 
-export function takePendingAnswer(callId: string) {
+export function takePendingAnswer(callId: string): { voiceOnly: boolean } | null {
     const pending = pendingAnswer;
-    if (!pending || pending.callId !== callId) return false;
+    if (!pending || pending.callId !== callId) return null;
     pendingAnswer = null;
-    return Date.now() - pending.at < ANSWER_HANDOFF_MS;
+    if (Date.now() - pending.at >= ANSWER_HANDOFF_MS) return null;
+    return { voiceOnly: pending.voiceOnly };
 }

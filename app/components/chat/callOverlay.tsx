@@ -94,6 +94,9 @@ const CallOverlay = ({ call, controller }: CallOverlayProps) => {
     const name = call.peer.nickname || AsShortName(call.peer.email);
     const kind = call.video ? 'video' : 'voice';
     const unavailableReason = unavailableDevicesReason({ audio: true, video: call.video }, devices);
+    // A video call with a microphone but no camera can still be answered;
+    // only a missing microphone leaves decline as the only action.
+    const voiceOnly = call.video && !devices.hasCamera && devices.hasMicrophone;
 
     if (call.status === 'incoming') {
         return (
@@ -119,9 +122,14 @@ const CallOverlay = ({ call, controller }: CallOverlayProps) => {
                         </p>
                     </div>
                 </div>
-                {unavailableReason && (
-                    <p className="mt-2 text-xs text-red-600 dark:text-red-400">
-                        {unavailableReason} - you can still decline.
+                {voiceOnly && (
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                        No camera was found on this device. You can answer with voice only.
+                    </p>
+                )}
+                {unavailableReason && !voiceOnly && (
+                    <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+                        {unavailableReason}. You can still decline.
                     </p>
                 )}
                 <div className="mt-4 flex gap-3">
@@ -134,16 +142,28 @@ const CallOverlay = ({ call, controller }: CallOverlayProps) => {
                         <PhoneOff size={18} aria-hidden="true" />
                         Decline
                     </button>
-                    <button
-                        type="button"
-                        onClick={() => controller.accept()}
-                        disabled={!!unavailableReason}
-                        aria-label={unavailableReason ? `Can't accept: ${unavailableReason.charAt(0).toLowerCase()}${unavailableReason.slice(1)}` : `Accept ${kind} call from ${name}`}
-                        className={`flex flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-green-600 ${FOCUS_RING} dark:focus-visible:ring-offset-gray-800 focus-visible:ring-offset-white`}
-                    >
-                        {call.video ? <Video size={18} aria-hidden="true" /> : <Phone size={18} aria-hidden="true" />}
-                        Accept
-                    </button>
+                    {voiceOnly ? (
+                        <button
+                            type="button"
+                            onClick={() => controller.accept({ video: false })}
+                            aria-label={`Answer voice only, no camera, from ${name}`}
+                            className={`flex flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-green-700 ${FOCUS_RING} dark:focus-visible:ring-offset-gray-800 focus-visible:ring-offset-white`}
+                        >
+                            <Phone size={18} aria-hidden="true" />
+                            Voice only
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => controller.accept()}
+                            disabled={!!unavailableReason}
+                            aria-label={unavailableReason ? `Can't accept: ${unavailableReason.charAt(0).toLowerCase()}${unavailableReason.slice(1)}` : `Accept ${kind} call from ${name}`}
+                            className={`flex flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-green-600 ${FOCUS_RING} dark:focus-visible:ring-offset-gray-800 focus-visible:ring-offset-white`}
+                        >
+                            {call.video ? <Video size={18} aria-hidden="true" /> : <Phone size={18} aria-hidden="true" />}
+                            Accept
+                        </button>
+                    )}
                 </div>
             </div>
         );
