@@ -1,10 +1,12 @@
 "use server"
 import { env } from "@/app/config/env";
+import { SESSION_MAX_AGE_SECONDS } from "@/app/config/session";
 import jwt from "jsonwebtoken";
 import connectDB from "@/app/lib/MongoDb";
 import AccountRepository from "@/repositories/AccountRepository";
 import { isExist } from "@/app/lib/accountActions";
 import Message from "@/models/Message";
+import PushSubscription from "@/models/PushSubscription";
 import { extractUserIDFromCoockie } from "@/app/lib/cookieActions";
 import { deleteFile } from "@/app/lib/fileActions";
 import { requestOTP, verifyOTP, deleteOTP } from "@/app/lib/OTPActions";
@@ -353,11 +355,14 @@ export const confirmEmailChange = async (newEmail: string, otp: string) => {
         // Conversation membership is by account id, but message authorship is
         // the email string (socket/handlers.ts compares message.sender to
         // socket.data.email) - without this, this account's prior messages
-        // and any reply snapshot quoting them stop showing as theirs.
+        // and any reply snapshot quoting them stop showing as theirs. Push
+        // subscriptions are keyed the same way, and pushes are sent to the
+        // account's current email.
         if (oldEmail && oldEmail !== normalized) {
             await Promise.all([
                 Message.updateMany({ sender: oldEmail }, { $set: { sender: normalized } }),
-                Message.updateMany({ 'replyTo.sender': oldEmail }, { $set: { 'replyTo.sender': normalized } })
+                Message.updateMany({ 'replyTo.sender': oldEmail }, { $set: { 'replyTo.sender': normalized } }),
+                PushSubscription.updateMany({ email: oldEmail }, { $set: { email: normalized } })
             ]);
         }
 
@@ -369,7 +374,7 @@ export const confirmEmailChange = async (newEmail: string, otp: string) => {
         const token = jwt.sign(
             { _id: account._id.toString(), email: normalized, nickname: account.nickname, isModerator: account.isModerator || false, signInTime: Date.now() },
             env.JWT_SECRET_KEY!,
-            { expiresIn: '7d' }
+            { expiresIn: SESSION_MAX_AGE_SECONDS }
         );
 
         revalidatePath('/profile');

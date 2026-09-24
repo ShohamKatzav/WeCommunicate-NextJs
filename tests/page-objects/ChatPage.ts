@@ -109,6 +109,45 @@ export default class ChatPage {
         await this.page.goto('/chat');
     }
 
+    // Chromium refuses the Push API in Playwright's incognito-style contexts
+    // (see bottom-prompts.spec.ts), so this puts a fake subscription for
+    // `endpoint` behind a granted permission. Its subscribed state lives in
+    // sessionStorage, so later navigations in this tab still see it.
+    async stubGrantedPush(endpoint: string): Promise<void> {
+        await this.page.addInitScript((endpoint) => {
+            if (typeof PushManager === 'undefined') return;
+            const SUBSCRIBED_KEY = 'e2e:push-subscribed';
+            const subscription = {
+                endpoint,
+                expirationTime: null,
+                options: { userVisibleOnly: true, applicationServerKey: null },
+                getKey: () => null,
+                toJSON: () => ({ endpoint, expirationTime: null, keys: { p256dh: 'e2e', auth: 'e2e' } }),
+                unsubscribe: async () => {
+                    sessionStorage.removeItem(SUBSCRIBED_KEY);
+                    return true;
+                },
+            } as unknown as PushSubscription;
+            Object.defineProperty(Notification, 'permission', {
+                configurable: true,
+                get: () => 'granted',
+            });
+            PushManager.prototype.getSubscription = async () =>
+                sessionStorage.getItem(SUBSCRIBED_KEY) ? subscription : null;
+            PushManager.prototype.subscribe = async () => {
+                sessionStorage.setItem(SUBSCRIBED_KEY, '1');
+                return subscription;
+            };
+        }, endpoint);
+    }
+
+    async hasPushSubscription(): Promise<boolean> {
+        return await this.page.evaluate(async () => {
+            const registration = await navigator.serviceWorker.getRegistration();
+            return Boolean(await registration?.pushManager.getSubscription());
+        });
+    }
+
     async navigateToChatPage(): Promise<void> {
         await Promise.all([
             this.page?.waitForURL('**/chat'),

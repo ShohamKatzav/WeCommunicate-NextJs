@@ -68,9 +68,7 @@ customTest.describe('Bottom prompts', () => {
     // the Push API in the incognito-style contexts Playwright always runs in
     // ("Chrome currently does not support the Push API in incognito mode"),
     // so subscribeToPush() always takes its catch branch under automation.
-    // Granting notifications first would also hide the soft-ask (permission
-    // would no longer be "default"), so Enable is clicked from the prompt
-    // state instead. That still covers what this test cares about - Enable
+    // That still covers what this test cares about - Enable
     // never leaves the old persistent green "Notifications Enabled" banner
     // behind, because both success and failure are one-shot toasts now.
     customTest('Enabling notifications never leaves a persistent banner behind', async ({ authPage }) => {

@@ -2,6 +2,8 @@ import webpush from 'web-push'
 import { env } from '@/app/config/env';
 import connectDB from '@/app/lib/MongoDb';
 import PushSubscription, { IPushSubscription } from '@/models/PushSubscription';
+import Account from '@/models/Account';
+import { SESSION_MAX_AGE_SECONDS } from '@/app/config/session';
 
 webpush.setVapidDetails(
     `mailto:${env.SMTP_USER}`,
@@ -50,11 +52,27 @@ const DELIVERY_OPTIONS: Partial<Record<NonNullable<PushPayload['kind']>, webpush
     },
 };
 
+// Rows saved before expiresAt existed. No session alive now can outlast
+// SESSION_MAX_AGE_SECONDS, and a device still in use restamps its row with
+// its session's real expiry on the next app load (syncSubscription).
+let legacyExpiryBackfill: Promise<unknown> | null = null;
+function backfillLegacyExpiry() {
+    legacyExpiryBackfill ??= PushSubscription.updateMany(
+        { expiresAt: { $exists: false } },
+        { $set: { expiresAt: new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000) } }
+    ).catch(error => {
+        legacyExpiryBackfill = null;
+        console.error('Failed to backfill push subscription expiry:', error);
+    });
+    return legacyExpiryBackfill;
+}
+
 // Delivery only - callers decide who may notify whom. Kept out of
 // app/lib/pushActions.ts because every export of a 'use server' file is a
 // client-callable action, and this takes arbitrary recipient emails.
 export async function sendPushToEmails(emails: string[], payload: PushPayload, { exceptEndpoint }: SendOptions = {}): Promise<number> {
     await connectDB();
+    await backfillLegacyExpiry();
     // Both Account.email and PushSubscription.email are always stored
     // lowercased already, so a plain $in match is correct - no need to
     // build a regex out of these values (a regex per-email is also a
@@ -63,8 +81,23 @@ export async function sendPushToEmails(emails: string[], payload: PushPayload, {
     const normalized = emails.flatMap(email => email ? [email.trim().toLowerCase()] : []);
     if (normalized.length === 0) return 0;
 
+    // Checked here rather than by deleting rows when an account is banned,
+    // so every ban path is covered: the 'banned' socket event only logs out
+    // devices connected right now, and a phone with the app closed would
+    // keep being notified. A temp ban that has run out no longer counts,
+    // even before isUserBanned gets around to clearing it.
+    const now = new Date();
+    const banned: string[] = await Account.distinct('email', {
+        email: { $in: normalized },
+        isBanned: true,
+        $or: [{ bannedUntil: null }, { bannedUntil: { $gt: now } }]
+    });
+    const recipients = normalized.filter(email => !banned.includes(email));
+    if (recipients.length === 0) return 0;
+
     const subscriptions = await PushSubscription.find({
-        email: { $in: normalized }
+        email: { $in: recipients },
+        expiresAt: { $gt: now }
     }).lean() as unknown as IPushSubscription[];
 
     const options = payload.kind ? DELIVERY_OPTIONS[payload.kind] : undefined;

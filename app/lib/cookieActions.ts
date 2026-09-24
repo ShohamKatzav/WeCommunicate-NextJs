@@ -1,5 +1,7 @@
 'use server';
 import { env } from '@/app/config/env';
+import { SESSION_MAX_AGE_SECONDS } from '@/app/config/session';
+import PushSubscription from '@/models/PushSubscription';
 import { cookies } from 'next/headers';
 import User from '@/types/user';
 import jwt from 'jsonwebtoken';
@@ -31,7 +33,7 @@ export async function createUserCoockie(data: User): Promise<any> {
     httpOnly: true,
     secure: true,
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: SESSION_MAX_AGE_SECONDS,
     name: 'user',
     value: JSON.stringify({
       email: data.email,
@@ -125,7 +127,19 @@ export async function extractUsersEmailFromCoockie(): Promise<string | null> {
   }
 }
 
-export async function deleteUserCoockie(): Promise<any> {
+// Given this device's push endpoint, it also stops notifying this user on it.
+// Done in the same request because finding their row needs the cookie that's
+// about to go - a separate action first would add a round trip to logout.
+// Best-effort: logging out must never fail on it.
+export async function deleteUserCoockie(pushEndpoint?: string): Promise<any> {
+  if (typeof pushEndpoint === 'string') {
+    try {
+      const email = await extractUsersEmailFromCoockie();
+      if (email) await PushSubscription.deleteOne({ email, 'data.endpoint': pushEndpoint });
+    } catch (error) {
+      console.error("Failed to remove push subscription:", error);
+    }
+  }
   const cookieStore = await cookies();
   // .set('user', "") with none of the original attributes (httpOnly,
   // secure, sameSite, path) can create a distinct cookie rather than

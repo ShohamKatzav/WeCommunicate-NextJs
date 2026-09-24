@@ -1,5 +1,6 @@
 "use server"
 import { env } from '@/app/config/env';
+import { SESSION_MAX_AGE_SECONDS } from '@/app/config/session';
 import connectDB from "@/app/lib/MongoDb";
 import AccountRepository from "@/repositories/AccountRepository";
 import jwt from 'jsonwebtoken';
@@ -19,7 +20,7 @@ export const createUser = async (identifier: string, password: string, nickname:
     // Realtime messaging uses email as its internal key; phone-only accounts get a private stable key.
     const email = phone ? `phone:${phone}` : identifier.trim().toLowerCase();
     const accountId = await AccountRepository.addUser(email, await bcrypt.hash(password, 10), nickname.trim(), phone);
-    const token = jwt.sign({ _id: accountId.toString(), email, nickname: nickname.trim(), isModerator: false, signInTime: Date.now() }, env.JWT_SECRET_KEY!, { expiresIn: '7d' });
+    const token = jwt.sign({ _id: accountId.toString(), email, nickname: nickname.trim(), isModerator: false, signInTime: Date.now() }, env.JWT_SECRET_KEY!, { expiresIn: SESSION_MAX_AGE_SECONDS });
     return { success: true, token, email, nickname: nickname.trim(), isModerator: false, status: 201 };
   } catch (err) { console.error('Failed to create user:', err); return { message: 'Internal Server Error', status: 500 }; }
 };
@@ -38,7 +39,7 @@ export const authenticateUser = async (identifier: string, password: string) => 
     const banStatus = await ModerationService.isUserBanned(user._id.toString());
     if (banStatus.isBanned) return { message: `Your account has been banned. Reason: ${banStatus.reason ?? 'Policy violation'}`, status: 403 };
     if (!await bcrypt.compare(password, user.password)) return { message: 'Invalid password', status: 401 };
-    const token = jwt.sign({ _id: user._id, email: user.email, nickname: user.nickname, isModerator: user.isModerator || false, signInTime: Date.now() }, env.JWT_SECRET_KEY!, { expiresIn: '7d' });
+    const token = jwt.sign({ _id: user._id, email: user.email, nickname: user.nickname, isModerator: user.isModerator || false, signInTime: Date.now() }, env.JWT_SECRET_KEY!, { expiresIn: SESSION_MAX_AGE_SECONDS });
     return { success: true, token, email: user.email, nickname: user.nickname, isModerator: user.isModerator || false, avatarUrl: user.avatarUrl, accentColor: user.accentColor, status: 200 };
   } catch (err) { console.error('Failed to authenticate user:', err); return { message: 'Internal Server Error', status: 500 }; }
 };
