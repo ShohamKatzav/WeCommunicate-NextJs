@@ -62,13 +62,25 @@ export async function enableDevicePush(token: string): Promise<PushSubscription>
 let sync: { token: string; done: Promise<void> } | null = null;
 
 export function syncDeviceSubscription(token: string): Promise<void> {
-    if (sync?.token !== token) sync = { token, done: runSync(token) };
-    return sync.done;
+    if (sync?.token === token) return sync.done;
+    // Assigned before runSync so a failure only forgets this run, not a newer
+    // one that replaced it.
+    let done!: Promise<void>;
+    const retryLater = () => { if (sync?.done === done) sync = null; };
+    done = runSync(token, retryLater);
+    sync = { token, done };
+    return done;
 }
 
-async function runSync(token: string): Promise<void> {
-    // A failed check is retried by the next caller for this login.
-    const retryLater = () => { if (sync?.token === token) sync = null; };
+// A sync started on the page that's being left can be aborted by the
+// navigation (its server action never settles) and then stay cached for that
+// token, so the page that lands never tries again. Forgetting it here lets
+// the next call start fresh.
+export function dropInFlightSync(token: string) {
+    if (sync?.token === token) sync = null;
+}
+
+async function runSync(token: string, retryLater: () => void): Promise<void> {
     const isOwner = accountIdOf(token) !== null && readOwner() === accountIdOf(token);
     try {
         const subscription = await getDeviceSubscription();

@@ -1,9 +1,10 @@
 "use client";
 import { ReactNode, useEffect, useState, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import User from "@/types/user";
 import UserContext from "./userContext";
 import { getCurrentUser, createUserCoockie, deleteUserCoockie } from "../lib/cookieActions";
-import { getDeviceSubscription, syncDeviceSubscription } from "../lib/devicePush";
+import { dropInFlightSync, getDeviceSubscription, syncDeviceSubscription } from "../lib/devicePush";
 
 type UserProviderProps = {
     children: ReactNode;
@@ -12,6 +13,7 @@ type UserProviderProps = {
 export const UserProvider = ({ children }: UserProviderProps) => {
     const [user, setUser] = useState<User | null>(null);
     const [loadingUser, setLoadingUser] = useState(true);
+    const pathname = usePathname();
 
     const fetchUserHandler = useCallback(async () => {
         try {
@@ -35,8 +37,10 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     // initial mount can cause a spurious remount.
     useEffect(() => {
         if (loadingUser || !user?.token) return;
-        syncDeviceSubscription(user.token);
-    }, [loadingUser, user?.token]);
+        const token = user.token;
+        syncDeviceSubscription(token);
+        return () => dropInFlightSync(token);
+    }, [loadingUser, user?.token, pathname]);
 
     const updateUser = useCallback(async (userData: User | null) => {
         try {
