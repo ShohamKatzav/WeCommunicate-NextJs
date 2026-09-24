@@ -6,6 +6,7 @@ import Footer from '@/app/components/shell/footer';
 import { UserProvider } from '@/app/context/userProvider';
 import { SocketProvider } from '@/app/context/socketProvider';
 import { NotificationProvider } from '@/app/context/notificationProvider';
+import IncomingCallNotice from '@/app/components/chat/incomingCallNotice';
 import { Toaster } from "sonner";
 
 export default function ClientProviders({ children }: { children: React.ReactNode }) {
@@ -19,6 +20,7 @@ export default function ClientProviders({ children }: { children: React.ReactNod
             <SocketProvider>
                 <Navbar />
                 <NotificationProvider>
+                    <IncomingCallNotice />
                     <Toaster richColors position="top-center" theme={theme as 'light' | 'dark' | 'system' | undefined} />
                     {/* No padding-top: clearing the fixed navbar is the job of
                         --content-top-offset (app/globals.css), and having a

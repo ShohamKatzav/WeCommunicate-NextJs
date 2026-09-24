@@ -94,25 +94,68 @@ self.addEventListener('activate', event => {
     );
 });
 
-self.addEventListener('push', function (event) {
-    if (event.data) {
-        const data = event.data.json()
-        const options = {
-            body: data.body,
-            icon: data.icon || '/icon.png',
-            badge: data.icon || '/icon.png',
-            vibrate: [100, 50, 100],
-            data: {
-                dateOfArrival: Date.now(),
-                primaryKey: '2',
-            },
-        }
-        event.waitUntil(self.registration.showNotification(data.title, options))
+// Must match INCOMING_CALL_TAG in app/lib/callNotifications.ts, which
+// closes the ring once the call is answered or declined in this browser.
+const INCOMING_CALL_TAG = 'incoming-call'
+const MISSED_CALL_TAG = 'missed-call'
+
+// Every push shows a notification, even for a call the app is already
+// ringing on screen: Safari revokes the subscription after a few pushes that
+// show nothing, and Chrome shows its own "site updated in the background"
+// notice. The server skips the call push when a tab is visible instead
+// (see handleCallInvite in socket/handlers.ts).
+function notificationFor(data) {
+    const base = {
+        body: data.body,
+        icon: data.icon || '/icon.png',
+        badge: data.icon || '/icon.png',
+        data: {
+            dateOfArrival: Date.now(),
+            primaryKey: '2',
+            kind: data.kind || 'message',
+        },
     }
+    switch (data.kind) {
+        case 'call':
+            return {
+                ...base,
+                tag: INCOMING_CALL_TAG,
+                // A new call replacing an old ring still alerts.
+                renotify: true,
+                // Desktop: stays up until acted on instead of fading after a
+                // few seconds. Android ignores it - there, whether it pops up
+                // over the screen is up to the site's notification settings.
+                requireInteraction: true,
+                vibrate: [300, 150, 300, 150, 500, 150, 300],
+            }
+        case 'missed-call':
+            return { ...base, tag: MISSED_CALL_TAG, silent: true }
+        // Answered or declined on another device - takes the ring's place
+        // (same tag) quietly.
+        case 'call-handled':
+            return { ...base, tag: INCOMING_CALL_TAG, silent: true }
+        default:
+            return { ...base, vibrate: [100, 50, 100] }
+    }
+}
+
+async function closeNotifications(tag) {
+    const notifications = await self.registration.getNotifications({ tag })
+    notifications.forEach(notification => notification.close())
+}
+
+self.addEventListener('push', function (event) {
+    if (!event.data) return
+    const data = event.data.json()
+    event.waitUntil((async () => {
+        if (data.kind === 'missed-call') await closeNotifications(INCOMING_CALL_TAG)
+        await self.registration.showNotification(data.title, notificationFor(data))
+    })())
 })
 
 self.addEventListener('notificationclick', function (event) {
     event.notification.close()
+    const isCall = event.notification.data?.kind === 'call'
     // Use the SW's own scope instead of a hardcoded origin - a hardcoded
     // URL breaks on any deployment other than the one it was written for
     // (including local dev), and always opening a new window instead of
@@ -120,11 +163,13 @@ self.addEventListener('notificationclick', function (event) {
     const targetUrl = new URL('chat', self.registration.scope).href;
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
-            for (const client of windowClients) {
-                if (client.url === targetUrl && 'focus' in client) {
-                    return client.focus();
-                }
-            }
+            const chatClient = windowClients.find(client => client.url === targetUrl && 'focus' in client)
+            // Any page of the app can answer a call (IncomingCallNotice), so a
+            // ring focuses whichever tab is already open rather than opening
+            // a new one next to it.
+            const callClient = isCall ? windowClients.find(client => 'focus' in client) : undefined
+            const existing = chatClient || callClient
+            if (existing) return existing.focus()
             if (clients.openWindow) {
                 return clients.openWindow(targetUrl);
             }

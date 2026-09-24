@@ -7,11 +7,16 @@ import Conversation from '@/models/Conversation'
 import Message from '@/models/Message'
 import Account from '@/models/Account'
 import { sendPushToEmails } from '@/services/PushService';
+import { MISSED_CALL_OUTCOMES, type CallOutcome } from '@/types/messageCall';
 
 interface SocketData {
     email: string;
     userId: string;
     typingIn?: Set<string>;
+    // Whether this tab is on screen, as last reported by the client ('app
+    // visibility'). Unknown counts as hidden, so a client that never reports
+    // still gets the call push.
+    appVisible?: boolean;
 }
 
 type AppServer = Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, SocketData>;
@@ -49,6 +54,7 @@ interface CallSignal {
     reason?: unknown;
     description?: unknown;
     candidate?: unknown;
+    pushEndpoint?: unknown;
 }
 
 interface ActiveCall {
@@ -63,6 +69,11 @@ interface ActiveCall {
     candidates: number;
     descriptions: number;
     calleeWasReachable: boolean;
+    callerName: string;
+    // An incoming-call push went out, so a call that ends unanswered sends
+    // a "missed call" push to replace it.
+    pushed: boolean;
+    acceptedAt: number | null;
     ringTimer: ReturnType<typeof setTimeout> | null;
     ended: boolean;
 }
@@ -165,6 +176,9 @@ export default async function handleSocketConnection(io: AppServer, socket: AppS
         socket.on('call hangup', (data) => safely(() => handleCallHangup(io, socket, data)));
         socket.on('call signal', (data) => safely(() => handleCallSignal(io, socket, data)));
         socket.on('call sync', () => safely(() => handleCallSync(socket)));
+        socket.on('app visibility', (visible) => {
+            socket.data.appVisible = visible === true;
+        });
 
         await RedisService.addUserSocket(email, socket.id);
         // Routed through the same per-viewer filtering as every other
@@ -614,6 +628,11 @@ const CALL_MAX_SDP_LENGTH = 32 * 1024;
 const CALL_MAX_CANDIDATE_LENGTH = 1024;
 const CALL_PUSHES_PER_WINDOW = 10;
 const CALL_PUSH_WINDOW_SECONDS = 10 * 60;
+// Far above real use - only stops a client that spams invites from filling
+// a conversation with call entries.
+const CALL_RECORDS_PER_WINDOW = 30;
+const CALL_RECORD_WINDOW_SECONDS = 10 * 60;
+const MAX_PUSH_ENDPOINT_LENGTH = 2048;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const OBJECT_ID_PATTERN = /^[0-9a-f]{24}$/i;
@@ -717,6 +736,14 @@ async function endCall(io: AppServer, call: ActiveCall, reason: string) {
     } else if (call.calleeSocketId) {
         io.to(call.calleeSocketId).emit('call hangup', payload);
     }
+    // 'ended' is a block - nothing more reaches a blocked pair.
+    if (reason === 'ended') return;
+    if (wasRinging) {
+        await pushMissedCall(call);
+        await recordCall(io, call, 'cancelled');
+    } else {
+        await recordCall(io, call, 'completed');
+    }
 }
 
 function inviteFor(call: ActiveCall) {
@@ -724,7 +751,8 @@ function inviteFor(call: ActiveCall) {
         callId: call.callId,
         conversationId: call.conversationId,
         video: call.video,
-        from: call.caller
+        from: call.caller,
+        fromName: call.callerName
     };
 }
 
@@ -753,6 +781,7 @@ async function handleCallInvite(io: AppServer, socket: AppSocket, data: CallSign
     }
     if (activeCalls.has(peerEmail)) {
         socket.emit('call busy', ids);
+        await recordCall(io, { ...ids, caller: email, callee: peerEmail, video: data.video, acceptedAt: null }, 'busy');
         return;
     }
 
@@ -767,6 +796,9 @@ async function handleCallInvite(io: AppServer, socket: AppSocket, data: CallSign
         candidates: 0,
         descriptions: 0,
         calleeWasReachable: false,
+        callerName: email.split('@')[0],
+        pushed: false,
+        acceptedAt: null,
         ringTimer: null,
         ended: false
     };
@@ -774,29 +806,150 @@ async function handleCallInvite(io: AppServer, socket: AppSocket, data: CallSign
     activeCalls.set(peerEmail, call);
     call.ringTimer = setTimeout(() => safely(() => handleCallRingTimeout(io, call)), CALL_RING_TIMEOUT_MS);
 
-    const calleeSockets = await getLiveSocketIds(io, peerEmail);
+    const [calleeSockets, callerName] = await Promise.all([
+        getLiveSocketIds(io, peerEmail),
+        getNickname(email)
+    ]);
     if (call.ended) return;
+    if (callerName) call.callerName = callerName;
     if (calleeSockets.length > 0) {
         call.calleeWasReachable = true;
         io.to(calleeSockets).emit('call invite', inviteFor(call));
-    } else {
-        await notifyOfflineCallee(call);
+    }
+    // A connected socket doesn't mean anyone can see the call: a phone keeps
+    // a backgrounded (or locked) tab's socket alive for minutes, and a hidden
+    // page can't put anything on screen. So the push goes out unless one of
+    // the callee's tabs is actually visible - including when another device
+    // of theirs is connected but sitting in the background.
+    const onScreen = calleeSockets.some(id => io.sockets.sockets.get(id)?.data.appVisible);
+    if (!onScreen) await pushIncomingCall(call);
+}
+
+async function getNickname(email: string) {
+    try {
+        const account = await Account.findOne({ email }).select('nickname').lean<LeanAccount | null>();
+        return account?.nickname || null;
+    } catch {
+        return null;
     }
 }
 
 // A push can't carry the call - it only gets the callee to open the app,
 // where 'call sync' picks up the invite if it's still ringing.
-async function notifyOfflineCallee(call: ActiveCall) {
+async function pushIncomingCall(call: ActiveCall) {
     const allowed = await RedisService.checkRateLimit(
         'call-push', call.caller, CALL_PUSHES_PER_WINDOW, CALL_PUSH_WINDOW_SECONDS
     );
-    if (!allowed) return;
-    const caller = await Account.findOne({ email: call.caller }).select('nickname').lean<LeanAccount | null>();
-    const callerName = caller?.nickname || call.caller.split('@')[0];
+    if (!allowed || call.ended) return;
+    call.pushed = true;
     await sendPushToEmails([call.callee], {
         title: call.video ? 'Incoming video call' : 'Incoming voice call',
-        body: `${callerName} is calling you on WeCommunicate. Open the app to answer.`
+        body: `${call.callerName} is calling you on WeCommunicate. Open the app to answer.`,
+        kind: 'call',
     });
+}
+
+// Replaces the ringing notification, which would otherwise keep saying
+// "is calling you" after the call stopped. Only sent after a ring push, so
+// it stays within the call-push rate limit.
+async function pushMissedCall(call: ActiveCall) {
+    if (!call.pushed) return;
+    await sendPushToEmails([call.callee], {
+        title: 'Missed call',
+        body: `Missed ${call.video ? 'video' : 'voice'} call from ${call.callerName}`,
+        kind: 'missed-call',
+    });
+}
+
+// The device that answered or declined sends its own push endpoint, so every
+// other device of the callee's can be told - otherwise a phone whose page is
+// frozen keeps "is calling you" in its shade for a call already taken.
+function parsePushEndpoint(data: CallSignal | undefined) {
+    const endpoint = data?.pushEndpoint;
+    return typeof endpoint === 'string' && endpoint.length <= MAX_PUSH_ENDPOINT_LENGTH ? endpoint : undefined;
+}
+
+// Replaces the ring on the callee's other devices. It has to be a real
+// (silent) notification rather than just closing the ring - see the push
+// handler in public/service-worker.js for why every push shows one.
+async function pushCallHandledElsewhere(call: ActiveCall, how: 'answered' | 'declined', exceptEndpoint: string | undefined) {
+    if (!call.pushed) return;
+    await sendPushToEmails([call.callee], {
+        title: call.callerName,
+        body: `${how === 'answered' ? 'Answered' : 'Declined'} on another device`,
+        kind: 'call-handled',
+    }, { exceptEndpoint });
+}
+
+interface LeanConversationSettings {
+    disappearingMessagesSeconds?: number;
+}
+
+// One history entry per call, written when the call ends - only the server
+// knows how every call ended (the caller's tab may be gone by then), so this
+// can't go through saveMessage the way a message does. Every end path runs
+// clearCall first and bails if the call had already ended, so a call is
+// recorded exactly once. Never throws: a failed write only loses the entry.
+async function recordCall(
+    io: AppServer,
+    call: Pick<ActiveCall, 'conversationId' | 'caller' | 'callee' | 'video' | 'acceptedAt'>,
+    outcome: CallOutcome
+) {
+    try {
+        const allowed = await RedisService.checkRateLimit(
+            'call-record', call.caller, CALL_RECORDS_PER_WINDOW, CALL_RECORD_WINDOW_SECONDS
+        );
+        if (!allowed) return;
+        const conversation = await Conversation.findById(call.conversationId)
+            .select('disappearingMessagesSeconds')
+            .lean<LeanConversationSettings | null>();
+        if (!conversation) return;
+
+        const missed = MISSED_CALL_OUTCOMES.includes(outcome);
+        const durationSeconds = outcome === 'completed' && call.acceptedAt
+            ? Math.max(0, Math.round((Date.now() - call.acceptedAt) / 1000))
+            : 0;
+        const record = await Message.create({
+            sender: call.caller,
+            conversation: call.conversationId,
+            call: { video: call.video, outcome, durationSeconds },
+            // A call the callee picked up (or turned down) is already seen;
+            // a missed one stays unread until they open the conversation,
+            // same as a message.
+            status: missed ? 'sent' : 'read',
+            expiresAt: conversation.disappearingMessagesSeconds
+                ? new Date(Date.now() + conversation.disappearingMessagesSeconds * 1000)
+                : undefined
+        });
+        // Same as a new message: back into the list of anyone who deleted
+        // the conversation, and part of its history from now on.
+        await Conversation.updateOne(
+            { _id: call.conversationId },
+            { $set: { deletedBy: [] }, $push: { messages: record._id } }
+        );
+
+        const payload = {
+            _id: record._id.toString(),
+            date: record.date,
+            sender: record.sender,
+            status: record.status,
+            call: { video: call.video, outcome, durationSeconds },
+            conversationID: call.conversationId
+        };
+        const roomSockets = await io.in(`chat_room_${call.conversationId}`).allSockets();
+        for (const email of [call.caller, call.callee]) {
+            const socketIds = await getLiveSocketIds(io, email);
+            if (email === call.callee && missed && !socketIds.some(id => roomSockets.has(id))) {
+                await RedisService.incrNotification(email, call.conversationId, 1);
+                const notifications = await RedisService.getNotifications(email);
+                if (socketIds.length > 0) io.to(socketIds).emit('notifications update', notifications);
+            }
+            if (socketIds.length > 0) io.to(socketIds).emit('call record', payload);
+        }
+    } catch (error) {
+        const message = typeof error === 'object' && error !== null && 'message' in error ? error.message : undefined;
+        console.error('Failed to record call:', message);
+    }
 }
 
 async function handleCallRingTimeout(io: AppServer, call: ActiveCall) {
@@ -808,6 +961,8 @@ async function handleCallRingTimeout(io: AppServer, call: ActiveCall) {
         reason: call.calleeWasReachable ? 'no-answer' : 'offline'
     });
     await emitToCalleeSockets(io, call, 'call cancel', { ...ids, reason: 'missed' });
+    await pushMissedCall(call);
+    await recordCall(io, call, 'no-answer');
 }
 
 async function handleCallAccept(io: AppServer, socket: AppSocket, data: CallSignal | undefined) {
@@ -827,8 +982,10 @@ async function handleCallAccept(io: AppServer, socket: AppSocket, data: CallSign
     if (call.ringTimer !== null) clearTimeout(call.ringTimer);
     call.state = 'active';
     call.calleeSocketId = socket.id;
+    call.acceptedAt = Date.now();
     io.to(call.callerSocketId).emit('call accept', ids);
     await emitToCalleeSockets(io, call, 'call cancel', { ...ids, reason: 'answered-elsewhere' }, socket.id);
+    await pushCallHandledElsewhere(call, 'answered', parsePushEndpoint(data));
 }
 
 async function handleCallDecline(io: AppServer, socket: AppSocket, data: CallSignal | undefined) {
@@ -841,6 +998,8 @@ async function handleCallDecline(io: AppServer, socket: AppSocket, data: CallSig
     clearCall(call);
     io.to(call.callerSocketId).emit('call decline', ids);
     await emitToCalleeSockets(io, call, 'call cancel', { ...ids, reason: 'declined-elsewhere' }, socket.id);
+    await pushCallHandledElsewhere(call, 'declined', parsePushEndpoint(data));
+    await recordCall(io, call, 'declined');
 }
 
 async function handleCallCancel(io: AppServer, socket: AppSocket, data: CallSignal | undefined) {
@@ -852,6 +1011,8 @@ async function handleCallCancel(io: AppServer, socket: AppSocket, data: CallSign
 
     clearCall(call);
     await emitToCalleeSockets(io, call, 'call cancel', { ...ids, reason: 'cancelled' });
+    await pushMissedCall(call);
+    await recordCall(io, call, 'cancelled');
 }
 
 async function handleCallHangup(io: AppServer, socket: AppSocket, data: CallSignal | undefined) {
@@ -875,8 +1036,8 @@ async function handleCallHangup(io: AppServer, socket: AppSocket, data: CallSign
     // from the client is passed through.
     const reason = data?.reason === 'failed' ? 'failed' : 'hangup';
     const peerId = peerSocketId(call, email);
-    if (!peerId) return;
-    io.to(peerId).emit('call hangup', { ...ids, reason });
+    if (peerId) io.to(peerId).emit('call hangup', { ...ids, reason });
+    await recordCall(io, call, reason === 'failed' ? 'failed' : 'completed');
 }
 
 function sanitizeDescription(description: unknown): SessionDescription | null {

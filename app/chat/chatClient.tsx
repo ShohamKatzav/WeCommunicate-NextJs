@@ -103,7 +103,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
     });
 
     // Message handling
-    const { handleIncomingMessage, handleServerSavedMessageResponse, handleSendMessage } = useMessageHandling({
+    const { handleIncomingMessage, handleCallRecord, handleServerSavedMessageResponse, handleSendMessage } = useMessageHandling({
         socket,
         loadingSocket,
         userEmail: user?.email,
@@ -123,6 +123,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
         loadingSocket,
         userEmail: user?.email,
         handleIncomingMessage,
+        handleCallRecord,
         setChat,
         chatRef,
         isLocalTypingRef,
