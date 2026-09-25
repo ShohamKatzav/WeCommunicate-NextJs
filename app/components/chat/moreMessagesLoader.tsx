@@ -1,11 +1,13 @@
 "use client";
-import { useEffect, useRef, useState, useMemo } from "react";
+import { Fragment, useEffect, useRef, useState, useMemo } from "react";
 import { useInView } from "react-intersection-observer";
 import Message from "@/types/message";
 import ChatUser from "@/types/chatUser";
 import { getMessages } from '@/app/lib/chatActions';
 import { Spinner } from "../ui/spinner";
 import MessageBubble from "./messageBubble";
+import DayChip from "./dayChip";
+import { startsNewDay } from "../../utils/dayLabel";
 import { accentForSender, accentsForReceivedBubbles } from "../../utils/accentColor";
 
 interface LoadMoreProps {
@@ -13,9 +15,13 @@ interface LoadMoreProps {
   participants: ChatUser[];
   onReply: (message: Message) => void;
   clearedAt?: string;
+  // Reports when the newest loaded older message was sent (undefined while
+  // nothing is loaded), so ChatWindow can drop the day chip above its own
+  // first message when that one is on the same day.
+  onNewestLoadedChange?: (sentAt?: number) => void;
 }
 
-export default function MoreMessagesLoader({ oldMessages, participants, onReply, clearedAt }: LoadMoreProps) {
+export default function MoreMessagesLoader({ oldMessages, participants, onReply, clearedAt, onNewestLoadedChange }: LoadMoreProps) {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [page, setPage] = useState(1);
@@ -42,6 +48,26 @@ export default function MoreMessagesLoader({ oldMessages, participants, onReply,
   const uniqueLoadedMessages = useMemo(() => {
     return messages.filter(msg => !oldMessageIds.has(msg._id));
   }, [messages, oldMessageIds]);
+
+  // Both divs below together show uniqueLoadedMessages top to bottom in
+  // array order, so its last item sits right above ChatWindow's first.
+  const newestLoaded = uniqueLoadedMessages[uniqueLoadedMessages.length - 1];
+  const newestLoadedAt = newestLoaded ? new Date(newestLoaded.date!).getTime() : undefined;
+  useEffect(() => {
+    onNewestLoadedChange?.(newestLoadedAt);
+  }, [newestLoadedAt, onNewestLoadedChange]);
+  useEffect(() => () => onNewestLoadedChange?.(undefined), [onNewestLoadedChange]);
+
+  const renderLoaded = (message: Message, index: number, keyPrefix: string) => (
+    <Fragment key={message._id || `${keyPrefix}-${index}`}>
+      {startsNewDay(message.date, uniqueLoadedMessages[index - 1]?.date) && <DayChip date={message.date!} />}
+      <MessageBubble
+        message={message}
+        onReply={onReply}
+        senderAccentColor={accentForSender(accentBySender, message.sender)}
+      />
+    </Fragment>
+  );
 
   const loadMoreMessages = async (currentParticipantsId: string) => {
     if (fetching || allDataFetched || offline) return;
@@ -161,22 +187,12 @@ export default function MoreMessagesLoader({ oldMessages, participants, onReply,
     <>
       <div ref={container}>
         {uniqueLoadedMessages.slice(newMessagesCount).map((message, index) =>
-          <MessageBubble
-            key={message._id || `old-${index}`}
-            message={message}
-            onReply={onReply}
-            senderAccentColor={accentForSender(accentBySender, message.sender)}
-          />
+          renderLoaded(message, newMessagesCount + index, "old")
         )}
       </div>
       <div>
         {uniqueLoadedMessages.slice(0, newMessagesCount).map((message, index) =>
-          <MessageBubble
-            key={message._id || `new-${index}`}
-            message={message}
-            onReply={onReply}
-            senderAccentColor={accentForSender(accentBySender, message.sender)}
-          />
+          renderLoaded(message, index, "new")
         )}
       </div>
 

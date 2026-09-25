@@ -176,7 +176,7 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                                     });
                                 })()}
                             </div>
-                            <div className="text-sm text-muted-foreground break-all col-span-2">{lastMessage.status?.includes("revoked")
+                            <div className="text-sm text-muted-foreground break-all col-span-2"><span dir="auto">{lastMessage.status?.includes("revoked")
                                 ? "Message deleted"
                                 : lastMessage.call
                                     ? callRecordSummary(lastMessage.call, lastMessage.sender?.toLowerCase() === user?.email?.toLowerCase())
@@ -186,7 +186,7 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                                         : lastMessage.file?.pathname?.includes("voice-message")
                                             ? "Voice message"
                                             : "sent file " + lastMessage.file?.pathname))}
-                            </div>
+                            </span></div>
                         </div>
                         :
                         <div className="text-muted-foreground text-sm italic">

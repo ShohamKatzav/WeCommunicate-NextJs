@@ -77,7 +77,14 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
 
   const isOwnMessage = message.sender === user?.email;
   const sender = isOwnMessage ? "You" : AsShortName(message.sender);
-  const dateToDisplay = new Date(message.date!).toLocaleString();
+  // Just the send time on the bubble - the day is in the chip above the
+  // first message of each day (see dayChip.tsx). The full stamp stays on
+  // hover / long-press.
+  const sentAt = new Date(message.date!);
+  const timeToDisplay = sentAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+  const fullSentAt = sentAt.toLocaleString();
+  // toISOString throws on an invalid date, where the strings above only say "Invalid Date".
+  const sentAtIso = Number.isNaN(sentAt.getTime()) ? undefined : sentAt.toISOString();
   // green-500/gray-500 (the previous values) were too light for the white
   // text on top of them - as low as 1.79:1 for the sender label, well under
   // the 4.5:1 text needs. -600/-700 are dark enough that plain white text
@@ -378,6 +385,23 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
     onReply?.(message);
   };
 
+  // Only this message's own text - never the reply quote, and nothing for
+  // an attachment, pin or call without a caption.
+  const canCopy = !!text?.trim();
+
+  // Closes only once the text is really on the clipboard, so a failure
+  // leaves the menu open instead of looking like it copied.
+  const handleCopy = async () => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      toast.error("Couldn't copy that message.");
+      return;
+    }
+    closeActions();
+  };
+
   // A message still waiting to send can't be reacted to or replied to yet,
   // but your own can still be deleted (the service worker queues that).
   const hasActions = (!isPending || isOwnMessage) && !isEditing;
@@ -471,7 +495,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
             <div className="font-medium">
               {message.replyTo.sender === user?.email ? "You" : AsShortName(message.replyTo.sender)}
             </div>
-            <div className="line-clamp-2 opacity-90">{replySnippet || "Attachment"}</div>
+            <div className="line-clamp-2 opacity-90"><span dir="auto">{replySnippet || "Attachment"}</span></div>
           </div>
         )}
 
@@ -514,7 +538,12 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
             </div>
           </div>
         ) : text && (
-          <div className="text-lg md:text-2xl wrap-break-word">{linkifyText(text)}</div>
+          // dir="auto" takes the direction from the first strong character,
+          // so a Hebrew message is laid out RTL and a trailing emoji ends up
+          // on the left, at the end of the sentence, rather than the right.
+          // whitespace-pre-wrap keeps the line breaks typed with Shift+Enter,
+          // and plaintext then gives each line its own direction.
+          <div dir="auto" style={{ unicodeBidi: "plaintext" }} className="text-lg md:text-2xl wrap-break-word whitespace-pre-wrap">{linkifyText(text)}</div>
         )}
 
         {message.location && (
@@ -617,8 +646,16 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
         )}
 
         <div className="text-xs md:text-sm mt-1 text-right flex items-center justify-end gap-1 text-white">
-          {edited && <span className="italic" data-testid="edited-label">Edited</span>}
-          {dateToDisplay}
+          {/* Edited is a flag, not a second clock: the time after it is
+              still when the message was sent, so a dot keeps the two from
+              reading as "edited at 15:40". */}
+          {edited && (
+            <>
+              <span className="italic" data-testid="edited-label">Edited</span>
+              <span aria-hidden="true">·</span>
+            </>
+          )}
+          <time dateTime={sentAtIso} title={fullSentAt} className="tabular-nums">{timeToDisplay}</time>
           {
             isPending && <TbClockQuestion color="red" size={38} className="inline p-2" />
           }
@@ -639,6 +676,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
           selectedReaction={myReaction?.emoji}
           onReact={isPending ? undefined : handleReact}
           onReply={onReply && !isPending ? handleReply : undefined}
+          onCopy={canCopy ? handleCopy : undefined}
           onEdit={canEdit ? startEdit : undefined}
           onDelete={isOwnMessage ? deleteMessageHandler : undefined}
           onDismiss={() => { if (message._id) clearActiveMessage(message._id); }}

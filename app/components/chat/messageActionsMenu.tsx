@@ -1,7 +1,7 @@
 "use client"
 import { RefObject, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Pencil, Reply, Trash2 } from "lucide-react";
+import { Copy, Pencil, Reply, Trash2 } from "lucide-react";
 import ReactionPicker from "./reactionPicker";
 
 interface MessageActionsMenuProps {
@@ -15,6 +15,7 @@ interface MessageActionsMenuProps {
   selectedReaction?: string;
   onReact?: (emoji: string) => void;
   onReply?: () => void;
+  onCopy?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
   onDismiss: () => void;
@@ -27,7 +28,7 @@ const EDGE_GAP = 8;
 // down while open. Portaled to <body> with fixed positioning because the
 // message list scrolls (and so clips anything that pokes out of it) and can
 // be shorter than the menu with the reaction grid expanded.
-const MessageActionsMenu = ({ anchorRef, align, menuRef, selectedReaction, onReact, onReply, onEdit, onDelete, onDismiss }: MessageActionsMenuProps) => {
+const MessageActionsMenu = ({ anchorRef, align, menuRef, selectedReaction, onReact, onReply, onCopy, onEdit, onDelete, onDismiss }: MessageActionsMenuProps) => {
   // The latest onDismiss, read by the per-frame check below without making
   // every parent re-render tear down and re-place the menu.
   const dismissRef = useRef(onDismiss);
@@ -106,7 +107,7 @@ const MessageActionsMenu = ({ anchorRef, align, menuRef, selectedReaction, onRea
       className="z-50 w-max max-w-[calc(100vw-16px)] overflow-hidden rounded-md border border-border bg-card text-card-foreground shadow-lg"
     >
       {onReact && <ReactionPicker selected={selectedReaction} onPick={onReact} />}
-      {(onReply || onEdit || onDelete) && (
+      {(onReply || onCopy || onEdit || onDelete) && (
         <div className={`py-1 ${onReact ? "border-t border-border" : ""}`}>
           {onReply && (
             <button
@@ -116,6 +117,16 @@ const MessageActionsMenu = ({ anchorRef, align, menuRef, selectedReaction, onRea
             >
               <Reply className="h-4 w-4 shrink-0" aria-hidden="true" />
               Reply
+            </button>
+          )}
+          {onCopy && (
+            <button
+              type="button"
+              onClick={onCopy}
+              className="flex w-full items-center gap-3 px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
+            >
+              <Copy className="h-4 w-4 shrink-0" aria-hidden="true" />
+              Copy
             </button>
           )}
           {onEdit && (
