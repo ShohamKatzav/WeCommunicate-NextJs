@@ -53,15 +53,22 @@ export const UserProvider = ({ children }: UserProviderProps) => {
                 await createUserCoockie(userData);
                 setUser(userData);
             } else {
-                setUser(null);
-                // The server drops this device's row in the same request
-                // that deletes the cookie. The browser's own unsubscribe is
-                // a push-service round trip, so logging out doesn't wait on it.
+                // Cookie first, state second. Clearing the user is what sends
+                // /chat (and the profile pages) to /login — that effect watches
+                // user.token — and proxy.ts bounces /login back to /chat while
+                // this cookie is still valid. With the old order that redirect
+                // landed after handleLogOut's own push and left the spinner up,
+                // because the effect does not run again once the token is gone.
+                // The browser's own unsubscribe is a push-service round trip,
+                // so logging out doesn't wait on it. The server still drops
+                // this device's row in the same request that deletes the cookie,
+                // which has to happen before setUser: that request needs the cookie.
                 const subscription = await getDeviceSubscription().catch(() => null);
                 subscription?.unsubscribe().catch(error => {
                     console.error("Failed to drop push subscription:", error);
                 });
                 await deleteUserCoockie(subscription?.endpoint);
+                setUser(null);
             }
             return true;
         } catch (error) {
