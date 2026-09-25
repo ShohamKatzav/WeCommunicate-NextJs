@@ -4,7 +4,7 @@ import MessageReaction from "@/types/messageReaction";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { deleteMessage, toggleMessageReaction } from '@/app/lib/chatActions'
+import { deleteMessage, editMessage, toggleMessageReaction } from '@/app/lib/chatActions'
 import { useUser } from "@/app/hooks/useUser";
 import { useSocket } from "@/app/hooks/useSocket";
 import useIsMobile from '@/app/hooks/useIsMobile';
@@ -21,7 +21,7 @@ import MessageActionsMenu from './messageActionsMenu';
 import { clearActiveMessage, setActiveMessage, useIsActiveMessage } from './activeMessageStore';
 import { AsShortName } from "../../utils/stringFormat";
 import { linkifyText } from "../../utils/linkify";
-import { DEFAULT_ACCENT_COLOR } from "../../config/limits";
+import { DEFAULT_ACCENT_COLOR, MAX_MESSAGE_LENGTH, REPLY_SNIPPET_LENGTH, WARNINGS_BEFORE_BAN } from "../../config/limits";
 
 interface MessageBubbleProps {
   message: Message;
@@ -56,6 +56,21 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
   // are rendered from MoreMessagesLoader's separate list, which the chat
   // state a parent-owned handler updates never reaches.
   const [reactions, setReactions] = useState<MessageReaction[]>(message.reactions || []);
+  // Same reasoning as reactions: an edit (this message's, or the one its
+  // reply quotes) has to reach bubbles on older pages too. An override only
+  // holds while the prop is still what it was when the edit arrived - once
+  // the parent's list catches up (or moves past it), the prop wins again.
+  const [textOverride, setTextOverride] = useState<{ from?: string; text: string } | null>(null);
+  const [snippetOverride, setSnippetOverride] = useState<{ from?: string; snippet: string } | null>(null);
+  const hasTextOverride = textOverride !== null && textOverride.from === message.text;
+  const text = hasTextOverride ? textOverride.text : message.text;
+  const edited = hasTextOverride || !!message.edited;
+  const replySnippet = snippetOverride !== null && snippetOverride.from === message.replyTo?.snippet
+    ? snippetOverride.snippet
+    : message.replyTo?.snippet;
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
   // Only one message at a time has its actions menu open (see
   // activeMessageStore.ts).
   const showMenu = useIsActiveMessage(message._id);
@@ -109,11 +124,23 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
       setReactions(data.reactions || []);
     };
 
+    const repliedToId = message.replyTo?.messageId;
+    const handleEdit = (edit: Pick<Message, '_id' | 'text'>) => {
+      if (typeof edit?.text !== 'string') return;
+      if (edit._id === message._id) {
+        setTextOverride({ from: message.text, text: edit.text });
+      } else if (repliedToId && edit._id === repliedToId) {
+        setSnippetOverride({ from: message.replyTo?.snippet, snippet: edit.text.slice(0, REPLY_SNIPPET_LENGTH) });
+      }
+    };
+
     socket.on("message reactions", handleReactions);
+    socket.on("edit message", handleEdit);
     return () => {
       socket.off("message reactions", handleReactions);
+      socket.off("edit message", handleEdit);
     };
-  }, [socket, message._id]);
+  }, [socket, message._id, message.text, message.replyTo?.messageId, message.replyTo?.snippet]);
 
   useEffect(() => {
     if (!showMenu || !message._id) return;
@@ -232,6 +259,77 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
     }
   }
 
+  const startEdit = () => {
+    closeActions();
+    setDraft(text ?? "");
+    setIsEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setDraft("");
+  };
+
+  // Waits for the server rather than showing the new text straight away:
+  // unlike a reaction, an edit can be turned down by moderation. On any
+  // failure the editor stays open with the draft, so it can be fixed or
+  // cancelled.
+  const submitEdit = async () => {
+    if (!message._id || savingEdit) return;
+    const newText = draft.trim();
+    if (!newText) {
+      toast.warning("A message can't be empty.");
+      return;
+    }
+    if (newText === text) {
+      cancelEdit();
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      const result = await editMessage(message._id, newText);
+      if (!result.success) {
+        if (result.punishment?.includes("ban")) {
+          const banMessage = result.bannedUntil
+            ? `You've been temporarily banned until ${new Date(result.bannedUntil).toLocaleString()}. Reason: ${result.reason}`
+            : `You've been permanently banned. Reason: ${result.reason}`;
+          socket?.emit('ban user', { userEmail: user?.email, message: banMessage });
+        } else if (result.punishment === 'warning') {
+          toast.warning(`Warning ${result.warningCount}/${WARNINGS_BEFORE_BAN}: ${result.reason}`, { duration: 7000 });
+        } else if (result.banned) {
+          toast.error(result.message || 'Your account is banned from sending messages.', { duration: 10000 });
+        } else {
+          toast.error(result.message || "Couldn't edit that message.");
+        }
+        return;
+      }
+      if (!result.unchanged) {
+        setTextOverride({ from: message.text, text: result.text });
+        socket?.emit("edit message", { messageId: message._id });
+      }
+      cancelEdit();
+    } catch {
+      // Edits aren't part of the offline outbox - the service worker turns
+      // the call away while offline, so nothing was saved.
+      toast.info("Couldn't edit that message while you're offline.");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleEditKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Enter saves, like Enter sends in the chat input - messages are single
+    // line there, so an edit shouldn't be able to add line breaks either.
+    if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+      event.preventDefault();
+      submitEdit();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      cancelEdit();
+    }
+  };
+
   // Shared by the media (photo/video) and location bubbles below - same
   // fullscreen behavior either way, just a different viewer rendered at the
   // bottom of this component depending on which the message actually has.
@@ -282,7 +380,11 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
 
   // A message still waiting to send can't be reacted to or replied to yet,
   // but your own can still be deleted (the service worker queues that).
-  const hasActions = !isPending || isOwnMessage;
+  const hasActions = (!isPending || isOwnMessage) && !isEditing;
+
+  // Only text can be edited: not a pin, and not a file or voice message sent
+  // without any (a deleted message or call record never gets this far).
+  const canEdit = isOwnMessage && !isPending && !!text?.trim() && !message.location;
 
   const toggleMenu = () => {
     if (!message._id) return;
@@ -293,7 +395,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
     if (!isMobile || !hasActions) return;
     // Links, media controls and reaction chips inside the bubble do their
     // own thing on tap - don't also toggle the menu over them.
-    if ((event.target as HTMLElement).closest("a, button, audio, video, input")) return;
+    if ((event.target as HTMLElement).closest("a, button, audio, video, input, textarea")) return;
     toggleMenu();
   };
 
@@ -369,12 +471,50 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
             <div className="font-medium">
               {message.replyTo.sender === user?.email ? "You" : AsShortName(message.replyTo.sender)}
             </div>
-            <div className="line-clamp-2 opacity-90">{message.replyTo.snippet || "Attachment"}</div>
+            <div className="line-clamp-2 opacity-90">{replySnippet || "Attachment"}</div>
           </div>
         )}
 
-        {message.text && (
-          <div className="text-lg md:text-2xl wrap-break-word">{linkifyText(message.text)}</div>
+        {isEditing ? (
+          <div className="flex w-72 max-w-full flex-col gap-2 md:w-96">
+            <textarea
+              value={draft}
+              onChange={event => setDraft(event.target.value)}
+              onKeyDown={handleEditKeyDown}
+              onFocus={event => {
+                const end = event.currentTarget.value.length;
+                event.currentTarget.setSelectionRange(end, end);
+              }}
+              autoFocus
+              rows={3}
+              maxLength={MAX_MESSAGE_LENGTH}
+              disabled={savingEdit}
+              aria-label="Edit message"
+              data-testid="edit-message-input"
+              className="w-full resize-none rounded-lg border border-white/40 bg-black/25 p-2 text-base text-white placeholder:text-white/70 focus:outline-none focus:ring-2 focus:ring-white/80 md:text-lg"
+            />
+            <div className="flex justify-end gap-2 text-sm">
+              <button
+                type="button"
+                onClick={cancelEdit}
+                disabled={savingEdit}
+                className="rounded-md px-3 py-1 text-white hover:bg-white/15 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitEdit}
+                disabled={savingEdit || !draft.trim()}
+                data-testid="edit-message-save"
+                className="rounded-md bg-white/25 px-3 py-1 font-medium text-white hover:bg-white/35 disabled:opacity-60"
+              >
+                {savingEdit ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        ) : text && (
+          <div className="text-lg md:text-2xl wrap-break-word">{linkifyText(text)}</div>
         )}
 
         {message.location && (
@@ -477,6 +617,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
         )}
 
         <div className="text-xs md:text-sm mt-1 text-right flex items-center justify-end gap-1 text-white">
+          {edited && <span className="italic" data-testid="edited-label">Edited</span>}
           {dateToDisplay}
           {
             isPending && <TbClockQuestion color="red" size={38} className="inline p-2" />
@@ -498,6 +639,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
           selectedReaction={myReaction?.emoji}
           onReact={isPending ? undefined : handleReact}
           onReply={onReply && !isPending ? handleReply : undefined}
+          onEdit={canEdit ? startEdit : undefined}
           onDelete={isOwnMessage ? deleteMessageHandler : undefined}
           onDismiss={() => { if (message._id) clearActiveMessage(message._id); }}
         />

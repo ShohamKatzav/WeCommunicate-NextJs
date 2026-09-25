@@ -40,6 +40,15 @@ interface LeanMessage {
     reactions?: { emoji: string; sender: string }[];
 }
 
+interface LeanEditedMessage {
+    _id: { toString(): string };
+    conversation: { toString(): string };
+    sender?: string;
+    text?: string;
+    edited?: boolean;
+    status?: string;
+}
+
 interface ClientMessage {
     conversationID?: string;
     conversation?: unknown;
@@ -154,6 +163,7 @@ export default async function handleSocketConnection(io: AppServer, socket: AppS
         socket.on('message read', (data) => handleMessageRead(io, socket, data));
         socket.on('publish message', (message) => handlePublishMessage(io, socket, message));
         socket.on('delete message', (message) => handleDeleteMessage(io, socket, message));
+        socket.on('edit message', (data) => handleEditMessage(io, socket, data));
         socket.on('react to message', (data) => handleReactToMessage(io, socket, data));
         socket.on('notifications update', () => handleNotificationsUpdate(socket, email));
         socket.on("notifications checked", (roomID) => handleNotificationsChecked(roomID, email));
@@ -371,6 +381,47 @@ async function handleDeleteMessage(io: AppServer, socket: AppSocket, message: Cl
             if (!isAnySocketInRoom) {
                 memberSocketIds.forEach(id => {
                     io.to(id).emit('delete message', message);
+                });
+            }
+        }
+    }
+}
+
+// The edit itself was already persisted by the editMessage server action
+// before this fires - this only fans it out, to the room and to members who
+// don't have the conversation open, the same way a delete is. What goes out
+// is re-read from the document rather than taken from the client, so a client
+// can't announce text that was never stored (or that moderation rejected).
+async function handleEditMessage(io: AppServer, socket: AppSocket, data: { messageId?: unknown } | undefined) {
+    const messageId = data?.messageId;
+    if (typeof messageId !== 'string' || !OBJECT_ID_PATTERN.test(messageId)) return;
+
+    const messageDoc = await Message.findById(messageId).select('sender text edited status conversation').lean<LeanEditedMessage | null>();
+    if (!messageDoc || !messageDoc.edited || messageDoc.status === 'revoked' || !messageDoc.text) return;
+    // Only the sender may broadcast an edit of their own message.
+    if (messageDoc.sender?.toLowerCase() !== socket.data.email?.toLowerCase()) return;
+
+    const conversationId = messageDoc.conversation.toString();
+    const payload = {
+        _id: messageDoc._id.toString(),
+        conversationID: conversationId,
+        text: messageDoc.text,
+        edited: true
+    };
+
+    const room = `chat_room_${conversationId}`;
+    io.to(room).emit('edit message', payload);
+
+    const conversation = await Conversation.findById(conversationId).populate('members', 'email');
+    if (conversation) {
+        const roomSockets = await io.in(room).allSockets();
+        for (const member of membersOf(conversation)) {
+            if (!member.email) continue;
+            const memberSocketIds = await RedisService.getUserSocketsByEmail(member.email);
+            const isAnySocketInRoom = memberSocketIds?.some(id => roomSockets.has(id));
+            if (!isAnySocketInRoom) {
+                memberSocketIds.forEach(id => {
+                    io.to(id).emit('edit message', payload);
                 });
             }
         }

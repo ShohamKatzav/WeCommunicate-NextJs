@@ -26,6 +26,9 @@ const ChatWindow = ({ messages, participants, isMobile, onReply, conversationId,
     // message changed within the one already open" - only the former should
     // ever land on the unread divider instead of the bottom.
     const previousConversationId = useRef<string>("");
+    // Count and last id of the list last scrolled for, to tell a message
+    // arriving from one that changed in place.
+    const previousListKey = useRef<string>("");
 
     const accentBySender = accentsForReceivedBubbles(participants.current);
 
@@ -41,16 +44,25 @@ const ChatWindow = ({ messages, participants, isMobile, onReply, conversationId,
     useLayoutEffect(() => {
         const roomChanged = previousConversationId.current !== conversationId;
         previousConversationId.current = conversationId;
+        const listKey = `${messages?.length ?? 0}|${messages?.[messages.length - 1]?._id ?? ""}`;
+        const listChanged = previousListKey.current !== listKey;
+        previousListKey.current = listKey;
 
         // Land on where the user left off instead of the very bottom, but
         // only on the initial view of a conversation that has one - once
-        // you're already looking at it, every other message change (a new
-        // message, an edit, a delete) still snaps to the bottom exactly as
-        // before.
+        // you're already looking at it, a new message still snaps to the
+        // bottom exactly as before.
         if (roomChanged && firstUnreadMessageId && dividerRef.current) {
             dividerRef.current.scrollIntoView({ block: 'center' });
             return;
         }
+
+        // A change in place (an edit, a delete, a read receipt) leaves the
+        // view where it is: snapping would pull someone who scrolled up to
+        // edit an older message - or who's reading back while the other side
+        // edits one - away from it. The list is flex-col-reverse, so a reader
+        // already at the bottom stays there without help.
+        if (!roomChanged && !listChanged) return;
 
         if (chatBox.current) {
             chatBox.current.scrollTop = chatBox.current.scrollHeight;

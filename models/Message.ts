@@ -23,6 +23,7 @@ interface IMessage extends Document {
     date: Date;
     sender: string;
     text?: string;
+    edited?: boolean;
     status?: string;
     file?: Schema.Types.ObjectId;
     location?: IMessageLocation;
@@ -47,6 +48,12 @@ const MessageSchema = new Schema<IMessage>({
         type: String,
         required: false,
         maxlength: [MAX_MESSAGE_LENGTH, `A message cannot be longer than ${MAX_MESSAGE_LENGTH} characters`]
+    },
+    // Set by the first successful edit (MessageRepository.editMessage) and
+    // never cleared. `date` stays the original send time either way.
+    edited: {
+        type: Boolean,
+        required: false
     },
     status: {
         type: String,
