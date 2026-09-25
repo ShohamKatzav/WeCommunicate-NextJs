@@ -246,6 +246,58 @@ export default class MessageRepository {
         }
     }
 
+    // The message requesterEmail may edit, or null. Only the sender's own
+    // message, and only one that still has text: a deleted message, a call
+    // record, a location pin, or a file/voice message sent without text has
+    // nothing to edit. requesterEmail must come from a verified identity (the
+    // caller's account), never from anything the client sent.
+    static async GetEditableMessage(id: string, requesterEmail: string) {
+        try {
+            if (!requesterEmail || !Types.ObjectId.isValid(id)) return null;
+            const message: any = await Message.findOne({ _id: id })
+                .select('sender text status call location conversation')
+                .lean();
+            if (!message) return null;
+            if (message.sender?.toLowerCase() !== requesterEmail.toLowerCase()) return null;
+            if (message.status === 'revoked' || message.call || message.location) return null;
+            if (typeof message.text !== 'string' || !message.text.trim()) return null;
+            return message as { _id: Types.ObjectId; conversation: Types.ObjectId; text: string };
+        } catch (err) {
+            console.error('Failed to find message to edit:', err);
+            throw err;
+        }
+    }
+
+    // `message` is what GetEditableMessage returned. The write repeats its
+    // "still has text, not deleted" conditions so a delete that lands in
+    // between wins. Reply quotes are snapshots taken at send time (see
+    // SaveMessage), so the ones quoting this message are refreshed here too -
+    // their sender stays as it is, only the snippet follows the new text.
+    static async editMessage(message: { _id: Types.ObjectId; conversation: Types.ObjectId }, text: string) {
+        try {
+            const result = await Message.updateOne(
+                { _id: message._id, status: { $ne: 'revoked' }, text: { $exists: true, $ne: '' } },
+                { $set: { text, edited: true } }
+            );
+            if (result.matchedCount === 0) return null;
+
+            await Message.updateMany(
+                { conversation: message.conversation, 'replyTo.messageId': message._id },
+                { $set: { 'replyTo.snippet': text.slice(0, REPLY_SNIPPET_LENGTH) } }
+            );
+
+            return {
+                messageId: message._id.toString(),
+                conversationId: message.conversation.toString(),
+                text,
+                edited: true
+            };
+        } catch (err) {
+            console.error('Failed to edit message:', err);
+            throw err;
+        }
+    }
+
     // requesterEmail must come from a verified identity (the caller's
     // account), never from anything the client sent.
     static async deleteMessage(id: string, requesterEmail: string) {

@@ -6,6 +6,7 @@ import connectDB from "@/app/lib/MongoDb";
 import AccountRepository from "@/repositories/AccountRepository";
 import { isExist } from "@/app/lib/accountActions";
 import Message from "@/models/Message";
+import Conversation from "@/models/Conversation";
 import PushSubscription from "@/models/PushSubscription";
 import { extractUserIDFromCoockie } from "@/app/lib/cookieActions";
 import { deleteFile } from "@/app/lib/fileActions";
@@ -324,6 +325,66 @@ export const resendNewEmailChangeOTP = async (newEmail: string) => {
     }
 }
 
+// Every place an account's identity string appears on a message - as its
+// sender, as the sender of a reply it quotes, and on its reactions - swapped
+// from oldIdentity to newIdentity in one write. Only this account's own
+// conversations can hold any of those (you can only send, quote or react
+// inside a conversation you're a member of), so the filter is scoped to them
+// and rides the { conversation, date } index; nothing indexes sender itself.
+// The pipeline replaces each field only where it equals oldIdentity, so
+// other members' senders, quotes and reactions in the same documents are
+// left alone. $literal keeps either string from being read as a field path.
+async function rewriteMessageIdentity(accountId: string, oldIdentity: string, newIdentity: string) {
+    const conversations = await Conversation.find({ members: accountId }).select('_id').lean();
+    if (conversations.length === 0) return;
+
+    const oldValue = { $literal: oldIdentity };
+    const newValue = { $literal: newIdentity };
+    await Message.updateMany(
+        {
+            conversation: { $in: conversations.map(conversation => conversation._id) },
+            $or: [
+                { sender: oldIdentity },
+                { 'replyTo.sender': oldIdentity },
+                { 'reactions.sender': oldIdentity }
+            ]
+        },
+        [{
+            $set: {
+                sender: { $cond: [{ $eq: ['$sender', oldValue] }, newValue, '$sender'] },
+                // Replaced whole rather than set by path: a dotted $set on a
+                // message with no reply would create an empty replyTo.
+                replyTo: {
+                    $cond: [
+                        { $eq: ['$replyTo.sender', oldValue] },
+                        { $mergeObjects: ['$replyTo', { sender: newValue }] },
+                        '$replyTo'
+                    ]
+                },
+                reactions: {
+                    $cond: [
+                        { $isArray: '$reactions' },
+                        {
+                            $map: {
+                                input: '$reactions',
+                                as: 'reaction',
+                                in: {
+                                    $cond: [
+                                        { $eq: ['$$reaction.sender', oldValue] },
+                                        { $mergeObjects: ['$$reaction', { sender: newValue }] },
+                                        '$$reaction'
+                                    ]
+                                }
+                            }
+                        },
+                        '$reactions'
+                    ]
+                }
+            }
+        }]
+    );
+}
+
 // Step 2 confirm: verify the code sent to the new address, then write it -
 // email is an identity key, not only a profile field, so this also reissues
 // the caller's JWT and rewrites their message history's sender identity.
@@ -354,14 +415,17 @@ export const confirmEmailChange = async (newEmail: string, otp: string) => {
 
         // Conversation membership is by account id, but message authorship is
         // the email string (socket/handlers.ts compares message.sender to
-        // socket.data.email) - without this, this account's prior messages
-        // and any reply snapshot quoting them stop showing as theirs. Push
-        // subscriptions are keyed the same way, and pushes are sent to the
-        // account's current email.
+        // socket.data.email) - without this, this account's prior messages,
+        // any reply snapshot quoting them and their own reactions stop
+        // showing as theirs. Push subscriptions are keyed the same way, and
+        // pushes are sent to the account's current email.
+        //
+        // oldEmail is whatever identity string is stored, which for a
+        // phone-only account adding its first email is a phone:+... key, not
+        // an address - it's matched exactly, never validated as an email.
         if (oldEmail && oldEmail !== normalized) {
             await Promise.all([
-                Message.updateMany({ sender: oldEmail }, { $set: { sender: normalized } }),
-                Message.updateMany({ 'replyTo.sender': oldEmail }, { $set: { 'replyTo.sender': normalized } }),
+                rewriteMessageIdentity(account._id.toString(), oldEmail, normalized),
                 PushSubscription.updateMany({ email: oldEmail }, { $set: { email: normalized } })
             ]);
         }

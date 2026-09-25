@@ -5,7 +5,7 @@ import ChatUser from '@/types/chatUser';
 import Message from '@/types/message';
 import { revalidateChatRoute } from '@/app/lib/chatActions';
 import { useUser } from './useUser';
-import { TYPING_EXPIRE_MS } from '../config/limits';
+import { REPLY_SNIPPET_LENGTH, TYPING_EXPIRE_MS } from '../config/limits';
 
 interface UseSocketEventsProps {
     socket: Socket | null;
@@ -192,6 +192,36 @@ export const useSocketEvents = ({
 
         return () => {
             socket.off("delete message", handleMessageDeleted);
+        };
+    }, [socket, loadingSocket, setChat, chatRef]);
+
+    // Message edits. Replaces the text in place (the date stays the send
+    // time) and refreshes the quote on any loaded reply to it, matching the
+    // snippets MessageRepository.editMessage rewrote in the DB. Older pages
+    // live in MoreMessagesLoader's own list, which each bubble covers by
+    // listening for this itself (see messageBubble.tsx).
+    useEffect(() => {
+        if (!socket || loadingSocket) return;
+
+        const handleMessageEdited = (edit: Pick<Message, '_id' | 'text' | 'edited'>) => {
+            if (!edit?._id || typeof edit.text !== 'string') return;
+            const text = edit.text;
+            setChat(
+                chatRef.current.map(msg => {
+                    if (msg._id === edit._id) return { ...msg, text, edited: true };
+                    const replyTo = msg.replyTo;
+                    if (replyTo && replyTo.messageId === edit._id) {
+                        return { ...msg, replyTo: { ...replyTo, snippet: text.slice(0, REPLY_SNIPPET_LENGTH) } };
+                    }
+                    return msg;
+                })
+            );
+        };
+
+        socket.on("edit message", handleMessageEdited);
+
+        return () => {
+            socket.off("edit message", handleMessageEdited);
         };
     }, [socket, loadingSocket, setChat, chatRef]);
 

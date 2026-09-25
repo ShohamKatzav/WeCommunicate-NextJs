@@ -61,10 +61,18 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
             }
         };
 
+        const handleEditedMessage = (edit: Pick<Message, '_id' | 'text'>) => {
+            if (lastMessage?._id !== edit?._id || typeof edit.text !== 'string') return;
+            const text = edit.text;
+            setLastMessage(prev => prev ? { ...prev, text, edited: true } : prev);
+        };
+
         socket.on("delete message", handleDeletedMessage);
+        socket.on("edit message", handleEditedMessage);
 
         return () => {
             socket.off("delete message", handleDeletedMessage);
+            socket.off("edit message", handleEditedMessage);
         };
     }, [socket, loadingSocket, lastMessage?._id]);
 

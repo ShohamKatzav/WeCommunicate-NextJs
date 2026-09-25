@@ -8,6 +8,7 @@ import MessageLocation from '@/types/messageLocation';
 import { saveMessage, revalidateChatRoute } from '@/app/lib/chatActions';
 import { toast } from "sonner";
 import { PendingClears } from './usePendingCleanHistory';
+import { WARNINGS_BEFORE_BAN } from '../config/limits';
 
 interface UseMessageHandlingProps {
     socket: Socket | null;
@@ -27,8 +28,6 @@ const isAtOrBeforeCutoff = (dateValue: Date | string | undefined, cutoff: string
     if (!cutoff || !dateValue) return false;
     return new Date(dateValue).getTime() <= new Date(cutoff).getTime();
 };
-
-const warningsBeforeBan = 3;
 
 export const useMessageHandling = ({
     socket,
@@ -232,7 +231,7 @@ export const useMessageHandling = ({
                         socket.emit('ban user', { userEmail: messageToSend.sender, message: message });
                     } else if (result.punishment === 'warning') {
                         toast.warning(
-                            `Warning ${result.warningCount}/${warningsBeforeBan}: ${result.reason}`,
+                            `Warning ${result.warningCount}/${WARNINGS_BEFORE_BAN}: ${result.reason}`,
                             { duration: 7000 }
                         );
                     }

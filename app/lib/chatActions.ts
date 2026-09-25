@@ -307,6 +307,113 @@ export const deleteMessage = async (id: string, type: string = "message") => {
     }
 }
 
+// Replaces the text of one of the caller's own messages in place. New text is
+// new content, so it goes through the same checks a send does (length, block,
+// ban, moderation). The message keeps its original date; `edited` marks it.
+export const editMessage = async (id: string, text: string) => {
+    try {
+        if (typeof id !== 'string' || !Types.ObjectId.isValid(id)) {
+            return { success: false, message: 'Invalid message' };
+        }
+        const newText = typeof text === 'string' ? text.trim() : '';
+        if (!newText) {
+            return { success: false, message: "A message can't be empty." };
+        }
+        if (newText.length > MAX_MESSAGE_LENGTH) {
+            return { success: false, tooLong: true, message: `Messages are limited to ${MAX_MESSAGE_LENGTH} characters.` };
+        }
+
+        await connectDB();
+        const userID = await extractUserIDFromCoockie();
+        if (typeof userID !== 'string') {
+            return { success: false, message: 'Unauthorized' };
+        }
+        // Ownership is checked against the verified account's identity, the
+        // same one saveMessage stamps as the sender - a phone:+... key for a
+        // phone-only account, which is just as valid here as an email.
+        const requesterEmail = await AccountRepository.getEmailById(new Types.ObjectId(userID));
+        if (!requesterEmail) {
+            return { success: false, message: 'Unauthorized' };
+        }
+
+        if (!(await isTestBypass())) {
+            // Every edit is a moderation call and a write, same as a send.
+            const allowed = await RedisService.checkRateLimit('edit-message', userID, 30, 60);
+            if (!allowed) {
+                return { success: false, rateLimited: true, message: "You're editing messages too quickly. Please slow down and try again shortly." };
+            }
+        }
+
+        const original = await MessageRepository.GetEditableMessage(id, requesterEmail);
+        if (!original) {
+            return { success: false, message: "That message can't be edited." };
+        }
+
+        // Nothing changed - don't mark it edited or spend a moderation call.
+        if (original.text === newText) {
+            return { success: true, messageId: id, conversationId: original.conversation.toString(), text: newText, unchanged: true };
+        }
+
+        // Same 1:1-only scope and neutral wording as saveMessage's check:
+        // editing an old message is still putting new text in front of
+        // someone who blocked you.
+        const conversation = await ConversationRepository.GetConversationById(original.conversation.toString());
+        const members: { _id: Types.ObjectId }[] = conversation?.members || [];
+        if (members.length === 2) {
+            const other = members.find(member => member._id.toString() !== userID);
+            if (other && await AccountRepository.isBlockedEitherWay(userID, other._id.toString())) {
+                return { success: false, blocked: true, message: 'This message could not be edited.' };
+            }
+        }
+
+        const banStatus = await ModerationService.isUserBanned(userID);
+        if (banStatus.isBanned) {
+            return JSON.parse(JSON.stringify({
+                success: false,
+                blocked: true,
+                banned: true,
+                reason: banStatus.reason,
+                bannedUntil: banStatus.bannedUntil,
+                message: banStatus.bannedUntil
+                    ? `You are banned until ${banStatus.bannedUntil.toLocaleString()}`
+                    : 'You are permanently banned from sending messages'
+            }));
+        }
+
+        const moderation = await ModerationService.moderateMessage(newText);
+        if (!moderation.isAllowed) {
+            const punishment = await ModerationService.recordViolation(
+                userID,
+                newText,
+                moderation.reason || 'Inappropriate content',
+                moderation.categories || [],
+                moderation.severity || 'medium'
+            );
+
+            return JSON.parse(JSON.stringify({
+                success: false,
+                blocked: true,
+                punishment: punishment.action,
+                warningCount: punishment.warningCount,
+                bannedUntil: punishment.bannedUntil,
+                reason: moderation.reason,
+                message: punishment.message
+            }));
+        }
+
+        const result = await MessageRepository.editMessage(original, newText);
+        if (!result) {
+            return { success: false, message: "That message can't be edited." };
+        }
+
+        revalidatePath('/chat');
+        return { success: true, ...result };
+    } catch (err) {
+        console.error('Failed to edit message:', err);
+        return { success: false, message: 'Failed to edit message' };
+    }
+}
+
 // Adds the caller's reaction to a message, or removes it when they pick the
 // one they already have. Never revalidates /chat: reactions reach everyone
 // else over the socket (see 'react to message' in socket/handlers.ts), and a

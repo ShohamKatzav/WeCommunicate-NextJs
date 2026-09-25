@@ -28,6 +28,10 @@ export const MAX_MATCHES_PER_CONVERSATION = 3;
 // dwarf the reply itself.
 export const REPLY_SNIPPET_LENGTH = 120;
 
+// Shown in the moderation warning toast ("Warning 2/3") after a send or an
+// edit is rejected. Mirrors ModerationService's own warningsBeforeBan.
+export const WARNINGS_BEFORE_BAN = 3;
+
 // Voice messages auto-stop recording at this length - without a cap, a
 // forgotten open mic would fill up the free-tier blob storage/bandwidth
 // quota with one very long recording.

@@ -369,6 +369,30 @@ export default class ChatPage {
         await expect(this.replyPreview).toBeVisible();
     }
 
+    getEditMessageInput(): Locator {
+        return this.page.getByTestId('edit-message-input');
+    }
+
+    getEditedLabel(bubble: Locator): Locator {
+        return bubble.getByTestId('edited-label');
+    }
+
+    // Takes the bubble rather than its text: once a reply quotes a message,
+    // the reply's bubble contains that text too.
+    async startEditingMessage(bubble: Locator): Promise<void> {
+        await this.openMessageActions(bubble);
+        await this.getMessageActionsMenu().getByRole('button', { name: 'Edit' }).click();
+        await expect(this.getEditMessageInput()).toBeFocused();
+    }
+
+    async editMessage(bubble: Locator, newText: string): Promise<void> {
+        await this.startEditingMessage(bubble);
+        await this.getEditMessageInput().fill(newText);
+        await this.page.getByTestId('edit-message-save').click();
+        await expect(this.getEditMessageInput()).toHaveCount(0);
+        await expect(this.getSentMessageByText(newText)).toBeVisible();
+    }
+
     async searchConversations(query: string): Promise<void> {
         await this.searchInput.fill(query);
     }

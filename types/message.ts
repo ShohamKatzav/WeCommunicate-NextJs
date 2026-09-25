@@ -9,6 +9,7 @@ export default interface Message {
     date?: Date | undefined;
     sender?: string | undefined;
     text?: string | undefined;
+    edited?: boolean | undefined;
     status?: string | undefined;
     file?: FileDTO | undefined | null;
     location?: MessageLocation | undefined | null;
