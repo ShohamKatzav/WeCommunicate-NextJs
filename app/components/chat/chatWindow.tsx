@@ -3,6 +3,8 @@ import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Message from "@/types/message";
 import MessageBubble from "./messageBubble";
 import MoreMessagesLoader from "./moreMessagesLoader";
+import DayChip from "./dayChip";
+import { startsNewDay } from "../../utils/dayLabel";
 import OfflineOutbox from "../offline/offlineOutbox";
 import ChatUser from "@/types/chatUser";
 import { HiOutlineChatBubbleLeftRight } from "react-icons/hi2";
@@ -31,6 +33,10 @@ const ChatWindow = ({ messages, participants, isMobile, onReply, conversationId,
     const previousListKey = useRef<string>("");
 
     const accentBySender = accentsForReceivedBubbles(participants.current);
+    // When the newest older-page message above this list was sent. A day
+    // chip goes above this list's first message only when that one starts a
+    // new day relative to it - otherwise the same day would get two chips.
+    const [newestLoadedAt, setNewestLoadedAt] = useState<number>();
 
     const handleScroll = () => {
         const el = chatBox.current;
@@ -106,6 +112,9 @@ const ChatWindow = ({ messages, participants, isMobile, onReply, conversationId,
                                         // state (deleted, playback position, etc.) to whatever
                                         // message now happens to occupy that index.
                                         <Fragment key={message._id || `msg-${index}`}>
+                                            {startsNewDay(message.date, index > 0 ? messages[index - 1].date : newestLoadedAt) && (
+                                                <DayChip date={message.date!} />
+                                            )}
                                             {message._id === firstUnreadMessageId && (
                                                 <div ref={dividerRef} data-testid="unread-divider" className="flex items-center gap-2 my-3">
                                                     <div className="flex-1 h-px bg-red-300 dark:bg-red-700" />
@@ -122,7 +131,7 @@ const ChatWindow = ({ messages, participants, isMobile, onReply, conversationId,
                                     }
                                 </div>
                                 {(messages?.length === parseInt(process.env.NEXT_PUBLIC_MESSAGES_PER_PAGE!) || loadNew) &&
-                                    <MoreMessagesLoader oldMessages={messages} participants={participants.current} onReply={onReply} clearedAt={clearedAt} />
+                                    <MoreMessagesLoader oldMessages={messages} participants={participants.current} onReply={onReply} clearedAt={clearedAt} onNewestLoadedChange={setNewestLoadedAt} />
                                 }
                             </div>
                         </div>

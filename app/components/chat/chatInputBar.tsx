@@ -1,4 +1,4 @@
-import { Dispatch, RefObject, SetStateAction, useCallback, useState } from "react";
+import { ChangeEvent, Dispatch, KeyboardEvent, RefObject, SetStateAction, useCallback, useLayoutEffect, useRef, useState } from "react";
 import Message from "@/types/message";
 import ChatUser from "@/types/chatUser";
 import FileDTO from "@/types/FileDTO";
@@ -11,6 +11,59 @@ import useIsMobile from "../../hooks/useIsMobile";
 import { MAX_MESSAGE_LENGTH } from "../../config/limits";
 import { AsShortName } from "../../utils/stringFormat";
 import { useUser } from "../../hooks/useUser";
+
+// The composer grows with the draft up to this many lines, then scrolls
+// inside itself, the way WhatsApp's does.
+const MAX_COMPOSER_LINES = 6;
+
+interface ComposerTextareaProps {
+    value: string | undefined;
+    onChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
+    onKeyDown?: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
+    placeholder: string;
+    disabled: boolean;
+    className: string;
+}
+
+// Shared by the mobile and desktop layouts so the two can't drift.
+// dir="auto" plus unicode-bidi: plaintext gives each line the direction of
+// its first strong character, so a Hebrew draft is laid out RTL and a
+// trailing emoji lands at the RTL end (the left) rather than the right edge
+// an LTR paragraph would put it on. An empty or English draft stays LTR.
+const ComposerTextarea = ({ value, onChange, onKeyDown, placeholder, disabled, className }: ComposerTextareaProps) => {
+    const ref = useRef<HTMLTextAreaElement>(null);
+
+    // Runs on every value change, so the reset to '' after a send shrinks
+    // the field back to one line too.
+    useLayoutEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        const style = getComputedStyle(el);
+        const border = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
+        const padding = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+        const lineHeight = parseFloat(style.lineHeight) || 24;
+        el.style.height = "auto";
+        // scrollHeight is content + padding; the box is border-box, so add the border back.
+        el.style.height = `${Math.min(el.scrollHeight + border, lineHeight * MAX_COMPOSER_LINES + padding + border)}px`;
+    }, [value]);
+
+    return (
+        <textarea
+            ref={ref}
+            rows={1}
+            dir="auto"
+            style={{ unicodeBidi: "plaintext" }}
+            className={`block resize-none overflow-y-auto bg-gray-100 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 border border-transparent dark:border-gray-600 transition-[box-shadow,border-color] ${className}`}
+            onKeyDown={onKeyDown}
+            placeholder={placeholder}
+            value={value}
+            onChange={onChange}
+            disabled={disabled}
+            maxLength={MAX_MESSAGE_LENGTH}
+            aria-label="Message input"
+        />
+    );
+};
 
 interface MessageInputProps {
     message: Message;
@@ -29,14 +82,17 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
     // chatActions.saveMessage) - disabling here too avoids the confusing
     // "I hit send and it just vanished with a vague error" experience.
     const canSend = (message.text?.trim() || message.file) && participants.current && !isBlocked;
+    const placeholder = participants.current ? "Message..." : "Select a participant to start chatting";
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && canSend) {
-            handleSendMessage();
-        }
+    // Desktop only, like WhatsApp Web: Enter sends and Shift+Enter is a
+    // newline. On mobile Enter is a newline and only the Send button sends.
+    const handleDesktopKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing) return;
+        e.preventDefault();
+        if (canSend) handleSendMessage();
     };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
         setMessage(prev => ({ ...prev, text: e.target.value }));
         handleTyping();
     };
@@ -72,7 +128,7 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
                                 Replying to {message.replyTo.sender === user?.email ? "yourself" : AsShortName(message.replyTo.sender)}
                             </div>
                             <div className="text-sm text-muted-foreground truncate">
-                                {message.replyTo.snippet || "Attachment"}
+                                <span dir="auto">{message.replyTo.snippet || "Attachment"}</span>
                             </div>
                         </div>
                         <button
@@ -104,16 +160,12 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
                 {isMobile ? (
                     <>
                         {!isRecordingVoice && (
-                            <input
-                                className="w-full p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 border border-transparent dark:border-gray-600 transition-all"
-                                onKeyDown={handleKeyDown}
-                                placeholder={participants.current ? "Message..." : "Select a participant to start chatting"}
-                                type="text"
+                            <ComposerTextarea
+                                className="w-full p-1.5 rounded-lg"
+                                placeholder={placeholder}
                                 value={message.text}
                                 onChange={handleChange}
                                 disabled={!participants.current}
-                                maxLength={MAX_MESSAGE_LENGTH}
-                                aria-label="Message input"
                             />
                         )}
                         <div className="flex items-center gap-2">
@@ -138,22 +190,21 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
                         </div>
                     </>
                 ) : (
-                    <div className="flex items-center gap-3">
+                    // items-end keeps the buttons on the bottom line as the
+                    // field grows, like WhatsApp Web.
+                    <div className="flex items-end gap-3">
                         <UploadFileButton />
                         {!isRecordingVoice && (
                             <ShareLocationButton participants={participants} onShare={handleLocationShared} disabled={isBlocked} />
                         )}
                         {!isRecordingVoice && (
-                            <input
-                                className="flex-1 p-3 rounded-xl bg-gray-100 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 border border-transparent dark:border-gray-600 transition-all"
-                                onKeyDown={handleKeyDown}
-                                placeholder={participants.current ? "Message..." : "Select a participant to start chatting"}
-                                type="text"
+                            <ComposerTextarea
+                                className="flex-1 min-w-0 p-3 rounded-xl"
+                                onKeyDown={handleDesktopKeyDown}
+                                placeholder={placeholder}
                                 value={message.text}
                                 onChange={handleChange}
                                 disabled={!participants.current}
-                                maxLength={MAX_MESSAGE_LENGTH}
-                                aria-label="Message input"
                             />
                         )}
                         <VoiceRecorder participants={participants} onRecorded={handleVoiceRecorded} onStatusChange={setIsRecordingVoice} />
