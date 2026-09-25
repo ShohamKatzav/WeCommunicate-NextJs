@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useUser } from '../hooks/useUser';
 import { useSocket } from '../hooks/useSocket';
@@ -46,6 +46,7 @@ const NO_TYPERS: Record<string, boolean> = {};
 const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlockedUserIds, iceServers }: ChatClientProps) => {
     const { socket, loadingSocket } = useSocket();
     const { user, loadingUser } = useUser();
+    const router = useRouter();
     const isMobile = useIsMobile();
 
     // UI State
@@ -357,7 +358,17 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
         document.body.classList.remove("overflow-hidden");
     };
 
-    if (!user || loadingUser) {
+    // Same signal as the profile pages: a session is the token, not a
+    // truthy user object. getCurrentUser() resolves to {} when the cookie
+    // is missing, and a failed fetch sets user to null. Either one used to
+    // sit on this spinner forever, because nothing sent the tab to /login.
+    useEffect(() => {
+        if (!loadingUser && !user?.token) {
+            router.replace('/login');
+        }
+    }, [loadingUser, user?.token, router]);
+
+    if (loadingUser || !user?.token) {
         return <Loading />;
     }
 
