@@ -9,7 +9,7 @@ interface AccentColorPickerProps {
 const AccentColorPicker = ({ value, onChange }: AccentColorPickerProps) => {
     const t = useT();
     return (
-        <div className="flex flex-wrap gap-3" role="radiogroup" aria-label={t("profile.edit.accentColor")}>
+        <div className="flex flex-wrap gap-2 sm:gap-3" role="radiogroup" aria-label={t("profile.edit.accentColor")}>
             {ACCENT_COLORS.map(color => (
                 <button
                     key={color}
@@ -18,7 +18,7 @@ const AccentColorPicker = ({ value, onChange }: AccentColorPickerProps) => {
                     aria-checked={value === color}
                     aria-label={t("profile.edit.accentColorOption", { color })}
                     onClick={() => onChange(color)}
-                    className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-105 ${value === color ? "border-foreground scale-110" : "border-transparent"
+                    className={`h-7 w-7 rounded-full border-2 transition-transform hover:scale-105 sm:h-8 sm:w-8 ${value === color ? "border-foreground scale-110" : "border-transparent"
                         }`}
                     style={{ backgroundColor: color }}
                 />

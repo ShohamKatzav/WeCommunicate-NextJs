@@ -182,12 +182,15 @@ export default class ModerationService {
         isBanned: boolean;
         reason?: string;
         bannedUntil?: Date;
+        // False when there's no such account (it was deleted) - from the same
+        // read, so the socket handshake can turn a leftover session away.
+        accountExists?: boolean;
     }> {
         try {
             const user = await Account.findById(userId);
 
             if (!user) {
-                return { isBanned: false };
+                return { isBanned: false, accountExists: false };
             }
 
             // Check if temp ban has expired

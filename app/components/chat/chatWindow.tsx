@@ -22,6 +22,8 @@ interface ChatWindowProps {
 }
 
 const ChatWindow = ({ messages, participants, isMobile, onReply, conversationId, firstUnreadMessageId, clearedAt }: ChatWindowProps) => {
+    // The other person in this 1:1 deleted their account - see MessageBubble's readOnly.
+    const recipientDeleted = participants.current?.length === 1 && !!participants.current[0].deleted;
     const [loadNew, setLoadNew] = useState(true);
     const chatBox = useRef<HTMLDivElement | null>(null);
     const dividerRef = useRef<HTMLDivElement | null>(null);
@@ -128,6 +130,7 @@ const ChatWindow = ({ messages, participants, isMobile, onReply, conversationId,
                                                 message={message}
                                                 onReply={onReply}
                                                 senderAccentColor={accentForSender(accentBySender, message.sender)}
+                                                readOnly={recipientDeleted}
                                             />
                                         </Fragment>)
                                     }

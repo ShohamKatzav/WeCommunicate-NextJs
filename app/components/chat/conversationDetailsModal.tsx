@@ -29,7 +29,13 @@ const ConversationDetailsModal = ({ participants, setShowParticipantsModal }: Co
                 </div>
                 <div className="max-h-[60vh] overflow-y-auto p-2">
                     {participants.current && participants.current.length > 0 ? (
-                        participants.current.map((user: ChatUser) => (
+                        participants.current.map((user: ChatUser) => user.deleted ? (
+                            // A deleted account has no profile to open.
+                            <div key={user._id} className="flex items-center gap-3 p-2">
+                                <Avatar deleted size={40} />
+                                <p className="text-sm font-medium text-muted-foreground">{t("chat.deletedAccount")}</p>
+                            </div>
+                        ) : (
                             <Link
                                 key={user._id}
                                 href={`/profile/${user._id}`}

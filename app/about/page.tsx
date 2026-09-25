@@ -1,18 +1,22 @@
 import Link from "next/link";
 import CollapsibleSection from "../components/ui/collapsibleSection";
-import { getT } from "../i18n/server";
+import { pageTitleClassName } from "../components/shell/pageTitle";
+import { getLocale, getT } from "../i18n/server";
 import {
     MessageSquare,
     CheckCheck,
     Search,
     Reply,
+    SmilePlus,
     Mic,
+    Video,
     Timer,
     ShieldOff,
     WifiOff,
     Bell,
     MapPin,
     Share2,
+    Languages,
     Image as ImageIcon,
 } from "lucide-react";
 
@@ -21,7 +25,9 @@ const features = [
     { icon: CheckCheck, key: "receipts" },
     { icon: Search, key: "search" },
     { icon: Reply, key: "replies" },
+    { icon: SmilePlus, key: "reactions" },
     { icon: Mic, key: "voice" },
+    { icon: Video, key: "calls" },
     { icon: ImageIcon, key: "media" },
     { icon: Timer, key: "disappearing" },
     { icon: ShieldOff, key: "blocking" },
@@ -29,6 +35,7 @@ const features = [
     { icon: Bell, key: "push" },
     { icon: Share2, key: "install" },
     { icon: MapPin, key: "location" },
+    { icon: Languages, key: "languages" },
 ] as const;
 
 // Product names stay as they are in every language; only what they do is copy.
@@ -36,10 +43,12 @@ const techStack = [
     { title: "Next.js", key: "next" },
     { title: "Tailwind CSS", key: "tailwind" },
     { title: "Socket.IO", key: "socket" },
+    { title: "WebRTC", key: "webrtc" },
     { title: "MongoDB", key: "mongo" },
     { title: "Upstash Redis", key: "redis" },
     { title: "OpenAI API", key: "openai" },
     { title: "Vercel Blob", key: "blob" },
+    { title: "Google Maps", key: "maps" },
     { titleKey: "about.tech.serviceWorkersTitle", key: "serviceWorkers" },
     { title: "Brevo", key: "brevo" },
 ] as const;
@@ -48,13 +57,18 @@ const deploymentNotes = ["env", "scale", "socket"] as const;
 
 const About = async () => {
     const t = await getT();
+    const locale = await getLocale();
+    // Geist has no Hebrew, so this word falls through to Segoe UI and draws
+    // about 80% as tall as the Latin line at the same size. 1.25em brings
+    // the ink height back in line with "We-Communicate".
+    const localTitleClassName = locale === "he" ? "text-[1.25em]" : "";
     return (
         <div className="relative overflow-hidden">
             <div className="max-w-7xl mx-auto">
                 <main className="max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="text-center">
-                        <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 dark:text-white sm:text-5xl md:text-6xl">
-                            <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-indigo-800 dark:from-blue-300 dark:to-indigo-400">{t("about.title")}</span><br />
+                        <h1 className={pageTitleClassName}>
+                            <span className={`text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-indigo-800 dark:from-blue-300 dark:to-indigo-400 ${localTitleClassName}`}>{t("about.title")}</span><br />
                             <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-indigo-800 dark:from-blue-300 dark:to-indigo-400">We-Communicate</span>
                         </h1>
                         <p className="mt-6 max-w-2xl mx-auto text-lg text-muted-foreground">

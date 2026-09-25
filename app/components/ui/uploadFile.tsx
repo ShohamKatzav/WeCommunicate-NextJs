@@ -465,11 +465,14 @@ export function UploadFileStatus() {
     );
 }
 
-export function UploadFileButton() {
-    const { suspended, isUploading, canReplace, inputRef, onFileChange } = useUploadFile();
+// disabled: nothing may be attached here at all (a chat whose other person
+// deleted their account - see ChatInputBar), not just "busy uploading".
+export function UploadFileButton({ disabled = false }: { disabled?: boolean } = {}) {
+    const { suspended, isUploading: uploading, canReplace, inputRef, onFileChange } = useUploadFile();
     const t = useT();
     const isMobile = useIsMobile();
     if (suspended) return null;
+    const isUploading = uploading || disabled;
 
     return (
         <label

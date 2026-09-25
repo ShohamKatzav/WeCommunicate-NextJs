@@ -174,6 +174,7 @@ export default async function handleSocketConnection(io: AppServer, socket: AppS
         socket.on('ban user', (data) => handleBanUser(io, socket, data));
         socket.on('unban user', (data) => handleUnbanUser(io, socket, data));
         socket.on('moderator status changed', (data) => handleModeratorStatusChanged(io, socket, data).catch(err => console.error('Failed to relay moderator status change:', err)));
+        socket.on('account deleted', (ack) => handleAccountDeleted(io, socket, ack).catch(err => console.error('Failed to sign out a deleted account:', err)));
         socket.on('disconnect', () => {
             // A closed tab never sends its own 'stop typing'.
             stopAllTyping(socket);
@@ -591,6 +592,63 @@ async function handleUnbanUser(io: AppServer, socket: AppSocket, data: { userEma
     if (!(await isModerator(socket.data.email))) return;
 
     io.emit('moderator_update_unbanned_user', { userEmail });
+}
+
+// Sent by the tab that just deleted its own account (DeleteAccountSection),
+// so the account's other open tabs sign out too - the way a ban reaches them.
+// Only acted on once the account really is gone, so a live account can't use
+// it; the sender signs itself out, the rest are told and disconnected. Then
+// the account leaves presence for good.
+async function handleAccountDeleted(io: AppServer, socket: AppSocket, ack?: unknown) {
+    const { email, userId } = socket.data;
+    try {
+        if (!email || !userId) return;
+        if (await Account.exists({ _id: userId })) return;
+
+        const socketIds = await RedisService.getUserSocketsByEmail(email);
+        for (const socketId of socketIds) {
+            if (socketId === socket.id) continue;
+            const target = io.sockets.sockets.get(socketId);
+            if (target) {
+                target.emit('account deleted');
+                target.disconnect(true);
+            }
+        }
+        await RedisService.clearPresence(email);
+        await handleUpdateConnectedUsers(io);
+        await notifyAccountDeleted(io, userId);
+    } finally {
+        if (typeof ack === 'function') ack();
+    }
+}
+
+// The people a deleted account was chatting with: each open chat swaps that
+// member for "Deleted account" and shows the notice AccountDeletionService
+// left in the conversation, without a reload. Anyone offline sees both the
+// next time the chat loads.
+async function notifyAccountDeleted(io: AppServer, deletedUserId: string) {
+    const conversations = await Conversation.find({ deletedMembers: deletedUserId })
+        .select('_id members')
+        .lean<{ _id: { toString(): string }; members?: { toString(): string }[] }[]>();
+    for (const conversation of conversations) {
+        const notice = await Message.findOne({ conversation: conversation._id, system: 'account-deleted' })
+            .sort({ date: -1 })
+            .select('_id date status')
+            .lean<{ _id: { toString(): string }; date: Date; status?: string } | null>();
+        if (!notice) continue;
+        const conversationID = conversation._id.toString();
+        const payload = {
+            conversationID,
+            deletedMemberId: deletedUserId,
+            message: { _id: notice._id.toString(), date: notice.date, sender: 'system', status: notice.status, system: 'account-deleted', conversationID },
+        };
+        const members = await Account.find({ _id: { $in: conversation.members ?? [] } }).select('email').lean<LeanAccount[]>();
+        for (const member of members) {
+            if (!member.email) continue;
+            const socketIds = await RedisService.getUserSocketsByEmail(member.email);
+            if (socketIds.length > 0) io.to(socketIds).emit('member account deleted', payload);
+        }
+    }
 }
 
 // Sent by a moderator's page right after promoteToModerator /

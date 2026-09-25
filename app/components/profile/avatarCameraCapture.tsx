@@ -41,7 +41,7 @@ function useCameraMode(): CameraMode {
 }
 
 const triggerButtonClass =
-    "absolute bottom-0 start-0 p-1.5 rounded-full bg-primary text-primary-foreground cursor-pointer hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed";
+    "absolute bottom-0 start-0 cursor-pointer rounded-full bg-primary p-1 text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50";
 
 export default function AvatarCameraCapture({ onCapture, disabled }: AvatarCameraCaptureProps) {
     const mode = useCameraMode();
@@ -59,7 +59,7 @@ export default function AvatarCameraCapture({ onCapture, disabled }: AvatarCamer
                     className={triggerButtonClass}
                     aria-label={t("profile.camera.takePhoto")}
                 >
-                    <Camera size={16} />
+                    <Camera size={14} />
                 </label>
                 <input
                     id="avatar-take-photo"
@@ -88,7 +88,7 @@ export default function AvatarCameraCapture({ onCapture, disabled }: AvatarCamer
                 disabled={disabled}
                 onClick={() => setPreviewOpen(true)}
             >
-                <Camera size={16} />
+                <Camera size={14} />
             </button>
             {previewOpen && (
                 <DesktopCameraPreview

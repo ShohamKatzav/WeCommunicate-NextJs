@@ -26,11 +26,18 @@ const APP_SHELL_PATHS = ["/chat"];
 
 const COMPACT_SHELL_QUERY = "(max-width: 768px), (max-height: 500px) and (max-width: 1024px)";
 
-const productLinks = [
-    { href: "/chat", labelKey: "footer.chat" },
-    { href: "/locations", labelKey: "footer.locations" },
+// About and contact are public. Chat, locations and profile are behind
+// login (proxy.ts), so they live under Account and only render once there
+// is a session. Moderator is a further subset of that.
+const exploreLinks = [
     { href: "/about", labelKey: "footer.about" },
     { href: "/contact", labelKey: "footer.contact" },
+] as const;
+
+const accountLinks = [
+    { href: "/chat", labelKey: "footer.chat" },
+    { href: "/locations", labelKey: "footer.locations" },
+    { href: "/profile", labelKey: "footer.profile" },
 ] as const;
 
 // GitHub, LinkedIn and Facebook are names, not copy - only Email translates.
@@ -66,7 +73,7 @@ const Footer = () => {
     const { user } = useUser();
     const t = useT();
     const year = new Date().getFullYear();
-    const signedIn = Boolean(user && Object.keys(user).length > 0);
+    const signedIn = Boolean(user?.token);
     const footerRef = useRef<HTMLElement>(null);
 
     const currentPath = pathname || '';
@@ -164,7 +171,7 @@ const Footer = () => {
                                 {t("footer.explore")}
                             </h2>
                             <ul className="mt-3 space-y-2 sm:mt-4 sm:space-y-2.5">
-                                {productLinks.map((item) => (
+                                {exploreLinks.map((item) => (
                                     <li key={item.href}>
                                         <Link
                                             href={item.href}
@@ -184,14 +191,16 @@ const Footer = () => {
                             <ul className="mt-3 space-y-2 sm:mt-4 sm:space-y-2.5">
                                 {signedIn ? (
                                     <>
-                                        <li>
-                                            <Link
-                                                href="/chat"
-                                                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                                            >
-                                                {t("footer.openChat")}
-                                            </Link>
-                                        </li>
+                                        {accountLinks.map((item) => (
+                                            <li key={item.href}>
+                                                <Link
+                                                    href={item.href}
+                                                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                                                >
+                                                    {t(item.labelKey)}
+                                                </Link>
+                                            </li>
+                                        ))}
                                         {user?.isModerator && (
                                             <li>
                                                 <Link
@@ -267,7 +276,15 @@ const Footer = () => {
                 </div>
 
                 <div className="mt-6 flex flex-col gap-2 border-t border-border/40 pt-4 text-xs text-muted-foreground sm:mt-10 sm:flex-row sm:items-center sm:justify-between sm:pt-6">
-                    <p>{t("footer.copyright", { year })}</p>
+                    {/* Signed in or not - it's also where a visitor looks before
+                        signing up. */}
+                    <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span>{t("footer.copyright", { year })}</span>
+                        <span aria-hidden="true">·</span>
+                        <Link href="/privacy" className="transition-colors hover:text-foreground hover:underline">
+                            {t("footer.privacy")}
+                        </Link>
+                    </p>
                     <LanguagePicker />
                 </div>
             </div>

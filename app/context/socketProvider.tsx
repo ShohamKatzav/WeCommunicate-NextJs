@@ -61,6 +61,17 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
                         { duration: 10000 }
                     );
                 });
+                // This account was deleted from another tab (see
+                // handleAccountDeleted in socket/handlers.ts): sign out here
+                // too, the same way a ban does, and go home.
+                newSocket.on("account deleted", async () => {
+                    setSocket(null);
+                    newSocket.disconnect();
+                    await updateUser(null);
+                    router.push('/');
+                    setLoadingSocket(false);
+                    toast.info(tRef.current("profile.delete.deletedElsewhere"), { duration: 10000 });
+                });
                 // A moderator just promoted or demoted this user. Only a hint:
                 // the flag itself comes from re-reading the account, so the
                 // Moderator links (navbar, footer) appear or go, and a demoted

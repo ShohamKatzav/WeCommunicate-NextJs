@@ -32,6 +32,7 @@ interface IMessage extends Document {
     conversation: Schema.Types.ObjectId;
     replyTo?: IReplyTo;
     call?: MessageCall;
+    system?: 'account-deleted';
     expiresAt?: Date;
 }
 
@@ -122,6 +123,14 @@ const MessageSchema = new Schema<IMessage>({
         },
         required: false,
         _id: false
+    },
+    // A notice from the app itself rather than a person - so far only "a
+    // member deleted their account", written by AccountDeletionService into
+    // each conversation that account leaves behind. Never set by saveMessage.
+    system: {
+        type: String,
+        enum: ['account-deleted'],
+        required: false
     },
     // Set at send time from the conversation's disappearingMessagesSeconds
     // setting (see Conversation.ts) - undefined means "never expires".

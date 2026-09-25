@@ -2,6 +2,7 @@
 import { useRouter } from "next/navigation";
 import { MessageCircleOff, Ghost, MessageSquareHeart } from "lucide-react";
 import { useT } from "./i18n/client";
+import { pageTitleSizeClassName } from "./components/shell/pageTitle";
 
 export default function NotFoundClient() {
     const router = useRouter();
@@ -22,7 +23,7 @@ export default function NotFoundClient() {
                 <Ghost className="w-24 h-24 text-lime-600 dark:text-lime-400" />
             </div>
 
-            <h1 className="mt-6 text-5xl font-extrabold text-gray-900 dark:text-white">
+            <h1 className={`mt-6 ${pageTitleSizeClassName} text-gray-900 dark:text-white`}>
                 {t("errorPages.notFoundTitle")}
             </h1>
 

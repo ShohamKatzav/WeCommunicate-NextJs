@@ -239,6 +239,15 @@ export const useMessageHandling = ({
                     }
                     return;
                 }
+                // The server answered but didn't save it (a database error,
+                // say). Without this the error object itself took the temp
+                // message's place - no date ("Invalid Date"), and published to
+                // the other person as if it were the message.
+                if (!result?.success || !result.messageDoc) {
+                    setChat(chatRef.current.filter(m => m._id !== tempId));
+                    toast.error(result?.message || t('chat.send.error'));
+                    return;
+                }
                 await handleServerSavedMessageResponse(result, tempId);
             } catch (error: any) {
                 // Distinguish a genuine network/offline failure (which the

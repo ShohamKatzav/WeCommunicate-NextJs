@@ -2,7 +2,8 @@ import Link from "next/link";
 import { rememberChatForProfile } from "../../utils/chatReturn";
 import { ShieldOff, ShieldCheck } from "lucide-react";
 import ChatUser from "@/types/chatUser";
-import { AsShortName } from "../../utils/stringFormat";
+import { memberName } from "../../utils/memberName";
+import FitName from "../ui/fitName";
 import { formatLastSeen } from "../../utils/lastSeen";
 import { useT } from "../../i18n/client";
 import { useSocket } from "../../hooks/useSocket";
@@ -24,6 +25,9 @@ const UsersRow = ({ chatUser, getLastMessages, active, isBlocked, onToggleBlock,
     // Never for a blocked user: how recently someone was around is exactly
     // the kind of visibility blocking them is meant to end.
     const lastSeenText = isBlocked ? null : formatLastSeen(lastSeen, t);
+    // Shown as typed, fitted to the column by FitName.
+    const label = memberName(chatUser, t);
+    const fullName = chatUser.nickname?.trim() || chatUser.email || label;
 
     const switchRoom = async (participant: ChatUser) => {
         if (socket && participant) {
@@ -37,7 +41,7 @@ const UsersRow = ({ chatUser, getLastMessages, active, isBlocked, onToggleBlock,
             className="p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
         >
             <div className="flex items-center gap-3">
-                <div className="relative">
+                <div className="relative shrink-0">
                     <Link
                         href={`/profile/${chatUser._id}`}
                         onClick={(e) => {
@@ -46,7 +50,7 @@ const UsersRow = ({ chatUser, getLastMessages, active, isBlocked, onToggleBlock,
                             e.stopPropagation();
                             rememberChatForProfile(chatUser._id);
                         }}
-                        aria-label={t("people.viewProfile", { name: chatUser.nickname || AsShortName(chatUser.email || '') })}
+                        aria-label={t("people.viewProfile", { name: fullName })}
                     >
                         <Avatar avatarUrl={chatUser.avatarUrl} nickname={chatUser.nickname} email={chatUser.email} size={40} />
                     </Link>
@@ -57,10 +61,8 @@ const UsersRow = ({ chatUser, getLastMessages, active, isBlocked, onToggleBlock,
                     }
 
                 </div>
-                <div className="flex-1 min-w-0">
-                    <div className="font-medium text-gray-900 dark:text-white truncate">
-                        {chatUser.nickname || AsShortName(chatUser.email || '')}
-                    </div>
+                <div className="min-w-0 flex-1">
+                    <FitName text={label} fullText={fullName} className="font-medium text-gray-900 dark:text-white" />
                     {
                         isBlocked ?
                             <div className="text-xs text-muted-foreground">
@@ -71,6 +73,9 @@ const UsersRow = ({ chatUser, getLastMessages, active, isBlocked, onToggleBlock,
                                     {t("presence.online")}
                                 </div> :
                                 lastSeenText ?
+                                    // Wraps rather than ellipsizing: Hebrew and Arabic
+                                    // run longer than English, and it's a sentence,
+                                    // not a name - the row just grows.
                                     <div className="text-xs text-muted-foreground wrap-break-word">
                                         {lastSeenText}
                                     </div> :

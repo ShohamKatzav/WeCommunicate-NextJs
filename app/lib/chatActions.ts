@@ -250,6 +250,15 @@ export const saveMessage = async (message: MessageDTO) => {
         // a blocked sender exactly why can escalate exactly the harassment
         // this feature exists to stop.
         if (message.participantID?.length === 1) {
+            // The other person deleted their account - the chat stays, with
+            // a "Deleted account" in it, but nothing more can be sent.
+            if (!(await AccountRepository.existsById(message.participantID[0]))) {
+                return JSON.parse(JSON.stringify({
+                    success: false,
+                    blocked: true,
+                    message: t('errors.recipientDeleted')
+                }));
+            }
             const isBlocked = await AccountRepository.isBlockedEitherWay(userID, message.participantID[0]);
             if (isBlocked) {
                 return JSON.parse(JSON.stringify({
@@ -557,7 +566,8 @@ export const getConversationMembers = async (conversationId: string) => {
         }
         const result = JSON.parse(JSON.stringify({
             success: true,
-            members: conversation.members
+            // Deleted accounts included, as anonymous placeholders.
+            members: ConversationRepository.withDeletedMembers(conversation.toObject()).members
         }));
         return result;
     } catch (err) {

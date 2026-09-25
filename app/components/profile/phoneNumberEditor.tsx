@@ -93,10 +93,10 @@ const PhoneNumberEditor = ({ currentPhone, canEdit, onChanged }: PhoneNumberEdit
     if (!canEdit) {
         return (
             <div data-testid="phone-number-editor">
-                <span className="block text-sm font-medium mb-1">{t('profile.contact.phone')}</span>
-                <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-900 text-muted-foreground text-sm">
-                    <PhoneIcon size={16} aria-hidden="true" />
-                    {currentPhone ? <bdi dir="ltr">{currentPhone}</bdi> : t('profile.contact.notSet')}
+                <span className="mb-0.5 block text-sm font-medium sm:mb-1">{t('profile.contact.phone')}</span>
+                <div className="flex items-center gap-2 rounded-lg border border-gray-300 bg-gray-100 px-3 py-1.5 text-sm text-muted-foreground dark:border-gray-600 dark:bg-gray-900 sm:px-4 sm:py-2">
+                    <PhoneIcon size={16} className="shrink-0" aria-hidden="true" />
+                    {currentPhone ? <bdi dir="ltr" className="truncate">{currentPhone}</bdi> : <span className="truncate">{t('profile.contact.notSet')}</span>}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                     {t('profile.contact.phoneLocked')}
@@ -107,18 +107,18 @@ const PhoneNumberEditor = ({ currentPhone, canEdit, onChanged }: PhoneNumberEdit
 
     return (
         <div data-testid="phone-number-editor">
-            <span className="block text-sm font-medium mb-1">{t('profile.contact.phone')}</span>
+            <span className="mb-0.5 block text-sm font-medium sm:mb-1">{t('profile.contact.phone')}</span>
 
             {step === 'view' && (
-                <div className="flex items-center justify-between gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                    <span className="flex items-center gap-2 text-sm">
-                        <PhoneIcon size={16} className="text-muted-foreground" aria-hidden="true" />
-                        {currentPhone ? <bdi dir="ltr">{currentPhone}</bdi> : <span className="text-muted-foreground italic">{t('profile.contact.notSet')}</span>}
+                <div className="flex items-center justify-between gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 dark:border-gray-600 dark:bg-gray-800 sm:px-4 sm:py-2">
+                    <span className="flex min-w-0 items-center gap-2 text-sm">
+                        <PhoneIcon size={16} className="shrink-0 text-muted-foreground" aria-hidden="true" />
+                        {currentPhone ? <bdi dir="ltr" className="truncate">{currentPhone}</bdi> : <span className="truncate text-muted-foreground italic">{t('profile.contact.notSet')}</span>}
                     </span>
                     <button
                         type="button"
                         onClick={() => setStep('enter-phone')}
-                        className="flex items-center gap-1 text-sm text-primary hover:underline"
+                        className="flex shrink-0 items-center gap-1 text-sm text-primary hover:underline"
                     >
                         <Pencil size={14} aria-hidden="true" /> {currentPhone ? t('profile.contact.change') : t('profile.contact.add')}
                     </button>

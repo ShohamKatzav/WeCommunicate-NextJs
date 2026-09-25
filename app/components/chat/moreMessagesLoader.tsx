@@ -22,6 +22,8 @@ interface LoadMoreProps {
 }
 
 export default function MoreMessagesLoader({ oldMessages, participants, onReply, clearedAt, onNewestLoadedChange }: LoadMoreProps) {
+  // The other person in this 1:1 deleted their account - see MessageBubble's readOnly.
+  const recipientDeleted = participants?.length === 1 && !!participants[0].deleted;
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [page, setPage] = useState(1);
@@ -65,6 +67,7 @@ export default function MoreMessagesLoader({ oldMessages, participants, onReply,
         message={message}
         onReply={onReply}
         senderAccentColor={accentForSender(accentBySender, message.sender)}
+        readOnly={recipientDeleted}
       />
     </Fragment>
   );

@@ -4,6 +4,7 @@ interface IConversation extends Document {
     members?: Schema.Types.ObjectId[];
     messages?: Schema.Types.ObjectId[];
     deletedBy?: Schema.Types.ObjectId[];
+    deletedMembers?: Schema.Types.ObjectId[];
     disappearingMessagesSeconds?: number;
 }
 
@@ -21,6 +22,16 @@ const ConversationSchema = new Schema<IConversation>({
     deletedBy: {
         type: [Schema.Types.ObjectId],
         ref: 'Account',
+        required: false,
+        default: []
+    },
+    // Members whose accounts were deleted (services/AccountDeletionService.ts).
+    // Taken out of `members`, so nothing reaches them any more, but kept here
+    // so the conversation still says someone was there: clients get each as
+    // an anonymous "Deleted account" member (ConversationRepository), and a
+    // group that lost one isn't mistaken for a chat with only the rest.
+    deletedMembers: {
+        type: [Schema.Types.ObjectId],
         required: false,
         default: []
     },

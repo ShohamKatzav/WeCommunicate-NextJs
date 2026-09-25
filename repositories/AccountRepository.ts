@@ -30,6 +30,10 @@ export default class AccountRepository {
             throw new Error('Failed to find user by ID');
         }
     }
+    static async existsById(ID: string) {
+        if (!Types.ObjectId.isValid(ID)) return false;
+        return Boolean(await Account.exists({ _id: ID }));
+    }
     static async getUsersByID(IDs: string[]) {
         try {
             const obj_ids = IDs.map(id => new Types.ObjectId(id));

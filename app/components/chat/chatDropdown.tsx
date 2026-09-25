@@ -197,7 +197,9 @@ const ChatDropdown = ({
                             setDisappearingMessagesConversationId(id);
                             setShowDisappearingMessagesModal(true);
                         }}
-                        disabled={!participants.current?.length || isOpeningDisappearingMessages}
+                        // A 1:1 with a deleted account gets no new messages to time.
+                        disabled={!participants.current?.length || isOpeningDisappearingMessages
+                            || (participants.current.length === 1 && !!participants.current[0].deleted)}
                         className="flex items-center gap-2 w-full text-start px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Timer size={18} /> {t("chat.menu.disappearing")}

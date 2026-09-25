@@ -12,6 +12,7 @@ interface VoiceRecorderProps {
     participants: RefObject<ChatUser[] | null | undefined>;
     onRecorded: (file: FileDTO) => Promise<void>;
     onStatusChange: (isRecordingOrUploading: boolean) => void;
+    disabled?: boolean;
 }
 
 const formatDuration = (totalSeconds: number) => {
@@ -20,7 +21,7 @@ const formatDuration = (totalSeconds: number) => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 };
 
-const VoiceRecorder = ({ participants, onRecorded, onStatusChange }: VoiceRecorderProps) => {
+const VoiceRecorder = ({ participants, onRecorded, onStatusChange, disabled = false }: VoiceRecorderProps) => {
     const t = useT();
     const isMobile = useIsMobile();
     const { status, elapsedSeconds, startRecording, stopAndSend, cancelRecording } = useVoiceRecorder({ onRecorded });
@@ -73,7 +74,7 @@ const VoiceRecorder = ({ participants, onRecorded, onStatusChange }: VoiceRecord
         <button
             type="button"
             onClick={startRecording}
-            disabled={!participants.current}
+            disabled={!participants.current || disabled}
             aria-label={t("chat.voice.record")}
             className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
         >

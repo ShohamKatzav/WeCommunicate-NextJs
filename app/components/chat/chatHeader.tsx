@@ -6,6 +6,7 @@ import { HiChatBubbleLeftRight, HiUsers } from "react-icons/hi2";
 import { Phone, Timer, Video } from "lucide-react";
 import { AsShortName } from "../../utils/stringFormat";
 import { formatLastSeen } from "../../utils/lastSeen";
+import { memberName } from "../../utils/memberName";
 import { useUser } from "../../hooks/useUser";
 import ChatDropdown from "./chatDropdown";
 import Avatar from "../ui/avatar";
@@ -92,7 +93,10 @@ const ChatHeader = ({
     // and the header already summarises those as "N of M members online".
     // Never shown for a blocked user, matching the users list.
     const otherParticipant = participants.current?.length === 1 ? participants.current[0] : undefined;
-    const lastSeenText = (!otherParticipant || isBlocked)
+    // The other person deleted their account: the chat stays, with no one
+    // to reach - no profile, presence or calls.
+    const recipientDeleted = !!otherParticipant?.deleted;
+    const lastSeenText = (!otherParticipant || isBlocked || recipientDeleted)
         ? null
         : formatLastSeen(
             (otherParticipant.email ? lastSeenByEmail[otherParticipant.email.toLowerCase()] : undefined)
@@ -104,8 +108,8 @@ const ChatHeader = ({
     // never reach a blocked user. They don't require a conversation to
     // exist yet - onStartCall creates one on demand (ensureConversationId)
     // if this is a brand-new chat with no messages.
-    const canCall = !!otherParticipant && !isBlocked;
-    const callTargetName = otherParticipant?.nickname || AsShortName(otherParticipant?.email as string);
+    const canCall = !!otherParticipant && !isBlocked && !recipientDeleted;
+    const callTargetName = otherParticipant ? memberName(otherParticipant, t) : "";
     // Voice calls need a microphone; video calls need a microphone and a
     // camera (getMedia(true, video) in callController.ts). getUserMedia would
     // already reject and toast this once a call is attempted; disabling up
@@ -128,11 +132,15 @@ const ChatHeader = ({
     // user, who is already named in the navbar. A group lists its members;
     // nothing here is ever truncated, it wraps instead.
     const conversationTitle = roomParticipants
-        ?.map(p => p.nickname || AsShortName(p.email))
+        ?.map(p => memberName(p, t))
         .join(", ");
+    // A deleted account in a group isn't a member who could be online.
+    const liveMemberCount = roomParticipants?.filter(p => !p.deleted).length ?? 0;
     const presenceText = isGroup
-        ? t("chat.header.membersOnline", { online: onlineCount, count: roomParticipants!.length })
-        : onlineCount > 0
+        ? t("chat.header.membersOnline", { online: onlineCount, count: liveMemberCount })
+        : recipientDeleted
+            ? t("chat.header.accountDeleted")
+            : onlineCount > 0
             ? t("presence.online")
             : lastSeenText ?? t("chat.header.notHere");
     const typingEmails = Object.keys(typingUsers);
@@ -161,7 +169,10 @@ const ChatHeader = ({
             </button>
 
             <div className="order-2 flex min-h-11 min-w-0 flex-1 basis-0 items-center gap-2.5 md:min-h-10">
-                {otherParticipant && (
+                {otherParticipant && recipientDeleted && (
+                    <Avatar deleted size={40} className="self-start md:self-center" />
+                )}
+                {otherParticipant && !recipientDeleted && (
                     <Link
                         href={`/profile/${otherParticipant._id}`}
                         onClick={() => rememberChatForProfile(otherParticipant._id)}

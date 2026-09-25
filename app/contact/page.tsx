@@ -1,5 +1,6 @@
 import { Mail, Phone, Linkedin, Facebook, Github } from 'lucide-react';
 import { getT } from '../i18n/server';
+import { pageTitleClassName } from '../components/shell/pageTitle';
 
 const Contact = async () => {
     const t = await getT();
@@ -33,10 +34,10 @@ const Contact = async () => {
     return (
         <div>
             {/* Hero Section */}
-            <div className="pt-4 pb-12">
+            <div className="pb-12">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center">
-                        <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 dark:text-white sm:text-5xl md:text-6xl">
+                        <h1 className={pageTitleClassName}>
                             <span className="text-transparent bg-clip-text bg-linear-to-r from-emerald-700 to-cyan-800 dark:from-emerald-300 dark:to-cyan-400">{t('contact.title')}</span>
                         </h1>
                         <p className="mt-4 max-w-2xl mx-auto text-xl text-muted-foreground">

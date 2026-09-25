@@ -17,6 +17,7 @@ import AudioPlayer from './audioPlayer';
 import LocationBubble from './locationBubble';
 import FullscreenLocationViewer from './fullscreenLocationViewer';
 import CallRecordRow from './callRecordRow';
+import SystemNoticeRow from './systemNoticeRow';
 import MessageActionsMenu from './messageActionsMenu';
 import { clearActiveMessage, setActiveMessage, useIsActiveMessage } from './activeMessageStore';
 import { AsShortName } from "../../utils/stringFormat";
@@ -28,9 +29,12 @@ interface MessageBubbleProps {
   message: Message;
   onReply?: (message: Message) => void;
   senderAccentColor?: string;
+  // A 1:1 whose other person deleted their account: nothing new can be
+  // added (reply, react, edit); copying and deleting your own still work.
+  readOnly?: boolean;
 }
 
-const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubbleProps) => {
+const MessageBubble = ({ message, onReply, senderAccentColor, readOnly = false }: MessageBubbleProps) => {
 
   const { user } = useUser();
   const { socket } = useSocket();
@@ -223,6 +227,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
   }, []);
 
   const handleReact = async (emoji: string) => {
+    if (readOnly) return;
     if (!message._id || !user?.email) return;
 
     closeActions();
@@ -414,7 +419,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
 
   // Only text can be edited: not a pin, and not a file or voice message sent
   // without any (a deleted message or call record never gets this far).
-  const canEdit = isOwnMessage && !isPending && !!text?.trim() && !message.location;
+  const canEdit = isOwnMessage && !isPending && !!text?.trim() && !message.location && !readOnly;
 
   const toggleMenu = () => {
     if (!message._id) return;
@@ -428,6 +433,10 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
     if ((event.target as HTMLElement).closest("a, button, audio, video, input, textarea")) return;
     toggleMenu();
   };
+
+  if (message.system) {
+    return <SystemNoticeRow date={message.date} />;
+  }
 
   if (message.call) {
     return (
@@ -680,8 +689,8 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
           align={isOwnMessage ? "end" : "start"}
           menuRef={menuRef}
           selectedReaction={myReaction?.emoji}
-          onReact={isPending ? undefined : handleReact}
-          onReply={onReply && !isPending ? handleReply : undefined}
+          onReact={isPending || readOnly ? undefined : handleReact}
+          onReply={onReply && !isPending && !readOnly ? handleReply : undefined}
           onCopy={canCopy ? handleCopy : undefined}
           onEdit={canEdit ? startEdit : undefined}
           onDelete={isOwnMessage ? deleteMessageHandler : undefined}

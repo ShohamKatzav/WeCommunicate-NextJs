@@ -31,6 +31,7 @@ const en = {
         attachment: "Attachment",
     },
     nav: {
+        privacy: "Privacy",
         main: "Main",
         login: "login",
         chat: "chat",
@@ -52,6 +53,7 @@ const en = {
         current: "Theme: {theme}. Change theme",
     },
     footer: {
+        privacy: "Privacy policy",
         tagline: "Real-time chat with voice notes, disappearing messages, and full offline support - free, in your browser.",
         explore: "Explore",
         account: "Account",
@@ -60,6 +62,7 @@ const en = {
         locations: "Locations",
         about: "About",
         contact: "Contact",
+        profile: "Profile",
         openChat: "Open chat",
         moderator: "Moderator",
         logIn: "Log in",
@@ -164,7 +167,7 @@ const en = {
     },
     about: {
         title: "About",
-        intro: "A real-time chat app built from scratch - messaging, voice notes, offline support and more, in five languages.",
+        intro: "A real-time chat app built from scratch - messaging, voice and video calls, and offline support, in five languages.",
         whatYouCanDo: "What You Can Do",
         liveToday: "Everything below is live in the app today.",
         features: {
@@ -184,9 +187,17 @@ const en = {
                 title: "Replies & quotes",
                 description: "Reply to a specific message and the quoted text travels with it, so group threads stay readable.",
             },
+            reactions: {
+                title: "Reactions",
+                description: "React to a message with an emoji and see who reacted, without sending another message.",
+            },
             voice: {
                 title: "Voice messages",
                 description: "Record and send a voice note straight from the browser - no app install, no extra permissions beyond the mic.",
+            },
+            calls: {
+                title: "Voice & video calls",
+                description: "Call someone one-to-one from the chat. Audio and video go directly between your browsers; the server only sets the call up.",
             },
             media: {
                 title: "Photos, video & files",
@@ -216,17 +227,23 @@ const en = {
                 title: "Location sharing",
                 description: "Opt in to share your location and see how far away your friends are on a live map.",
             },
+            languages: {
+                title: "Five languages",
+                description: "Use the app in English, Hebrew, Arabic, Russian or French. Hebrew and Arabic run right to left, and you can switch language any time.",
+            },
         },
         builtWith: "Built With",
-        builtWithTeaser: "Next.js, Socket.IO, MongoDB, Redis, Vercel Blob and more",
+        builtWithTeaser: "Next.js, Socket.IO, WebRTC, MongoDB, Redis, Vercel Blob and more",
         tech: {
             next: "Server-side rendering, server actions and efficient routing for a seamless user experience.",
             tailwind: "Utility-first CSS framework for designing a responsive and aesthetically pleasing interface.",
             socket: "Enabling real-time communication and facilitating instant dynamic interactions.",
+            webrtc: "One-to-one voice and video calls. Audio and video travel directly between the two browsers; the server only passes the messages that set the call up.",
             mongo: "Scalable and flexible database handling, including TTL-based cleanup for disappearing messages.",
             redis: "Real-time notifications and online status tracking, ensuring instant updates without heavy backend load.",
             openai: "Advanced content moderation system to maintain community safety and ensure appropriate communication.",
             blob: "Storage for images, documents and voice notes, uploaded straight from the browser.",
+            maps: "The Locations page and the location pins in chats, drawn in the browser.",
             serviceWorkersTitle: "Service Workers & Web Push",
             serviceWorkers: "Offline queueing, installable PWA support and notifications that arrive even with the tab closed.",
             brevo: "Delivers the email and SMS verification codes behind sign-up and password reset.",
@@ -292,6 +309,7 @@ const en = {
             signUp: "Sign up!",
         },
         otp: {
+            privacyNote: "What we store and why: <link>privacy policy</link>.",
             titleReset: "Reset Your Password",
             titleSignUp: "Create Your Account on WeCommunicate",
             titleVerify: "Verify OTP",
@@ -360,7 +378,110 @@ const en = {
         },
     },
     // Returned by server actions and shown as-is in a toast or form error.
+    privacy: {
+        metaTitle: "Privacy Policy - WeCommunicate",
+        title: "Privacy Policy",
+        contents: "On this page",
+        updated: "Last updated {date}",
+        intro: "What WeCommunicate stores about you, why, and who else receives it - in plain language, and only what the app actually does.",
+        account: {
+            title: "Your account",
+            lead: "Your account holds:",
+            items: {
+                contact: "Your email address or phone number - whichever you signed up with. An account made with a phone number also gets an internal identifier built from that number.",
+                password: "Your password, stored only as a salted hash (bcrypt) - never the password itself.",
+                profile: "Your nickname and, if you add them, a short \"about\" line, a profile picture and an accent color.",
+                locale: "The language you use the app in.",
+                lastSeen: "When you were last online.",
+                blocked: "The list of people you've blocked.",
+                moderator: "Whether your account is a moderator (see Moderators).",
+                moderation: "Any warnings and bans, with their reasons (see Automatic moderation).",
+            },
+            visible: "Other signed-in users can see your nickname, profile picture, about line, email address, phone number and when you were last online.",
+        },
+        moderators: {
+            title: "Moderators",
+            p1: "Some accounts have a moderator role. A new account is never a moderator; only an existing moderator can make someone one.",
+            p2: "Moderators can open the moderator page, which lists every account's email address, nickname and phone number, whether it's a moderator, and whether it's banned and why. From there they can ban and unban accounts, promote an account to moderator, and demote one. That page doesn't show anyone's conversations.",
+        },
+        messages: {
+            title: "Messages and conversations",
+            p1: "What you send in a chat is stored so the people in that conversation can read it: the text, edits, reactions and replies, locations you share as a pin (a latitude and longitude), and the photos, videos, files and voice notes you upload. Messages are kept in our database (MongoDB) and uploaded files in Vercel Blob.",
+            p2: "Deleting a message removes it, and any file attached to it, for everyone. Clearing a conversation's history or deleting a conversation hides it for you only - the others keep their copy. Disappearing messages are deleted from the database when their timer runs out, but a file attached to one currently stays in file storage.",
+        },
+        media: {
+            title: "Voice notes and profile photos",
+            voice: "A voice note is a recording from your microphone that you make and send yourself. It's uploaded and stored like any other file in the conversation. It isn't a call.",
+            photo: "Taking a profile photo in the app uses your camera for that one picture, which is stored as your profile picture.",
+        },
+        calls: {
+            title: "Voice and video calls",
+            p1: "Calls are one-to-one. When one starts, your browser asks for your microphone - and for a video call, your camera too.",
+            p2: "The audio and video travel directly between the two browsers (WebRTC). Our server only passes along the messages that set the call up - offers, answers and network candidates - over Socket.IO. It doesn't record or store the call's audio or video.",
+            p3: "To connect, your browser uses Google's public STUN server (stun.l.google.com), which sees your network address. When a TURN relay is configured and the two browsers can't connect directly, the call's audio and video pass through that relay (encrypted, as WebRTC requires).",
+            p4: "After a call, one entry is added to the chat: whether it was a video call, how it ended (completed, declined, not answered, cancelled, busy or failed) and how long it lasted in seconds. It's recorded as a message from the person who placed the call.",
+        },
+        location: {
+            title: "Your location",
+            p1: "Your location is used only when you allow it. On the Locations page, once you give access, your position (latitude, longitude, accuracy and time) is saved to your account as you move while the page is open - one saved location per account, replacing the last. Every signed-in user can see saved locations, with the owner's email address, on that page's map.",
+            p2: "A location you share in a chat is sent as a message (see Messages and conversations).",
+            p3: "Maps are drawn by Google Maps, on the Locations page and for location pins in chats. Your browser loads them from Google, which receives the places being shown and your network address.",
+        },
+        notifications: {
+            title: "Notifications",
+            p1: "If you turn on notifications, your browser's push service (for example Google's for Chrome or Apple's for Safari) gives us an address to send them to. We store it with your account's email, and it expires with your sign-in. Each notification - the sender's name and the message text, or that someone is calling - passes through that push service to reach your device.",
+            p2: "Unread counts for your conversations are kept in Upstash Redis.",
+        },
+        moderation: {
+            title: "Automatic moderation",
+            p1: "The text of every message you send or edit is checked by OpenAI's moderation service before it's delivered. Photos, files and voice notes aren't sent to it.",
+            p2: "A flagged message isn't delivered. We keep a record of the violation - the flagged text, the reason, its categories and severity, and when it happened - along with your warning count and any ban, with its reason and end date. Moderators see ban reasons on the moderator page.",
+        },
+        signIn: {
+            title: "Signing in",
+            p1: "Verification codes - for signing up, resetting your password, changing your email or phone number, and deleting your account - are 6 digits, valid for 10 minutes and usable once. They're kept in Upstash Redis and sent by Brevo by email or SMS, so Brevo receives your email address or phone number along with the code.",
+            p2: "Once you're signed in, a cookie on this device holds your session: a signed token that lasts 7 days, plus a copy of your nickname, profile picture, accent color and moderator status. Page scripts can't read it. A second cookie remembers your language for a year.",
+            p3: "To slow down password guessing and spam, Upstash Redis keeps short-lived counters of attempts per email address, phone number or account.",
+        },
+        presence: {
+            title: "Online status",
+            p1: "While the app is open, your connection (Socket.IO) is registered in Upstash Redis so others can see you're online and messages reach you right away. When your last open tab closes, that moment is saved as your last seen. Typing indicators are passed along live and not stored.",
+        },
+        device: {
+            title: "On your device",
+            p1: "Unsent drafts, your theme and which prompts you've dismissed are kept in your browser's local storage.",
+            p2: "The app's service worker keeps pages and media for offline use. Messages you send while offline wait in an outbox in your browser's storage on this device, and go out once you're back online. Signing out clears the saved pages; deleting your account also empties the outbox.",
+        },
+        services: {
+            title: "Services we use",
+            lead: "Your data goes to these services, only for the purposes above:",
+            items: {
+                mongo: "<b>MongoDB</b> - our database: accounts, messages, conversations, locations, notification subscriptions and moderation records.",
+                redis: "<b>Upstash Redis</b> - verification codes, online status, unread counts, rate-limit counters, and content shared into the app while it waits (a few minutes) to be sent.",
+                blob: "<b>Vercel Blob</b> - profile pictures and files sent in chats.",
+                brevo: "<b>Brevo</b> - sends verification codes by email and SMS.",
+                openai: "<b>OpenAI</b> - checks message text for moderation.",
+                google: "<b>Google</b> - maps, and the STUN server that helps calls connect.",
+                push: "<b>Your browser's push service</b> - delivers notifications.",
+                turn: "<b>A TURN relay</b>, when one is configured - carries calls that can't connect directly.",
+            },
+            notSold: "We don't sell your data, and the app has no ads or analytics trackers.",
+        },
+        delete: {
+            title: "Deleting your account",
+            p1: "You can delete your account at any time from <edit>Edit profile</edit>. We send a code to your email - or by SMS if you signed up with a phone number - and once you enter it, your account is deleted right away.",
+            p2: "That removes your account, your messages and their files, your profile picture, your saved location, your notification subscriptions and moderation records, your reactions and other people's quotes of your messages, and your place in every conversation. Other people keep their own messages, and see \"Deleted account\" where you were, with a note that the account was deleted - your name isn't kept. A conversation with no one left in it is deleted. Every device you're signed in on is signed out.",
+            p3: "What the services above have already delivered - a notification or an email, for example - can't be called back.",
+        },
+        contact: {
+            title: "Contact",
+            p1: "Questions about your data? Email <mail>{email}</mail>.",
+        },
+    },
     errors: {
+        recipientDeleted: "This account was deleted.",
+        noContactForDeletion: "This account has no email address or phone number to send a code to.",
+        deleteAccountFailed: "Couldn't delete your account. Please try again.",
         unauthorized: "Unauthorized",
         invalidUser: "Invalid user",
         userNotFound: "User not found",
@@ -476,7 +597,12 @@ const en = {
         yesterday: "Yesterday",
     },
     chat: {
+        deletedAccount: "Deleted account",
+        notice: {
+            accountDeleted: "An account in this chat was deleted",
+        },
         composer: {
+            recipientDeleted: "This account was deleted, so you can't send messages here.",
             messageInput: "Message input",
             placeholder: "Message...",
             selectParticipant: "Select a participant to start chatting",
@@ -508,6 +634,7 @@ const en = {
             moreMatches: plural({ one: "+{count} more match", other: "+{count} more matches" }),
         },
         preview: {
+            accountDeleted: "Account deleted",
             deleted: "Message deleted",
             location: "Shared a location",
             voice: "Voice message",
@@ -574,6 +701,7 @@ const en = {
             image: "Fullscreen image",
         },
         header: {
+            accountDeleted: "This account was deleted",
             membersOnline: plural({ one: "{online} of {count} members online", other: "{online} of {count} members online" }),
             notHere: "Not here right now",
             openConversations: "Open conversations",
@@ -831,6 +959,10 @@ const en = {
         promote: "Promote",
         unknownUser: "Unknown user",
         bannedByModerator: "Banned by moderator",
+        empty: "No users match.",
+        range: "{start}–{end} of {total}",
+        previous: "Previous",
+        next: "Next",
     },
     presence: {
         online: "Online",
@@ -842,6 +974,19 @@ const en = {
         lastSeenOn: "Last seen on {date}",
     },
     profile: {
+        delete: {
+            title: "Delete account",
+            body: "Permanently deletes your account, your messages and the files in them, your profile picture, your saved location and everything else that's yours. The people you've talked to keep their own messages. This can't be undone.",
+            start: "Delete my account",
+            codeSentEmail: "We sent a 6-digit code to <b>{destination}</b>. Enter it to delete your account.",
+            codeSentSms: "We texted a 6-digit code to <b>{destination}</b>. Enter it to delete your account.",
+            confirm: "Delete permanently",
+            deleting: "Deleting...",
+            deleted: "Your account has been deleted.",
+            deletedElsewhere: "Your account was deleted, so you've been signed out.",
+            failed: "Couldn't delete your account. Please try again.",
+            offline: "You're offline - try again once you're connected.",
+        },
         loadFailed: "Couldn't load your profile.",
         userNotFound: "User not found.",
         backToChat: "Back to chat",
