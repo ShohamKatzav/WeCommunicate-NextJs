@@ -1,6 +1,6 @@
 "use server"
 import { env } from '@/app/config/env';
-import { MAX_MESSAGE_LENGTH, MESSAGE_REACTIONS } from '@/app/config/limits';
+import { MAX_MESSAGE_LENGTH, ALL_MESSAGE_REACTIONS } from '@/app/config/limits';
 import connectDB from "@/app/lib/MongoDb";
 import mongoose, { Types } from "mongoose";
 import ModerationService from '@/services/ModerationService';
@@ -316,7 +316,7 @@ export const toggleMessageReaction = async (messageId: string, emoji: string) =>
         if (typeof messageId !== 'string' || !Types.ObjectId.isValid(messageId)) {
             return { success: false, message: 'Invalid message' };
         }
-        if (!MESSAGE_REACTIONS.includes(emoji as typeof MESSAGE_REACTIONS[number])) {
+        if (typeof emoji !== 'string' || !ALL_MESSAGE_REACTIONS.includes(emoji)) {
             return { success: false, message: 'Unsupported reaction' };
         }
 

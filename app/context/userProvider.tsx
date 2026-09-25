@@ -44,11 +44,16 @@ export const UserProvider = ({ children }: UserProviderProps) => {
 
     const updateUser = useCallback(async (userData: User | null) => {
         try {
-            setUser(userData);
-
             if (userData) {
+                // Cookie first, state second. Setting the user is what sends
+                // the login page on to /chat (its effect watches user.email),
+                // and proxy.ts bounces /chat back to /login without this
+                // cookie. With the old order that navigation raced the cookie
+                // write and could leave the login page's spinner up for good.
                 await createUserCoockie(userData);
+                setUser(userData);
             } else {
+                setUser(null);
                 // The server drops this device's row in the same request
                 // that deletes the cookie. The browser's own unsubscribe is
                 // a push-service round trip, so logging out doesn't wait on it.
@@ -58,8 +63,10 @@ export const UserProvider = ({ children }: UserProviderProps) => {
                 });
                 await deleteUserCoockie(subscription?.endpoint);
             }
+            return true;
         } catch (error) {
             console.error("Failed to update user:", error);
+            return false;
         }
     }, []);
 

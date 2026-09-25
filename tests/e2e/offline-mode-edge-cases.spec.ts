@@ -122,8 +122,8 @@ customTest.describe('Offline Mode - Separated Scenarios', () => {
         // Offline Action
         await context.setOffline(true);
         const msg = chat.getMessageSentByText(OFFLINE_TESTS_DATA.DELETE_TEST.test_message);
-        await msg.hover();
-        const delButton = chat.getDeleteButtonByMessageText(OFFLINE_TESTS_DATA.DELETE_TEST.test_message);
+        await chat.openMessageActions(msg);
+        const delButton = chat.getMessageActionsDeleteButton();
         await Promise.all([
             expect(chat.toastWarnings.messageDeletingOfflineWarning).toBeVisible(),
             delButton.click()

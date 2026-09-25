@@ -19,8 +19,8 @@ customTest.describe('Chat Messages Functionality', () => {
         await (await pOManager2.getChatPage().selectUser(firstUserShortName)).click();
         const messageFromUser1 = await pOManager2.getChatPage().getMessageReceivedByText(textToSend);
         await expect(messageFromUser1).toBeVisible();
-        await authPage.getChatPage().getMessageSentByText(textToSend).hover();
-        await authPage.getChatPage().getDeleteButtonByMessageText(textToSend).click();
+        await authPage.getChatPage().openMessageActions(authPage.getChatPage().getMessageSentByText(textToSend));
+        await authPage.getChatPage().getMessageActionsDeleteButton().click();
 
         // Confirm deletion in the dialog of both users
         await expect(authPage.getChatPage().getSentMessageByText('You deleted this message')).toBeVisible();

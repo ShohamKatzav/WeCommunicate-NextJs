@@ -187,8 +187,22 @@ export default class ChatPage {
         // accent colors, so this matches on the stable data-testid instead.
         return this.page.getByTestId('sent-message').filter({ hasText: text }).last();
     }
-    getDeleteButtonByMessageText(text: string): Locator {
-        return this.page.locator(`//div[text()="${text}"]/parent::div/following-sibling::button`).last();
+    // A message's actions (react, reply, delete) live in one menu, opened on
+    // desktop from the button beside the bubble that shows on hover. The
+    // menu is portaled to <body>, so it's located page-wide rather than
+    // inside the message row - only one can be open at a time.
+    getMessageActionsMenu(): Locator {
+        return this.page.getByTestId('message-actions-menu');
+    }
+
+    async openMessageActions(bubble: Locator): Promise<void> {
+        await bubble.hover();
+        await bubble.locator('xpath=..').getByTestId('message-actions-trigger').click();
+        await expect(this.getMessageActionsMenu()).toBeVisible();
+    }
+
+    getMessageActionsDeleteButton(): Locator {
+        return this.getMessageActionsMenu().getByRole('button', { name: 'Delete' });
     }
 
     /**
@@ -343,23 +357,15 @@ export default class ChatPage {
         return this.getSentMessageByText(text).locator('[aria-label="Read"]');
     }
 
-    getReplyButtonForSentMessage(text: string): Locator {
-        return this.getSentMessageByText(text).locator('xpath=..').getByRole('button', { name: 'Reply to message' });
-    }
-
-    getReplyButtonForReceivedMessage(text: string): Locator {
-        return this.getReceivedMessageByText(text).locator('xpath=..').getByRole('button', { name: 'Reply to message' });
-    }
-
     async replyToSentMessage(text: string): Promise<void> {
-        await this.getSentMessageByText(text).hover();
-        await this.getReplyButtonForSentMessage(text).click();
+        await this.openMessageActions(this.getSentMessageByText(text));
+        await this.getMessageActionsMenu().getByRole('button', { name: 'Reply' }).click();
         await expect(this.replyPreview).toBeVisible();
     }
 
     async replyToReceivedMessage(text: string): Promise<void> {
-        await this.getReceivedMessageByText(text).hover();
-        await this.getReplyButtonForReceivedMessage(text).click();
+        await this.openMessageActions(this.getReceivedMessageByText(text));
+        await this.getMessageActionsMenu().getByRole('button', { name: 'Reply' }).click();
         await expect(this.replyPreview).toBeVisible();
     }
 
