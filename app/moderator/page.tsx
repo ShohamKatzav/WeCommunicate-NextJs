@@ -220,14 +220,13 @@ export default function ModeratorPanel() {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="mb-8">
-                <div className="flex items-center gap-3 mb-4">
-                    <Shield className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-                    <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-                        {t("moderator.title")}
-                    </h1>
-                </div>
-                <p className="text-gray-600 dark:text-gray-400">
+            {/* Same title treatment as the locations, about and contact pages, in
+                a colour of its own. */}
+            <div className="mb-8 text-center">
+                <h1 className="mb-4 text-2xl font-extrabold text-balance wrap-break-word text-gray-900 dark:text-white sm:text-4xl lg:text-5xl">
+                    <span className="text-transparent bg-clip-text bg-linear-to-r from-amber-700 to-rose-700 dark:from-amber-300 dark:to-rose-400">{t("moderator.title")}</span>
+                </h1>
+                <p className="mx-auto max-w-2xl text-muted-foreground">
                     {t("moderator.subtitle")}
                 </p>
             </div>

@@ -6,6 +6,7 @@ import Conversation from '@/types/conversation';
 import { PendingClears } from './usePendingCleanHistory';
 import { findConversationId, getOrCreateConversationId } from '../lib/conversationActions';
 import { TYPING_IDLE_MS, TYPING_REFRESH_MS } from '../config/limits';
+import { registerOpenRoom } from '../utils/chatReturn';
 
 interface UseChatRoomProps {
     socket: Socket | null;
@@ -329,6 +330,11 @@ export const useChatRoom = ({
         participants.current = null;
         setFirstUnreadMessageId(undefined);
     }, [socket, updateChatRef, stopLocalTyping]);
+
+    // Lets a profile link snapshot the open room (see utils/chatReturn.ts).
+    useEffect(() => registerOpenRoom(() => participants.current
+        ? { conversationId: currentConversationId.current, participants: participants.current }
+        : null), []);
 
     // Persist the in-progress draft for whichever conversation is open right
     // now on every change - including it being cleared after a send, which

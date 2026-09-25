@@ -3,7 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Mail as MailIcon, Pencil, X } from "lucide-react";
 import { requestEmailChangeOTP, confirmEmailChangeStep1, resendNewEmailChangeOTP, confirmEmailChange } from "../../lib/profileActions";
-import { useT } from "../../i18n/client";
+import { useI18n } from "../../i18n/client";
 
 interface EmailAddressEditorProps {
     currentEmail?: string;
@@ -28,7 +28,7 @@ const RESEND_COOLDOWN_SECONDS = 60;
 const inputClassName = "flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent";
 
 const EmailAddressEditor = ({ currentEmail, hasRealEmail, hasPhone, onChanged }: EmailAddressEditorProps) => {
-    const t = useT();
+    const { t, dir: pageDir } = useI18n();
     const defaultChannel: VerifyChannel = hasRealEmail ? 'email' : 'sms';
     const [step, setStep] = useState<Step>('view');
     const [newEmail, setNewEmail] = useState('');
@@ -166,7 +166,9 @@ const EmailAddressEditor = ({ currentEmail, hasRealEmail, hasPhone, onChanged }:
                         <input
                             id="new-email"
                             type="email"
-                            dir={newEmail ? "ltr" : undefined}
+                            // An address reads left to right; empty, the
+                            // placeholder sits on the page's side.
+                            dir={newEmail ? "ltr" : pageDir}
                             value={newEmail}
                             onChange={ev => setNewEmail(ev.target.value)}
                             placeholder="you@example.com"

@@ -844,6 +844,7 @@ const en = {
     profile: {
         loadFailed: "Couldn't load your profile.",
         userNotFound: "User not found.",
+        backToChat: "Back to chat",
         noEmail: "Hasn't added an email",
         noPhone: "Hasn't added a phone number",
         addAbout: "Add a short line about yourself",

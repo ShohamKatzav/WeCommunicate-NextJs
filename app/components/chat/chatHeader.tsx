@@ -1,5 +1,6 @@
 import ChatUser from "@/types/chatUser";
 import Link from "next/link";
+import { rememberChatForProfile } from "../../utils/chatReturn";
 import { SetStateAction, useEffect, useState } from "react";
 import { HiChatBubbleLeftRight, HiUsers } from "react-icons/hi2";
 import { Phone, Timer, Video } from "lucide-react";
@@ -163,6 +164,7 @@ const ChatHeader = ({
                 {otherParticipant && (
                     <Link
                         href={`/profile/${otherParticipant._id}`}
+                        onClick={() => rememberChatForProfile(otherParticipant._id)}
                         aria-label={t("chat.header.viewProfile", { name: callTargetName })}
                         className="shrink-0 self-start rounded-full outline-none focus-visible:ring-2 focus-visible:ring-purple-500 md:self-center"
                     >

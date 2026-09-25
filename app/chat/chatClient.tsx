@@ -11,6 +11,7 @@ import Conversation from '@/types/conversation';
 import Message from '@/types/message';
 import FileDTO from '@/types/FileDTO';
 import { getSharedContent } from '../lib/shareActions';
+import { takeChatReturn } from '../utils/chatReturn';
 import { blockUser, unblockUser } from '../lib/blockActions';
 import ChatInputBar from '../components/chat/chatInputBar';
 import ChatWindow from '../components/chat/chatWindow';
@@ -265,6 +266,19 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
             document.body.classList.add('overflow-hidden');
         })();
     }, [loadingUser]);
+
+    // Back from another user's profile reopens the conversation that was
+    // open when they left (see utils/chatReturn.ts). Waits for the user load
+    // (the same remount hazard as the share pickup above) and for the socket,
+    // since getLastMessages joins the room through it and nothing re-joins
+    // a room opened before the socket existed.
+    const hasRestoredRoomRef = useRef(false);
+    useEffect(() => {
+        if (loadingUser || loadingSocket || hasRestoredRoomRef.current) return;
+        hasRestoredRoomRef.current = true;
+        const room = takeChatReturn();
+        if (room) getLastMessages(room.participants);
+    }, [loadingUser, loadingSocket, getLastMessages]);
 
     // Clean up conversations with empty messages
     useEffect(() => {

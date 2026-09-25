@@ -3,6 +3,9 @@ import type { Messages } from "./messages";
 
 // Hebrew. The reader is addressed in the plural imperative (לחצו, הזינו) -
 // the usual gender-neutral register for Hebrew UI copy.
+// \u2066...\u2069 around a phone number isolate it left to right: in
+// right-to-left text a bare "+972 50 123 4567" splits at its spaces and the
+// digit groups come out in reverse order.
 const he: Messages = {
     meta: {
         description: "WeCommunicate היא אפליקציית צ'אט",
@@ -305,7 +308,7 @@ const he: Messages = {
             nickname: "בחרו כינוי",
             contactLabel: "אימייל או מספר טלפון",
             emailPlaceholder: "הזינו אימייל",
-            phonePlaceholder: "הזינו מספר טלפון, למשל +972 50 123 4567",
+            phonePlaceholder: "הזינו מספר טלפון, למשל \u2066+972 50 123 4567\u2069",
             secure: "מאובטח ופרטי",
             codeLabel: "קוד אימות",
             codePlaceholder: "הזינו קוד בן 6 ספרות",
@@ -321,7 +324,7 @@ const he: Messages = {
             enterEmail: "הזינו אימייל",
             invalidEmail: "הזינו אימייל תקין",
             chooseNickname: "בחרו כינוי",
-            invalidPhone: "השתמשו במספר טלפון בינלאומי, למשל +972 50 123 4567",
+            invalidPhone: "השתמשו במספר טלפון בינלאומי, למשל \u2066+972 50 123 4567\u2069",
             forgotSentEmail: "אם קיים חשבון עם האימייל הזה, נשלח אליו קוד אימות.\nבדקו את תיבת הדואר.",
             forgotSentSms: "אם קיים חשבון עם מספר הטלפון הזה, נשלח אליו קוד אימות.\nבדקו את הטלפון.",
             sentEmail: "קוד האימות נשלח לאימייל שלכם. בדקו את תיבת הדואר.",
@@ -370,7 +373,7 @@ const he: Messages = {
         bannedWithReason: "החשבון שלכם נחסם. סיבה: {reason}",
         policyViolation: "הפרת מדיניות",
         invalidPassword: "סיסמה שגויה",
-        invalidPhone: "השתמשו במספר טלפון בינלאומי, למשל +972 50 123 4567",
+        invalidPhone: "השתמשו במספר טלפון בינלאומי, למשל \u2066+972 50 123 4567\u2069",
         invalidEmail: "הזינו כתובת אימייל תקינה",
         waitBeforeResend: "חכו רגע לפני שתבקשו קוד נוסף.",
         cannotSendCode: "לא ניתן לשלוח את הקוד. בדקו את יתרת ה-SMS ואת הגדרות השולח ב-Brevo.",
@@ -839,6 +842,7 @@ const he: Messages = {
     profile: {
         loadFailed: "לא הצלחנו לטעון את הפרופיל שלכם.",
         userNotFound: "המשתמש לא נמצא.",
+        backToChat: "חזרה לצ'אט",
         noEmail: "לא הוסיף/ה אימייל",
         noPhone: "לא הוסיף/ה מספר טלפון",
         addAbout: "הוסיפו שורה קצרה על עצמכם",
@@ -887,7 +891,7 @@ const he: Messages = {
             resendIn: "שליחה חוזרת בעוד {seconds} שנ׳",
             resend: "שליחת הקוד שוב",
             cancel: "ביטול",
-            invalidPhone: "השתמשו במספר טלפון בינלאומי, למשל +972 50 123 4567",
+            invalidPhone: "השתמשו במספר טלפון בינלאומי, למשל \u2066+972 50 123 4567\u2069",
             invalidEmail: "הזינו כתובת אימייל תקינה",
             enterSixDigits: "הזינו את הקוד בן 6 הספרות",
             phoneCodeSent: "קוד אימות נשלח לאימייל של החשבון",

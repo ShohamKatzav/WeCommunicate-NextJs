@@ -5,7 +5,7 @@ import { Phone as PhoneIcon, Pencil, X } from "lucide-react";
 import { isPhone } from "../../lib/contact";
 import { sanitizePhoneInput } from "../auth/OTPProcess";
 import { requestPhoneChangeOTP, confirmPhoneChange } from "../../lib/profileActions";
-import { useT } from "../../i18n/client";
+import { useI18n } from "../../i18n/client";
 
 interface PhoneNumberEditorProps {
     currentPhone?: string;
@@ -22,7 +22,7 @@ const RESEND_COOLDOWN_SECONDS = 60;
 const inputClassName = "flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent";
 
 const PhoneNumberEditor = ({ currentPhone, canEdit, onChanged }: PhoneNumberEditorProps) => {
-    const t = useT();
+    const { t, dir: pageDir } = useI18n();
     const [step, setStep] = useState<Step>('view');
     const [newPhone, setNewPhone] = useState('');
     const [otp, setOtp] = useState('');
@@ -132,10 +132,15 @@ const PhoneNumberEditor = ({ currentPhone, canEdit, onChanged }: PhoneNumberEdit
                         <input
                             id="new-phone"
                             type="tel"
-                            dir={newPhone ? "ltr" : undefined}
+                            // A number reads left to right; empty, the
+                            // placeholder sits on the page's side - set
+                            // explicitly, since browsers make type="tel" left to
+                            // right. Isolated (\u2066...\u2069) so its digit
+                            // groups don't reverse in a right-to-left field.
+                            dir={newPhone ? "ltr" : pageDir}
                             value={newPhone}
                             onChange={ev => setNewPhone(sanitizePhoneInput(ev.target.value))}
-                            placeholder="+972 50 123 4567"
+                            placeholder={"\u2066+972 50 123 4567\u2069"}
                             disabled={sending}
                             className={inputClassName}
                         />

@@ -1,5 +1,6 @@
 import ChatUser from "@/types/chatUser";
 import Link from "next/link";
+import { rememberChatForProfile } from "../../utils/chatReturn";
 import { Dispatch, RefObject, SetStateAction } from "react";
 import { AsShortName } from "../../utils/stringFormat";
 import Avatar from "../ui/avatar";
@@ -32,7 +33,10 @@ const ConversationDetailsModal = ({ participants, setShowParticipantsModal }: Co
                             <Link
                                 key={user._id}
                                 href={`/profile/${user._id}`}
-                                onClick={() => setShowParticipantsModal(false)}
+                                onClick={() => {
+                                    rememberChatForProfile(user._id);
+                                    setShowParticipantsModal(false);
+                                }}
                                 className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg"
                             >
                                 <Avatar avatarUrl={user.avatarUrl} nickname={user.nickname} email={user.email} size={40} />

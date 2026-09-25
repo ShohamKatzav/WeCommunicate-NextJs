@@ -6,7 +6,7 @@ import { useUser } from '@/app/hooks/useUser';
 import { Eye, EyeOff, Mail, Shield, Lock, KeyRound } from 'lucide-react';
 import { requestOTP, verifyOTP, resetPassword, createAccount } from '@/app/lib/OTPActions'
 import { isPhone } from '@/app/lib/contact';
-import { useT } from '@/app/i18n/client';
+import { useI18n } from '@/app/i18n/client';
 import type { Locale } from '@/app/i18n/config';
 
 interface OTPProcessProps {
@@ -23,7 +23,7 @@ export const sanitizePhoneInput = (value: string) => {
 const OTPProcess = ({ mode }: OTPProcessProps) => {
     const router = useRouter();
     const { updateUser } = useUser();
-    const t = useT();
+    const { t, dir: pageDir } = useI18n();
 
     const [step, setStep] = useState<'email' | 'otp' | 'password'>('email');
     const [email, setEmail] = useState("");
@@ -337,12 +337,15 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                                 <label htmlFor="email" className="sr-only">{t("auth.otp.contactLabel")}</label>
                                 {/* Left to right even in a right-to-left page, or the
                                     digit groups of a phone number come out reversed.
-                                    Empty, the placeholder follows the page. */}
+                                    Empty, the placeholder follows the page - set
+                                    explicitly, since browsers make type="tel" left
+                                    to right by default. The example number inside
+                                    it is isolated left to right in the catalogs. */}
                                 <input
                                     key={channel}
                                     id="email"
                                     type={channel === 'email' ? 'email' : 'tel'}
-                                    dir={contact ? "ltr" : undefined}
+                                    dir={contact ? "ltr" : pageDir}
                                     value={contact}
                                     placeholder={channel === 'email' ? t("auth.otp.emailPlaceholder") : t("auth.otp.phonePlaceholder")}
                                     onChange={ev => {

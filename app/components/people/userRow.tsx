@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { rememberChatForProfile } from "../../utils/chatReturn";
 import { ShieldOff, ShieldCheck } from "lucide-react";
 import ChatUser from "@/types/chatUser";
 import { AsShortName } from "../../utils/stringFormat";
@@ -39,7 +40,12 @@ const UsersRow = ({ chatUser, getLastMessages, active, isBlocked, onToggleBlock,
                 <div className="relative">
                     <Link
                         href={`/profile/${chatUser._id}`}
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                            // Opening the profile doesn't switch rooms - Back
+                            // returns to whatever was open before.
+                            e.stopPropagation();
+                            rememberChatForProfile(chatUser._id);
+                        }}
                         aria-label={t("people.viewProfile", { name: chatUser.nickname || AsShortName(chatUser.email || '') })}
                     >
                         <Avatar avatarUrl={chatUser.avatarUrl} nickname={chatUser.nickname} email={chatUser.email} size={40} />
@@ -65,7 +71,7 @@ const UsersRow = ({ chatUser, getLastMessages, active, isBlocked, onToggleBlock,
                                     {t("presence.online")}
                                 </div> :
                                 lastSeenText ?
-                                    <div className="text-xs text-muted-foreground truncate">
+                                    <div className="text-xs text-muted-foreground wrap-break-word">
                                         {lastSeenText}
                                     </div> :
                                     <div className="text-xs text-red-600 dark:text-red-400">

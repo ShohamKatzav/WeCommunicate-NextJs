@@ -24,7 +24,7 @@ const AVATAR_MAX_SIZE = 10 * 1024 * 1024;
 
 export default function EditProfilePage() {
     const { user, loadingUser, updateUser } = useUser();
-    const { t, locale: activeLocale } = useI18n();
+    const { t, locale: activeLocale, dir: pageDir } = useI18n();
     const router = useRouter();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -288,7 +288,10 @@ export default function EditProfilePage() {
                             value={about}
                             onChange={ev => setAbout(ev.target.value.slice(0, ABOUT_MAX_LENGTH))}
                             maxLength={ABOUT_MAX_LENGTH}
-                            dir="auto"
+                            // Typed text takes its direction from its first
+                            // letter; empty, the placeholder follows the page -
+                            // "auto" with nothing in it would be left to right.
+                            dir={about ? "auto" : pageDir}
                             placeholder={t("profile.edit.aboutPlaceholder")}
                             disabled={saving}
                             rows={3}
