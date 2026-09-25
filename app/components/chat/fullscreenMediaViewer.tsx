@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { X, Loader2 } from 'lucide-react';
+import { useT } from '../../i18n/client';
 
 interface FullscreenMediaViewerProps {
     src: string;
@@ -10,6 +11,7 @@ interface FullscreenMediaViewerProps {
 }
 
 const FullscreenMediaViewer = ({ src, onClose }: FullscreenMediaViewerProps) => {
+    const t = useT();
     const containerRef = useRef<HTMLDivElement>(null);
     const [loaded, setLoaded] = useState(false);
 
@@ -39,8 +41,8 @@ const FullscreenMediaViewer = ({ src, onClose }: FullscreenMediaViewerProps) => 
         >
             <button
                 onClick={onClose}
-                className="absolute top-4 right-4 z-10000 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
-                aria-label="Close fullscreen"
+                className="absolute top-4 end-4 z-10000 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
+                aria-label={t("chat.fullscreen.close")}
             >
                 <X size={32} color="red" />
             </button>
@@ -53,14 +55,14 @@ const FullscreenMediaViewer = ({ src, onClose }: FullscreenMediaViewerProps) => 
                     {!loaded && (
                         <div
                             className="absolute inset-0 flex items-center justify-center"
-                            aria-label="Loading image"
+                            aria-label={t("chat.fullscreen.loadingImage")}
                         >
                             <Loader2 size={48} className="animate-spin text-white/80" />
                         </div>
                     )}
                     <Image
                         src={src}
-                        alt="Fullscreen image"
+                        alt={t("chat.fullscreen.image")}
                         fill
                         style={{ objectFit: 'contain', opacity: loaded ? 1 : 0 }}
                         priority
@@ -70,7 +72,7 @@ const FullscreenMediaViewer = ({ src, onClose }: FullscreenMediaViewerProps) => 
             </div>
 
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white/70 text-sm md:hidden">
-                Tap outside to close
+                {t("chat.fullscreen.tapToClose")}
             </div>
         </div>
     );

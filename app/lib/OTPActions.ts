@@ -8,6 +8,7 @@ import { isEmail, isPhone, normalizePhone, type VerificationChannel } from './co
 import RedisService from '@/services/RedisService';
 import { isTestBypass } from './testBypass';
 import { cookies } from 'next/headers';
+import { getT } from '@/app/i18n/server';
 
 const emailApi = new Brevo.TransactionalEmailsApi();
 emailApi.setApiKey(Brevo.TransactionalEmailsApiApiKeys.apiKey, env.BREVO_API_KEY!);
@@ -19,16 +20,19 @@ const OTP_SEND_COOLDOWN_SECONDS = 60;
 const OTP_ATTEMPT_WINDOW_SECONDS = 900;
 const MAX_OTP_ATTEMPTS = 5;
 
+// In the language the requesting page was shown in.
 async function sendCode(contact: string, channel: VerificationChannel, otp: string) {
+  const t = await getT();
   if (channel === 'sms') {
-    const result = await fetch('https://api.brevo.com/v3/transactionalSMS/send', { method: 'POST', headers: { 'api-key': env.BREVO_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify({ sender: env.BREVO_SMS_SENDER, recipient: normalizePhone(contact).slice(1), content: `Your WeCommunicate code is ${otp}. It expires in 10 minutes.`, type: 'transactional' }) });
+    const result = await fetch('https://api.brevo.com/v3/transactionalSMS/send', { method: 'POST', headers: { 'api-key': env.BREVO_API_KEY, 'content-type': 'application/json' }, body: JSON.stringify({ sender: env.BREVO_SMS_SENDER, recipient: normalizePhone(contact).slice(1), content: t('email.otpSms', { code: otp }), type: 'transactional' }) });
     if (!result.ok) throw new Error(`Brevo SMS failed (${result.status})`); return;
   }
-  const message = new Brevo.SendSmtpEmail(); message.to = [{ email: contact }]; message.sender = { name: 'WeCommunicate', email: env.SMTP_USER }; message.subject = 'Your WeCommunicate verification code'; message.htmlContent = `<p>Your verification code is <strong>${otp}</strong>.</p><p>It expires in 10 minutes.</p>`;
+  const message = new Brevo.SendSmtpEmail(); message.to = [{ email: contact }]; message.sender = { name: 'WeCommunicate', email: env.SMTP_USER }; message.subject = t('email.otpSubject'); message.htmlContent = `<div dir="${t.locale === 'he' || t.locale === 'ar' ? 'rtl' : 'ltr'}">${t('email.otpBody', { code: otp })}</div>`;
   await emailApi.sendTransacEmail(message);
 }
 export async function requestOTP(contact: string, mode: 'sign-up' | 'forgot' | 'change-phone' | 'change-email', channel: VerificationChannel = 'email') {
-  if (!(channel === 'sms' ? isPhone(contact) : isEmail(contact))) return { message: channel === 'sms' ? 'Use an international phone number, e.g. +972 50 123 4567' : 'Enter a valid email address', status: 400 };
+  const t = await getT();
+  if (!(channel === 'sms' ? isPhone(contact) : isEmail(contact))) return { message: channel === 'sms' ? t('errors.invalidPhone') : t('errors.invalidEmail'), status: 400 };
   // 'change-phone' always targets a contact already on the caller's own
   // account - the account email for profileActions.ts's phone-number-change
   // flow, or (reused as-is, same behavior) the account's own phone for the
@@ -39,7 +43,7 @@ export async function requestOTP(contact: string, mode: 'sign-up' | 'forgot' | '
   // the *new* address the caller doesn't own yet - it must refuse an address
   // already claimed by another account, like sign-up, but "wrong meaning" is
   // avoided by not reusing 'sign-up' itself.
-  const exists = await isExist(contact); if ((mode === 'sign-up' || mode === 'change-email') && exists.accountExists) return { message: `An account already exists for this ${channel === 'sms' ? 'phone number' : 'email address'}`, status: 400 }; if (mode === 'forgot' && !exists.accountExists) return { status: 200 };
+  const exists = await isExist(contact); if ((mode === 'sign-up' || mode === 'change-email') && exists.accountExists) return { message: channel === 'sms' ? t('errors.accountExistsPhone') : t('errors.accountExistsEmail'), status: 400 }; if (mode === 'forgot' && !exists.accountExists) return { status: 200 };
 
   const otpKey = key(contact, channel);
   if (!(await isTestBypass())) {
@@ -47,14 +51,15 @@ export async function requestOTP(contact: string, mode: 'sign-up' | 'forgot' | '
     // quota - the client-side 60s timer in OTPProcess.tsx is only cosmetic.
     const allowedToSend = await RedisService.startOTPSendCooldown(otpKey, OTP_SEND_COOLDOWN_SECONDS);
     if (!allowedToSend) {
-      return { message: 'Please wait a bit before requesting another code.', status: 429 };
+      return { message: t('errors.waitBeforeResend'), status: 429 };
     }
   }
 
-  try { const otp = newCode(); await RedisService.addOTP(otpKey, { OTP: otp, expiresAt: Date.now() + 600000 }); await sendCode(contact, channel, otp); return { status: 200 }; } catch (error) { console.error(error); return { message: 'Unable to send code. Check Brevo SMS credits and sender settings.', status: 500 }; }
+  try { const otp = newCode(); await RedisService.addOTP(otpKey, { OTP: otp, expiresAt: Date.now() + 600000 }); await sendCode(contact, channel, otp); return { status: 200 }; } catch (error) { console.error(error); return { message: t('errors.cannotSendCode'), status: 500 }; }
 }
 export async function verifyOTP(contact: string, otp: string, channel: VerificationChannel = 'email') {
-  if (!/^\d{6}$/.test(otp)) return { message: 'OTP must be 6 digits', status: 400 };
+  const t = await getT();
+  if (!/^\d{6}$/.test(otp)) return { message: t('errors.codeMustBeSixDigits'), status: 400 };
   const e2eCookie = (await cookies()).get('e2e')?.value;
   if (env.E2E_TEST === 'true' && env.TEST_BYPASS_KEY && e2eCookie === env.TEST_BYPASS_KEY && otp === '000000') {
     return { status: 200 };
@@ -67,12 +72,12 @@ export async function verifyOTP(contact: string, otp: string, channel: Verificat
     // 10-minute expiry window.
     const attempts = await RedisService.incrOTPAttempts(otpKey, OTP_ATTEMPT_WINDOW_SECONDS);
     if (attempts > MAX_OTP_ATTEMPTS) {
-      return { message: 'Too many attempts. Please request a new code and try again later.', status: 429 };
+      return { message: t('errors.tooManyCodeAttempts'), status: 429 };
     }
   }
 
   const stored = await RedisService.getOTPByEmail(otpKey);
-  return !stored || Date.now() > stored.expiresAt || stored.OTP !== otp ? { message: 'Invalid or expired verification code', status: 400 } : { status: 200 };
+  return !stored || Date.now() > stored.expiresAt || stored.OTP !== otp ? { message: t('errors.invalidCode'), status: 400 } : { status: 200 };
 }
 export async function createAccount(contact: string, otp: string, password: string, nickname = '', channel: VerificationChannel = 'email') { const verified = await verifyOTP(contact, otp, channel); if (verified.status !== 200) return verified; const result = await createUser(contact, password, nickname); if (result.status < 300) await RedisService.deleteOTP(key(contact, channel)); return result; }
 export async function resetPassword(contact: string, otp: string, password: string, channel: VerificationChannel = 'email') { const verified = await verifyOTP(contact, otp, channel); if (verified.status !== 200) return verified; const result = await updateAccountPassword(contact, password); if (result.status < 300) await RedisService.deleteOTP(key(contact, channel)); return result; }

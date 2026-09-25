@@ -1,4 +1,5 @@
 import { Dispatch, RefObject, SetStateAction, useCallback, useEffect, useState } from "react";
+import { useT } from "../../i18n/client";
 import { useUser } from "../../hooks/useUser";
 import ChatUser from "@/types/chatUser";
 import Message from "@/types/message";
@@ -27,6 +28,7 @@ const ChatCreationForm =
         setChat,
         conversationMode,
         setMobileSidebarOpen }: ChatCreationProps) => {
+        const t = useT();
 
         const [participantsList, setParticipantsList] = useState<ChatUser[]>([]);
         const [selectedParticipants, setSelectedParticipants] = useState<ChatUser[]>([]);
@@ -78,14 +80,14 @@ const ChatCreationForm =
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-96 h-96 max-w-full flex flex-col border border-gray-200 dark:border-gray-700">
                     {
                         title ? <h2 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">{title}</h2> :
-                            conversationMode === 'group' ? <h2 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">Create a new group</h2> :
-                                <h2 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">Select a friend</h2>
+                            conversationMode === 'group' ? <h2 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">{t("chat.create.group")}</h2> :
+                                <h2 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">{t("chat.create.friend")}</h2>
                     }
                     <div className="flex flex-col flex-1 min-h-0">
                         {
                             conversationMode === 'group' &&
                             <label className="text-2xl block font-medium mb-2 text-gray-900 dark:text-gray-100">
-                                Select Participants:
+                                {t("chat.create.participants")}
                             </label>
                         }
                         <input
@@ -93,7 +95,7 @@ const ChatCreationForm =
                 focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700
                 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white
                 dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                            placeholder="Start typing a participants name..."
+                            placeholder={t("chat.create.search")}
                             type="text"
                             value={participantsSearch}
                             onChange={(e) => setParticipantsSearch(e.target.value)}
@@ -131,14 +133,14 @@ const ChatCreationForm =
                             onClick={groupCreation}
                             className="bg-primary text-primary-foreground px-4 py-2 rounded hover:opacity-90"
                         >
-                            {conversationMode === 'group' ? 'Create Group' : 'Start chatting'}
+                            {conversationMode === 'group' ? t("chat.create.createGroup") : t("chat.create.start")}
                         </button>
                         <button
                             type="button"
                             onClick={onClose}
                             className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
-                            Cancel
+                            {t("chat.create.cancel")}
                         </button>
                     </div>
                 </div>

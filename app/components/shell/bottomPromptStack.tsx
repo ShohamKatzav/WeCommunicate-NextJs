@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useT } from "../../i18n/client";
 
 // The install and notification prompts used to be fixed to the bottom of the
 // viewport on their own, which meant they floated over whatever was already
@@ -22,6 +23,7 @@ import { useEffect, useRef } from "react";
 export const BOTTOM_PROMPT_STACK_ID = "bottom-prompt-stack";
 
 export default function BottomPromptStack({ children }: { children?: React.ReactNode }) {
+    const t = useT();
     const stackRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -66,7 +68,7 @@ export default function BottomPromptStack({ children }: { children?: React.React
             id={BOTTOM_PROMPT_STACK_ID}
             ref={stackRef}
             role="region"
-            aria-label="Notifications"
+            aria-label={t("prompts.region")}
             aria-live="polite"
             className="fixed inset-x-0 bottom-[var(--footer-height)] z-[17] pb-[env(safe-area-inset-bottom)] pointer-events-none"
         >

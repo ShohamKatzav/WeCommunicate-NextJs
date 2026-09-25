@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
+import { useT } from "../../i18n/client";
+
+const bold = (chunk: string) => <strong>{chunk}</strong>;
 
 export default function OfflinePage({ forceOffline }: { forceOffline?: boolean }) {
+    const t = useT();
     const [isOnline, setIsOnline] = useState(() => {
         if (forceOffline) return false;
         return navigator.onLine;
@@ -24,7 +28,7 @@ export default function OfflinePage({ forceOffline }: { forceOffline?: boolean }
         if (navigator.onLine) {
             window.location.href = '/chat';
         } else {
-            toast.error("Still offline. Please check your connection.");
+            toast.error(t("offline.stillOffline"));
         }
     };
 
@@ -81,20 +85,16 @@ export default function OfflinePage({ forceOffline }: { forceOffline?: boolean }
 
             {/* Status Text - Reduced size for better mobile fit */}
             <h1 className="mt-6 text-4xl sm:text-5xl font-extrabold">
-                {isOnline ? "You're back online! 🎉" : "You're offline 📡"}
+                {isOnline ? t("offline.backOnline") : t("offline.offline")}
             </h1>
 
             {/* Description */}
             <p className="mt-4 text-base sm:text-lg">
-                {isOnline ? (
-                    <>Your <strong>internet connection</strong> has been restored</>
-                ) : (
-                    <>Looks like you've lost your <strong>internet connection</strong></>
-                )}
+                {isOnline ? t.rich("offline.restored", { b: bold }) : t.rich("offline.lost", { b: bold })}
             </p>
 
             <p className="mt-2 text-sm italic text-muted-foreground">
-                "Sometimes you need to disconnect to reconnect." — Anonymous
+                {t("offline.quote")}
             </p>
 
             {/* Connection Indicator */}
@@ -104,7 +104,7 @@ export default function OfflinePage({ forceOffline }: { forceOffline?: boolean }
                     : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                     }`}
             >
-                {isOnline ? '✓ Connected' : '✗ No connection'}
+                {isOnline ? t("offline.connected") : t("offline.noConnection")}
             </div>
 
             {/* Action Buttons */}
@@ -113,21 +113,21 @@ export default function OfflinePage({ forceOffline }: { forceOffline?: boolean }
                     onClick={handleRetry}
                     className="flex-1 w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all duration-200 text-base"
                 >
-                    🔄 Retry connection
+                    {t("offline.retry")}
                 </button>
                 <button
                     onClick={handleGoBack}
                     className="flex-1 w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-100 font-semibold rounded-xl border border-gray-600 transition-all duration-200 text-base"
                 >
-                    ❌ Go back
+                    {t("offline.goBack")}
                 </button>
             </div>
 
             {/* Helpful Tips */}
-            <ul className="mt-12 list-disc text-left max-w-xs pl-5 space-y-2">
-                <li>Check your WiFi or mobile data</li>
-                <li>Try airplane mode on/off</li>
-                <li>Some features may be cached and still work</li>
+            <ul className="mt-12 list-disc text-start max-w-xs ps-5 space-y-2">
+                <li>{t("offline.tipWifi")}</li>
+                <li>{t("offline.tipAirplane")}</li>
+                <li>{t("offline.tipCached")}</li>
             </ul>
         </div>
     );

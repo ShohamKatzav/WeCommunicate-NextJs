@@ -6,6 +6,7 @@ import PromptBar from "../shell/promptBar";
 import { usePromptDismissal } from "../../hooks/usePromptDismissal";
 import { usePromptSlot } from "../../hooks/usePromptSlot";
 import { isSamsungInternet } from "../../utils/samsungInternet";
+import { useT } from "../../i18n/client";
 
 const PROMPT_ID = "install";
 // Separate id from PROMPT_ID: dismissing "you can install this" (the manual
@@ -56,13 +57,14 @@ type ManualInstallPlatform = "ios" | "samsung" | "other";
 // the generic "open your browser menu" wording sent people looking in the
 // wrong place. iOS 26's compact Safari layout hides Share behind the "•••"
 // button, so the message names both routes.
-function manualInstallMessage(platform: ManualInstallPlatform): string {
-    if (platform === "ios") return "Install: tap ••• or Share, then Add to Home Screen";
-    if (platform === "samsung") return "Samsung: menu → Add page to → Home screen";
-    return "Install WeCommunicate: open your browser menu and choose Add to Home screen";
-}
+const MANUAL_INSTALL_MESSAGES = {
+    ios: "install.manualIos",
+    samsung: "install.manualSamsung",
+    other: "install.manualOther",
+} as const satisfies Record<ManualInstallPlatform, string>;
 
 export default function InstallPrompt() {
+    const t = useT();
     const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
     const [showInstallButton, setShowInstallButton] = useState(false);
     const [isInstalled, setIsInstalled] = useState(false);
@@ -176,10 +178,10 @@ export default function InstallPrompt() {
             // instead of letting it float over the composer.
             <PromptBar
                 icon={<Download className="h-5 w-5 text-cyan-300" />}
-                message="Install WeCommunicate for faster access"
-                primaryAction={{ label: "Install", onClick: handleInstallClick }}
+                message={t("install.message")}
+                primaryAction={{ label: t("install.action"), onClick: handleInstallClick }}
                 onDismiss={dismiss}
-                dismissLabel="Dismiss install prompt"
+                dismissLabel={t("install.dismiss")}
                 queuedCount={queuedBehind}
                 accentClassName="bg-slate-900/95 text-white backdrop-blur-sm"
             />
@@ -190,9 +192,9 @@ export default function InstallPrompt() {
         return (
             <PromptBar
                 icon={<Download className="h-5 w-5 text-cyan-300" />}
-                message={manualInstallMessage(manualPlatform)}
+                message={t(MANUAL_INSTALL_MESSAGES[manualPlatform])}
                 onDismiss={dismissFallback}
-                dismissLabel="Dismiss install instructions"
+                dismissLabel={t("install.dismissManual")}
                 queuedCount={fallbackQueuedBehind}
                 accentClassName="bg-slate-900/95 text-white backdrop-blur-sm"
             />

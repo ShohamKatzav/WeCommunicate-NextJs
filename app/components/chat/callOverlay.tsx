@@ -7,6 +7,7 @@ import { CallController, CallSnapshot } from '../../lib/callController';
 import useMediaDeviceAvailability from '../../hooks/useMediaDeviceAvailability';
 import { unavailableDevicesReason } from '../../lib/mediaDeviceError';
 import { formatCallDuration } from '../../utils/callRecord';
+import { useT } from '../../i18n/client';
 
 interface CallOverlayProps {
     call: CallSnapshot;
@@ -88,12 +89,12 @@ const CallOverlay = ({ call, controller }: CallOverlayProps) => {
     // "declined". Checked here so the incoming card can name the device
     // that is actually missing.
     const devices = useMediaDeviceAvailability();
+    const t = useT();
 
     if (call.status === 'idle' || !call.peer || !controller) return null;
 
     const name = call.peer.nickname || AsShortName(call.peer.email);
-    const kind = call.video ? 'video' : 'voice';
-    const unavailableReason = unavailableDevicesReason({ audio: true, video: call.video }, devices);
+    const unavailableReason = unavailableDevicesReason({ audio: true, video: call.video }, devices, t);
     // A video call with a microphone but no camera can still be answered;
     // only a missing microphone leaves decline as the only action.
     const voiceOnly = call.video && !devices.hasCamera && devices.hasMicrophone;
@@ -108,7 +109,7 @@ const CallOverlay = ({ call, controller }: CallOverlayProps) => {
                 // Below the navbar rather than over it - the navbar sits in
                 // its own stacking context, so no z-index here can lift the
                 // card above it.
-                className="fixed left-1/2 top-[calc(var(--navbar-height)+0.75rem)] z-60 w-[min(24rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-gray-200 bg-white p-4 shadow-2xl dark:border-gray-700 dark:bg-gray-800"
+                className="fixed start-1/2 top-[calc(var(--navbar-height)+0.75rem)] z-60 w-[min(24rem,calc(100vw-2rem))] -translate-x-1/2 rtl:translate-x-1/2 rounded-2xl border border-gray-200 bg-white p-4 shadow-2xl dark:border-gray-700 dark:bg-gray-800"
             >
                 <div className="flex items-center gap-3">
                     <div className="relative shrink-0">
@@ -118,50 +119,52 @@ const CallOverlay = ({ call, controller }: CallOverlayProps) => {
                     <div className="min-w-0 flex-1">
                         <p id="incoming-call-name" className="truncate font-semibold text-gray-900 dark:text-white">{name}</p>
                         <p id="incoming-call-kind" aria-live="assertive" className="text-sm text-gray-500 dark:text-gray-400">
-                            Incoming {kind} call
+                            {call.video ? t("calls.incomingVideo") : t("calls.incomingVoice")}
                         </p>
                     </div>
                 </div>
                 {voiceOnly && (
                     <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                        No camera was found on this device. You can answer with voice only.
+                        {t("calls.noCamera")}
                     </p>
                 )}
                 {unavailableReason && !voiceOnly && (
                     <p className="mt-2 text-sm text-red-600 dark:text-red-400">
-                        {unavailableReason}. You can still decline.
+                        {t("calls.canStillDecline", { reason: unavailableReason })}
                     </p>
                 )}
                 <div className="mt-4 flex gap-3">
                     <button
                         type="button"
                         onClick={() => controller.decline()}
-                        aria-label={`Decline call from ${name}`}
+                        aria-label={t("calls.declineFrom", { name })}
                         className={`flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-red-700 ${FOCUS_RING} dark:focus-visible:ring-offset-gray-800 focus-visible:ring-offset-white`}
                     >
                         <PhoneOff size={18} aria-hidden="true" />
-                        Decline
+                        {t("calls.decline")}
                     </button>
                     {voiceOnly ? (
                         <button
                             type="button"
                             onClick={() => controller.accept({ video: false })}
-                            aria-label={`Answer voice only, no camera, from ${name}`}
+                            aria-label={t("calls.voiceOnlyFrom", { name })}
                             className={`flex flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-green-700 ${FOCUS_RING} dark:focus-visible:ring-offset-gray-800 focus-visible:ring-offset-white`}
                         >
                             <Phone size={18} aria-hidden="true" />
-                            Voice only
+                            {t("calls.voiceOnly")}
                         </button>
                     ) : (
                         <button
                             type="button"
                             onClick={() => controller.accept()}
                             disabled={!!unavailableReason}
-                            aria-label={unavailableReason ? `Can't accept: ${unavailableReason.charAt(0).toLowerCase()}${unavailableReason.slice(1)}` : `Accept ${kind} call from ${name}`}
+                            aria-label={unavailableReason
+                                ? t("calls.cantAccept", { reason: unavailableReason.charAt(0).toLocaleLowerCase(t.dateLocale) + unavailableReason.slice(1) })
+                                : call.video ? t("calls.acceptVideoFrom", { name }) : t("calls.acceptVoiceFrom", { name })}
                             className={`flex flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-green-600 ${FOCUS_RING} dark:focus-visible:ring-offset-gray-800 focus-visible:ring-offset-white`}
                         >
                             {call.video ? <Video size={18} aria-hidden="true" /> : <Phone size={18} aria-hidden="true" />}
-                            Accept
+                            {t("calls.accept")}
                         </button>
                     )}
                 </div>
@@ -174,18 +177,18 @@ const CallOverlay = ({ call, controller }: CallOverlayProps) => {
     const showSelfView = (inCall || call.status === 'outgoing') && call.cameraOn && !!call.localStream;
 
     const statusText = {
-        outgoing: 'Ringing…',
-        connecting: 'Connecting…',
+        outgoing: t("calls.ringing"),
+        connecting: t("calls.connecting"),
         connected: formatCallDuration(elapsed),
-        reconnecting: 'Reconnecting…',
-        failed: call.message || 'Call failed',
-        ended: call.message || 'Call ended',
+        reconnecting: t("calls.reconnecting"),
+        failed: call.message || t("calls.failed"),
+        ended: call.message || t("calls.ended"),
     }[call.status];
 
     return (
         <section
             role="dialog"
-            aria-label={`${call.video ? 'Video' : 'Voice'} call with ${name}`}
+            aria-label={call.video ? t("calls.videoCallWith", { name }) : t("calls.voiceCallWith", { name })}
             className="absolute inset-0 z-20 flex flex-col bg-gray-950 text-white"
         >
             <RemoteAudio stream={inCall ? call.remoteStream : null} />
@@ -196,7 +199,7 @@ const CallOverlay = ({ call, controller }: CallOverlayProps) => {
                 )}
 
                 {showRemoteVideo ? (
-                    <div className="absolute left-3 top-3 max-w-[70%] rounded-lg bg-black/50 px-3 py-1.5">
+                    <div className="absolute start-3 top-3 max-w-[70%] rounded-lg bg-black/50 px-3 py-1.5">
                         <p className="truncate text-sm font-semibold">{name}</p>
                         <p className="text-xs text-gray-200 tabular-nums" aria-live="polite">{statusText}</p>
                     </div>
@@ -216,7 +219,7 @@ const CallOverlay = ({ call, controller }: CallOverlayProps) => {
                 {showSelfView && (
                     <StreamVideo
                         stream={call.localStream}
-                        className="absolute bottom-3 right-3 aspect-3/4 w-24 -scale-x-100 rounded-xl border border-white/20 bg-gray-800 object-cover shadow-lg sm:aspect-video sm:w-44"
+                        className="absolute bottom-3 end-3 aspect-3/4 w-24 -scale-x-100 rounded-xl border border-white/20 bg-gray-800 object-cover shadow-lg sm:aspect-video sm:w-44"
                     />
                 )}
             </div>
@@ -225,25 +228,25 @@ const CallOverlay = ({ call, controller }: CallOverlayProps) => {
                 {(inCall || call.status === 'outgoing') && (
                     <>
                         <ControlButton
-                            label={call.micMuted ? 'Unmute microphone' : 'Mute microphone'}
+                            label={call.micMuted ? t("calls.unmute") : t("calls.mute")}
                             onClick={() => controller.toggleMute()}
                             active={call.micMuted}
                         >
                             {call.micMuted ? <MicOff size={22} aria-hidden="true" /> : <Mic size={22} aria-hidden="true" />}
                         </ControlButton>
                         <ControlButton
-                            label={call.cameraOn ? 'Turn camera off' : 'Turn camera on'}
+                            label={call.cameraOn ? t("calls.cameraOff") : t("calls.cameraOn")}
                             onClick={() => controller.toggleCamera()}
                             active={!call.cameraOn}
                         >
                             {call.cameraOn ? <Video size={22} aria-hidden="true" /> : <VideoOff size={22} aria-hidden="true" />}
                         </ControlButton>
                         {call.cameraOn && call.canSwitchCamera && (
-                            <ControlButton label="Switch camera" onClick={() => controller.switchCamera()}>
+                            <ControlButton label={t("calls.switchCamera")} onClick={() => controller.switchCamera()}>
                                 <SwitchCamera size={22} aria-hidden="true" />
                             </ControlButton>
                         )}
-                        <ControlButton label={call.status === 'outgoing' ? 'Cancel call' : 'Hang up'} onClick={() => controller.hangUp()} danger>
+                        <ControlButton label={call.status === 'outgoing' ? t("calls.cancel") : t("calls.hangUp")} onClick={() => controller.hangUp()} danger>
                             <PhoneOff size={22} aria-hidden="true" />
                         </ControlButton>
                     </>
@@ -251,17 +254,17 @@ const CallOverlay = ({ call, controller }: CallOverlayProps) => {
 
                 {call.status === 'failed' && (
                     <>
-                        <ControlButton label="Retry call" onClick={() => controller.retry()}>
+                        <ControlButton label={t("calls.retry")} onClick={() => controller.retry()}>
                             <RotateCcw size={22} aria-hidden="true" />
                         </ControlButton>
-                        <ControlButton label="Close" onClick={() => controller.dismiss()} danger>
+                        <ControlButton label={t("calls.close")} onClick={() => controller.dismiss()} danger>
                             <X size={22} aria-hidden="true" />
                         </ControlButton>
                     </>
                 )}
 
                 {call.status === 'ended' && (
-                    <ControlButton label="Close" onClick={() => controller.dismiss()}>
+                    <ControlButton label={t("calls.close")} onClick={() => controller.dismiss()}>
                         <X size={22} aria-hidden="true" />
                     </ControlButton>
                 )}

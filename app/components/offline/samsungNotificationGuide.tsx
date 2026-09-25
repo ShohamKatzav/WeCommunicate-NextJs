@@ -4,8 +4,11 @@ import { useEffect, useRef, useState } from 'react';
 import { Bell, X } from 'lucide-react';
 import { usePromptDismissal } from '../../hooks/usePromptDismissal';
 import { useSocket } from '../../hooks/useSocket';
+import { useT } from '../../i18n/client';
 
 const PROMPT_ID = 'samsung-notification-popup';
+
+const bold = (chunk: string) => <strong>{chunk}</strong>;
 
 type NavigatorWithUAData = Navigator & {
     userAgentData?: {
@@ -41,6 +44,7 @@ function isInstalledApp() {
 export default function SamsungNotificationGuide() {
     const { suppressed, dismiss } = usePromptDismissal(PROMPT_ID);
     const { socket } = useSocket();
+    const t = useT();
     const [open, setOpen] = useState(false);
     const [installed, setInstalled] = useState(true);
     const confirmRef = useRef<HTMLButtonElement>(null);
@@ -130,35 +134,35 @@ export default function SamsungNotificationGuide() {
                             <Bell className="h-6 w-6 text-blue-600 dark:text-blue-400" aria-hidden="true" />
                         </div>
                         <h2 id="samsung-notification-title" className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                            Samsung keeps alerts in the shade
+                            {t("samsung.title")}
                         </h2>
                     </div>
                     <button
                         type="button"
                         onClick={close}
-                        aria-label="Dismiss Samsung notification steps"
+                        aria-label={t("samsung.dismiss")}
                         className="text-gray-500 transition-colors hover:text-gray-900 dark:hover:text-gray-100"
                     >
                         <X className="h-5 w-5" aria-hidden="true" />
                     </button>
                 </div>
                 <p id="samsung-notification-body" className="mb-4 text-gray-700 dark:text-gray-300">
-                    Notifications are on, but Samsung won&apos;t show calls and messages over the screen until you turn on a setting it hides by default.
+                    {t("samsung.body")}
                 </p>
-                <ol className="mb-6 list-decimal space-y-2 pl-5 text-gray-800 dark:text-gray-200">
-                    <li>Open Settings, then Notifications, then Advanced settings, and turn on <strong>Manage notification categories for each app</strong>.</li>
+                <ol className="mb-6 list-decimal space-y-2 ps-5 text-gray-800 dark:text-gray-200">
+                    <li>{t.rich("samsung.step1", { b: bold })}</li>
                     {installed ? (
                         <>
-                            <li>Go back to Settings, then Apps, then WeCommunicate, then Notifications.</li>
-                            <li>Scroll down to Notification categories and tap <strong>General</strong>.</li>
+                            <li>{t("samsung.step2App")}</li>
+                            <li>{t.rich("samsung.step3App", { b: bold })}</li>
                         </>
                     ) : (
                         <>
-                            <li>Go back to Settings, then Apps, then Chrome, then Notifications.</li>
-                            <li>Scroll down to Notification categories and tap <strong>{window.location.hostname}</strong> under Sites.</li>
+                            <li>{t("samsung.step2Browser")}</li>
+                            <li>{t.rich("samsung.step3Browser", { b: bold, host: window.location.hostname })}</li>
                         </>
                     )}
-                    <li>Turn on <strong>Show as pop-up</strong>.</li>
+                    <li>{t.rich("samsung.step4", { b: bold })}</li>
                 </ol>
                 <button
                     ref={confirmRef}
@@ -166,7 +170,7 @@ export default function SamsungNotificationGuide() {
                     onClick={close}
                     className="w-full rounded-xl bg-blue-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-blue-700"
                 >
-                    Got it
+                    {t("samsung.confirm")}
                 </button>
             </div>
         </div>

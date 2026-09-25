@@ -8,6 +8,7 @@ import Message from '@/models/Message'
 import Account from '@/models/Account'
 import { sendPushToEmails } from '@/services/PushService';
 import { MISSED_CALL_OUTCOMES, type CallOutcome } from '@/types/messageCall';
+import { translatorFor } from '@/app/i18n/forLocale';
 
 interface SocketData {
     email: string;
@@ -172,6 +173,7 @@ export default async function handleSocketConnection(io: AppServer, socket: AppS
         socket.on('leave room', (body) => handleLeaveRoom(body, socket));
         socket.on('ban user', (data) => handleBanUser(io, socket, data));
         socket.on('unban user', (data) => handleUnbanUser(io, socket, data));
+        socket.on('moderator status changed', (data) => handleModeratorStatusChanged(io, socket, data).catch(err => console.error('Failed to relay moderator status change:', err)));
         socket.on('disconnect', () => {
             // A closed tab never sends its own 'stop typing'.
             stopAllTyping(socket);
@@ -591,6 +593,22 @@ async function handleUnbanUser(io: AppServer, socket: AppSocket, data: { userEma
     io.emit('moderator_update_unbanned_user', { userEmail });
 }
 
+// Sent by a moderator's page right after promoteToModerator /
+// demoteFromModerator succeeds, so the target's open tabs show or drop the
+// Moderator link without a new login. Only their own sockets hear it, and
+// it carries no flag: each tab re-reads its account through getCurrentUser,
+// so a forged relay can't grant anything - at most it makes a tab re-check.
+async function handleModeratorStatusChanged(io: AppServer, socket: AppSocket, data: { userEmail?: string } | undefined) {
+    const { userEmail } = data || {};
+    if (!userEmail) return;
+    if (!(await isModerator(socket.data.email))) return;
+
+    const socketIds = await RedisService.getUserSocketsByEmail(userEmail);
+    socketIds.forEach(socketId => {
+        io.sockets.sockets.get(socketId)?.emit('moderator status changed');
+    });
+}
+
 
 async function handleLeaveRoom(body: { conversationId?: unknown } | undefined, socket: AppSocket) {
     const conversationId = body?.conversationId;
@@ -885,6 +903,13 @@ async function getNickname(email: string) {
     }
 }
 
+// Call pushes go to the callee, so they're worded in the callee's account
+// language - there's no request here to read a cookie from.
+async function calleeTranslator(call: ActiveCall) {
+    const account = await Account.findOne({ email: call.callee }).select('locale').lean<{ locale?: string }>();
+    return translatorFor(account?.locale);
+}
+
 // A push can't carry the call - it only gets the callee to open the app,
 // where 'call sync' picks up the invite if it's still ringing.
 async function pushIncomingCall(call: ActiveCall) {
@@ -893,9 +918,10 @@ async function pushIncomingCall(call: ActiveCall) {
     );
     if (!allowed || call.ended) return;
     call.pushed = true;
+    const t = await calleeTranslator(call);
     await sendPushToEmails([call.callee], {
-        title: call.video ? 'Incoming video call' : 'Incoming voice call',
-        body: `${call.callerName} is calling you on WeCommunicate. Open the app to answer.`,
+        title: call.video ? t('notifications.incomingVideo') : t('notifications.incomingVoice'),
+        body: t('notifications.calling', { name: call.callerName }),
         kind: 'call',
     });
 }
@@ -905,9 +931,10 @@ async function pushIncomingCall(call: ActiveCall) {
 // it stays within the call-push rate limit.
 async function pushMissedCall(call: ActiveCall) {
     if (!call.pushed) return;
+    const t = await calleeTranslator(call);
     await sendPushToEmails([call.callee], {
-        title: 'Missed call',
-        body: `Missed ${call.video ? 'video' : 'voice'} call from ${call.callerName}`,
+        title: t('notifications.missedTitle'),
+        body: call.video ? t('notifications.missedVideo', { name: call.callerName }) : t('notifications.missedVoice', { name: call.callerName }),
         kind: 'missed-call',
     });
 }
@@ -925,9 +952,10 @@ function parsePushEndpoint(data: CallSignal | undefined) {
 // handler in public/service-worker.js for why every push shows one.
 async function pushCallHandledElsewhere(call: ActiveCall, how: 'answered' | 'declined', exceptEndpoint: string | undefined) {
     if (!call.pushed) return;
+    const t = await calleeTranslator(call);
     await sendPushToEmails([call.callee], {
         title: call.callerName,
-        body: `${how === 'answered' ? 'Answered' : 'Declined'} on another device`,
+        body: how === 'answered' ? t('notifications.answeredElsewhere') : t('notifications.declinedElsewhere'),
         kind: 'call-handled',
     }, { exceptEndpoint });
 }

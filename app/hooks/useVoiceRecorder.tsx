@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import FileDTO from '@/types/FileDTO';
 import { useUser } from './useUser';
 import { MAX_VOICE_MESSAGE_SECONDS } from '../config/limits';
+import { useT } from '../i18n/client';
 
 type RecorderStatus = 'idle' | 'recording' | 'uploading';
 
@@ -36,6 +37,7 @@ interface UseVoiceRecorderProps {
 
 export const useVoiceRecorder = ({ onRecorded }: UseVoiceRecorderProps) => {
     const { user } = useUser();
+    const t = useT();
     const [status, setStatus] = useState<RecorderStatus>('idle');
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
@@ -79,16 +81,16 @@ export const useVoiceRecorder = ({ onRecorded }: UseVoiceRecorderProps) => {
             });
         } catch (err) {
             console.error('Failed to send voice message:', err);
-            toast.error("Couldn't send the voice message. Please try again.");
+            toast.error(t('chat.voice.sendFailed'));
         } finally {
             setStatus('idle');
             setElapsedSeconds(0);
         }
-    }, [user, onRecorded]);
+    }, [user, onRecorded, t]);
 
     const startRecording = useCallback(async () => {
         if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-            toast.error("Voice messages aren't supported in this browser.");
+            toast.error(t('chat.voice.unsupported'));
             return;
         }
         try {
@@ -144,9 +146,9 @@ export const useVoiceRecorder = ({ onRecorded }: UseVoiceRecorderProps) => {
             }, 1000);
         } catch (err) {
             console.error('Failed to start voice recording:', err);
-            toast.error('Could not access the microphone. Check your browser permissions.');
+            toast.error(t('chat.voice.micDenied'));
         }
-    }, [stopTracks, uploadAndSend]);
+    }, [stopTracks, uploadAndSend, t]);
 
     const stopAndSend = useCallback(() => {
         mediaRecorderRef.current?.stop();

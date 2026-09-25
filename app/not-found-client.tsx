@@ -1,9 +1,11 @@
 "use client"
 import { useRouter } from "next/navigation";
 import { MessageCircleOff, Ghost, MessageSquareHeart } from "lucide-react";
+import { useT } from "./i18n/client";
 
 export default function NotFoundClient() {
     const router = useRouter();
+    const t = useT();
 
     const handleBackToChat = (e: React.FormEvent) => {
         e.preventDefault();
@@ -21,15 +23,15 @@ export default function NotFoundClient() {
             </div>
 
             <h1 className="mt-6 text-5xl font-extrabold text-gray-900 dark:text-white">
-                404 — Chat not found 💬
+                {t("errorPages.notFoundTitle")}
             </h1>
 
             <p className="mt-4 text-lg text-gray-700 dark:text-gray-300 max-w-md">
-                Looks like this chat has <span className="font-semibold">ghosted</span> you 👻
+                {t.rich("errorPages.notFoundBody", { b: chunk => <span className="font-semibold">{chunk}</span> })}
             </p>
 
             <p className="mt-2 text-sm italic text-muted-foreground">
-                "Even unread messages deserve closure." — Anonymous
+                {t("errorPages.notFoundQuote")}
             </p>
 
             <div className="flex gap-3 mt-8">
@@ -39,7 +41,7 @@ export default function NotFoundClient() {
                         className="flex items-center gap-2 px-5 py-3 bg-lime-700 hover:bg-lime-800 text-white rounded-xl font-semibold shadow-md transition-all"
                     >
                         <MessageSquareHeart className="w-5 h-5" />
-                        Back to chat
+                        {t("errorPages.backToChat")}
                     </button>
                 </form>
 
@@ -48,7 +50,7 @@ export default function NotFoundClient() {
                     className="flex items-center gap-2 px-5 py-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all"
                 >
                     <MessageCircleOff className="w-5 h-5" />
-                    Go back
+                    {t("errorPages.goBack")}
                 </button>
             </div>
         </div>

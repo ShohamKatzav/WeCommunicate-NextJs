@@ -1,5 +1,6 @@
 import { MapPinOff } from "lucide-react";
 import { AsShortName } from "../../utils/stringFormat";
+import { useT } from "../../i18n/client";
 
 export interface FriendDistanceRow {
     username: string;
@@ -14,22 +15,23 @@ interface LocationsTableProps {
 }
 
 const LocationsTable = ({ friendsWithDistance }: LocationsTableProps) => {
+    const t = useT();
     return (
         friendsWithDistance.length === 0 ? (
             <div className="flex flex-col items-center gap-1 px-4 py-6 text-center">
                 <MapPinOff size={28} className="text-gray-400 dark:text-gray-500" aria-hidden="true" />
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">No friends with active location</p>
-                <p className="text-xs text-gray-600 dark:text-gray-300">They&apos;ll show up here once they share where they are.</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t("locations.table.empty")}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300">{t("locations.table.emptyHint")}</p>
             </div>
         ) : (
             <div className="overflow-x-auto">
-                <table className="min-w-full table-auto text-left text-xs sm:text-sm">
+                <table className="min-w-full table-auto text-start text-xs sm:text-sm">
                     <thead className="border-b border-gray-200 text-gray-600 dark:border-gray-700 dark:text-gray-300">
                         <tr>
-                            <th className="px-2 py-2 font-semibold sm:px-3">Friend</th>
-                            <th className="px-2 py-2 font-semibold sm:px-3">Distance</th>
-                            <th className="px-2 py-2 font-semibold sm:px-3">Updated</th>
-                            <th className="px-2 py-2 font-semibold sm:px-3">Accuracy</th>
+                            <th className="px-2 py-2 font-semibold sm:px-3">{t("locations.table.friend")}</th>
+                            <th className="px-2 py-2 font-semibold sm:px-3">{t("locations.table.distance")}</th>
+                            <th className="px-2 py-2 font-semibold sm:px-3">{t("locations.table.updated")}</th>
+                            <th className="px-2 py-2 font-semibold sm:px-3">{t("locations.table.accuracy")}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -43,7 +45,9 @@ const LocationsTable = ({ friendsWithDistance }: LocationsTableProps) => {
                                         ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
                                         : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
                                         }`}>
-                                        {friend.accuracy != null ? `${Math.round(friend.accuracy)} m` : 'Unknown'}
+                                        {friend.accuracy != null
+                                            ? new Intl.NumberFormat(t.dateLocale, { style: "unit", unit: "meter", maximumFractionDigits: 0 }).format(Math.round(friend.accuracy))
+                                            : t("locations.unknown")}
                                     </span>
                                 </td>
                             </tr>

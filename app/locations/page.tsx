@@ -9,6 +9,7 @@ import LocationAccessInformation from '../components/locations/locationAccessSta
 import { useUser } from '../hooks/useUser';
 import LocationsTable, { FriendDistanceRow } from '../components/locations/locationsTable';
 import { getDistanceKm } from '../utils/geolocation';
+import { useT } from '../i18n/client';
 
 
 const center = {
@@ -16,16 +17,21 @@ const center = {
   lng: 35.0818155
 };
 
-const formatDistance = (distanceKm: number) => {
+// Units and digits in the viewer's locale ("5.20 km", "5,20 км", "٥٫٢٠ كم").
+const formatDistance = (distanceKm: number, locale: string) => {
   if (distanceKm < 1) {
-    return `${Math.round(distanceKm * 1000)} m`;
+    return new Intl.NumberFormat(locale, { style: 'unit', unit: 'meter', maximumFractionDigits: 0 })
+      .format(Math.round(distanceKm * 1000));
   }
 
-  return `${distanceKm.toFixed(distanceKm < 10 ? 2 : 1)} km`;
+  const digits = distanceKm < 10 ? 2 : 1;
+  return new Intl.NumberFormat(locale, { style: 'unit', unit: 'kilometer', minimumFractionDigits: digits, maximumFractionDigits: digits })
+    .format(distanceKm);
 };
 
 
 function Locations() {
+  const t = useT();
   const { position: myFix, locationAccessinfo, requestLocation } = useLocation();
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
@@ -86,7 +92,7 @@ function Locations() {
             { lat: currentUserPosition.latitude, lng: currentUserPosition.longitude },
             { lat: position.latitude, lng: position.longitude }
           );
-          distanceText = formatDistance(distanceKm);
+          distanceText = formatDistance(distanceKm, t.dateLocale);
         }
 
         return {
@@ -94,7 +100,7 @@ function Locations() {
           distanceText,
           distanceKm,
           accuracy: position.accuracy,
-          updatedAt: position.time ? new Date(position.time).toLocaleString() : 'Unknown',
+          updatedAt: position.time ? new Date(position.time).toLocaleString(t.dateLocale, { hour12: false }) : t('locations.unknown'),
         };
       })
       .sort((a, b) => {
@@ -102,7 +108,7 @@ function Locations() {
         if (b.distanceKm == null) return -1;
         return a.distanceKm - b.distanceKm;
       });
-  }, [currentUserPosition?.latitude, currentUserPosition?.longitude, positions, user?.email]);
+  }, [currentUserPosition?.latitude, currentUserPosition?.longitude, positions, user?.email, t]);
 
   useEffect(() => {
     setShowInfoWindow(positions?.map(() => false) || []);
@@ -154,7 +160,7 @@ function Locations() {
   return (
     <section className="mx-auto w-full max-w-6xl px-3 pb-8 pt-2 sm:px-4">
       <h1 className="mb-4 text-center text-2xl font-extrabold text-gray-900 dark:text-white sm:text-4xl lg:text-5xl">
-        <span className="text-transparent bg-clip-text bg-linear-to-r to-blue-900 from-teal-700 dark:to-blue-400 dark:from-teal-300">Friends&apos; locations</span>
+        <span className="text-transparent bg-clip-text bg-linear-to-r to-blue-900 from-teal-700 dark:to-blue-400 dark:from-teal-300">{t('locations.title')}</span>
       </h1>
 
       <LocationAccessInformation
@@ -201,12 +207,12 @@ function Locations() {
                     })}
                   >
                     <div>
-                      <p>Location Details:</p>
-                      <p>User: {ciEquals(position.username!, user?.email) ? 'You' : position.username}</p>
+                      <p>{t('locations.details')}</p>
+                      <p>{t('locations.user', { name: ciEquals(position.username!, user?.email) ? t('common.you') : position.username ?? '' })}</p>
                       {position?.time &&
-                        <p>Last update: {new Date(position?.time).toLocaleString()}</p>}
+                        <p>{t('locations.lastUpdate', { date: new Date(position?.time).toLocaleString(t.dateLocale, { hour12: false }) })}</p>}
                       {position?.accuracy! > 200 &&
-                        <p>(Not accurate)</p>}
+                        <p>{t('locations.notAccurate')}</p>}
                     </div>
                   </InfoWindow>
 
@@ -219,9 +225,9 @@ function Locations() {
 
       <div className="mt-4 rounded-xl border border-gray-200 bg-white p-3 shadow-xs dark:border-gray-700 dark:bg-gray-900 sm:p-4">
         <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white sm:text-lg">Distance from you</h2>
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white sm:text-lg">{t('locations.distanceFromYou')}</h2>
           {!currentUserPosition && (
-            <p className="text-xs text-amber-600 dark:text-amber-400">Enable your location to calculate distances</p>
+            <p className="text-xs text-amber-600 dark:text-amber-400">{t('locations.enableToCalculate')}</p>
           )}
         </div>
 

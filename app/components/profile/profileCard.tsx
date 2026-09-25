@@ -10,6 +10,7 @@ import { formatLastSeen } from "../../utils/lastSeen";
 import ciEquals from "../../utils/ciEqual";
 import { isEmail } from "../../lib/contact";
 import { useSocket } from "../../hooks/useSocket";
+import { useT } from "../../i18n/client";
 
 interface ProfileCardProps {
     profile: Profile;
@@ -21,6 +22,7 @@ const ProfileCard = ({ profile, isOwn }: ProfileCardProps) => {
     const accentColor = profile.accentColor || DEFAULT_ACCENT_COLOR;
 
     const { socket, loadingSocket } = useSocket();
+    const t = useT();
     const [isOnline, setIsOnline] = useState(false);
     // Overrides the value the page loaded with once a live update arrives
     // (see 'user last seen' in socket/handlers.ts) - otherwise leaving this
@@ -55,7 +57,7 @@ const ProfileCard = ({ profile, isOwn }: ProfileCardProps) => {
         };
     }, [isOwn, socket, loadingSocket, profile._id, profile.email]);
 
-    const lastSeenText = formatLastSeen(liveLastSeen ?? profile.lastSeen);
+    const lastSeenText = formatLastSeen(liveLastSeen ?? profile.lastSeen, t);
 
     return (
         <div className="bg-card text-card-foreground rounded-xl shadow-md p-6 max-w-md mx-auto">
@@ -69,14 +71,14 @@ const ProfileCard = ({ profile, isOwn }: ProfileCardProps) => {
                             className={`w-2 h-2 rounded-full ${isOnline ? "bg-green-500" : lastSeenText ? "bg-gray-400" : "bg-red-500"}`}
                             aria-hidden="true"
                         />
-                        {isOnline ? "Online" : lastSeenText ? `Last seen ${lastSeenText}` : "Offline"}
+                        {isOnline ? t("presence.online") : lastSeenText ?? t("presence.offline")}
                     </div>
                 )}
 
                 {isOwn && profile.phone && (
                     <div className="flex items-center gap-1.5 text-sm text-muted-foreground" data-testid="profile-phone">
                         <Phone size={14} aria-hidden="true" />
-                        {profile.phone}
+                        <bdi dir="ltr">{profile.phone}</bdi>
                     </div>
                 )}
 
@@ -88,19 +90,19 @@ const ProfileCard = ({ profile, isOwn }: ProfileCardProps) => {
                     <>
                         <div className="flex items-center gap-1.5 text-sm text-muted-foreground" data-testid="profile-email">
                             <Mail size={14} aria-hidden="true" />
-                            {isEmail(profile.email) ? profile.email : <span className="italic">Hasn&apos;t added an email</span>}
+                            {isEmail(profile.email) ? <bdi dir="ltr">{profile.email}</bdi> : <span className="italic">{t("profile.noEmail")}</span>}
                         </div>
                         <div className="flex items-center gap-1.5 text-sm text-muted-foreground" data-testid="profile-phone">
                             <Phone size={14} aria-hidden="true" />
-                            {profile.phone ? profile.phone : <span className="italic">Hasn&apos;t added a phone number</span>}
+                            {profile.phone ? <bdi dir="ltr">{profile.phone}</bdi> : <span className="italic">{t("profile.noPhone")}</span>}
                         </div>
                     </>
                 )}
 
                 {profile.about ? (
-                    <p className="text-sm wrap-break-word" data-testid="profile-about">{profile.about}</p>
+                    <p dir="auto" className="text-sm wrap-break-word" data-testid="profile-about">{profile.about}</p>
                 ) : (
-                    isOwn && <p className="text-sm text-muted-foreground italic">Add a short line about yourself</p>
+                    isOwn && <p className="text-sm text-muted-foreground italic">{t("profile.addAbout")}</p>
                 )}
 
                 {/* Accent color only tints the owner's own message bubbles -
@@ -115,7 +117,7 @@ const ProfileCard = ({ profile, isOwn }: ProfileCardProps) => {
                             aria-hidden="true"
                             data-testid="profile-accent-swatch"
                         />
-                        Accent color
+                        {t("profile.accentColor")}
                     </div>
                 )}
 
@@ -124,7 +126,7 @@ const ProfileCard = ({ profile, isOwn }: ProfileCardProps) => {
                         href="/profile/edit"
                         className="mt-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
                     >
-                        Edit profile
+                        {t("profile.editProfile")}
                     </Link>
                 )}
             </div>

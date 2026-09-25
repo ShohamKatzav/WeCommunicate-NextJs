@@ -1,4 +1,5 @@
 import { Document, Schema, models, model } from 'mongoose';
+import { LOCALES } from '../app/i18n/config';
 
 export interface IAccount extends Document {
     email: string;
@@ -19,6 +20,8 @@ export interface IAccount extends Document {
     avatarUrl?: string;
     about?: string;
     accentColor?: string;
+    // UI language. Missing means English; see app/i18n/config.ts.
+    locale?: string;
     lastSeen?: Date;
 }
 
@@ -83,6 +86,7 @@ const AccountSchema = new Schema<IAccount>({
     avatarUrl: { type: String, required: false },
     about: { type: String, trim: true, maxlength: 160, required: false },
     accentColor: { type: String, required: false },
+    locale: { type: String, enum: LOCALES, required: false },
 
     // Written when a user's *last* socket goes away (see handleDisconnect in
     // socket/handlers.ts) - closing one of several open tabs isn't leaving.

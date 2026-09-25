@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import ChatUser from '@/types/chatUser';
 import MessageLocation from '@/types/messageLocation';
 import useIsMobile from '../../hooks/useIsMobile';
+import { useT } from '../../i18n/client';
+import type { TFunction } from '../../i18n/messages';
 
 interface ShareLocationButtonProps {
     participants: RefObject<ChatUser[] | null | undefined>;
@@ -25,27 +27,28 @@ const getCurrentPosition = () => new Promise<GeolocationPosition>((resolve, reje
     });
 });
 
-const errorMessage = (error: GeolocationPositionError) => {
+const errorMessage = (error: GeolocationPositionError, t: TFunction) => {
     switch (error.code) {
         case error.PERMISSION_DENIED:
-            return "Location permission is blocked. Allow location access for this site to share your pin.";
+            return t("locations.share.denied");
         case error.POSITION_UNAVAILABLE:
-            return "Your location isn't available right now. Try again in a moment.";
+            return t("locations.share.unavailable");
         case error.TIMEOUT:
-            return "Getting your location took too long. Try again.";
+            return t("locations.share.timeout");
         default:
-            return "Couldn't get your location. Try again.";
+            return t("locations.share.failed");
     }
 };
 
 const ShareLocationButton = ({ participants, onShare, disabled }: ShareLocationButtonProps) => {
     const isMobile = useIsMobile();
+    const t = useT();
     const [locating, setLocating] = useState(false);
 
     const handleClick = async () => {
         if (!participants.current?.length) return;
         if (!navigator.geolocation) {
-            toast.error("This browser can't share a location.");
+            toast.error(t("locations.share.unsupported"));
             return;
         }
 
@@ -55,7 +58,7 @@ const ShareLocationButton = ({ participants, onShare, disabled }: ShareLocationB
             // Never send a pin we don't actually have - an empty or partial
             // fix would persist a bubble pointing at nothing.
             if (!Number.isFinite(position.coords.latitude) || !Number.isFinite(position.coords.longitude)) {
-                toast.error("Your location isn't available right now. Try again in a moment.");
+                toast.error(t("locations.share.unavailable"));
                 return;
             }
             await onShare({
@@ -63,7 +66,7 @@ const ShareLocationButton = ({ participants, onShare, disabled }: ShareLocationB
                 longitude: position.coords.longitude
             });
         } catch (error) {
-            toast.error(errorMessage(error as GeolocationPositionError));
+            toast.error(errorMessage(error as GeolocationPositionError, t));
         } finally {
             setLocating(false);
         }
@@ -74,8 +77,8 @@ const ShareLocationButton = ({ participants, onShare, disabled }: ShareLocationB
             type="button"
             onClick={handleClick}
             disabled={disabled || locating || !participants.current}
-            aria-label="Share my location"
-            title="Share my location"
+            aria-label={t("locations.share.label")}
+            title={t("locations.share.label")}
             className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
         >
             {locating

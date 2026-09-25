@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useT } from '../../i18n/client';
 import { X, Timer } from 'lucide-react';
 import { toast } from 'sonner';
 import { DISAPPEARING_MESSAGES_OPTIONS } from '../../config/limits';
@@ -13,6 +14,7 @@ interface DisappearingMessagesModalProps {
 }
 
 export default function DisappearingMessagesModal({ conversationId, onClose, onSaved }: DisappearingMessagesModalProps) {
+    const t = useT();
     const [selectedSeconds, setSelectedSeconds] = useState<number>(0);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -37,15 +39,15 @@ export default function DisappearingMessagesModal({ conversationId, onClose, onS
                 onSaved?.(selectedSeconds);
                 toast.success(
                     selectedSeconds === 0
-                        ? 'Disappearing messages turned off'
-                        : 'New messages in this chat will disappear automatically'
+                        ? t("chat.disappearing.turnedOff")
+                        : t("chat.disappearing.turnedOn")
                 );
                 onClose();
             } else {
-                toast.error(result.error || 'Failed to update setting');
+                toast.error(result.error || t("chat.disappearing.failed"));
             }
         } catch {
-            toast.info("You're offline - this setting couldn't be saved right now.");
+            toast.info(t("chat.disappearing.offline"));
         } finally {
             setSaving(false);
         }
@@ -61,11 +63,12 @@ export default function DisappearingMessagesModal({ conversationId, onClose, onS
                                 <Timer className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                             </div>
                             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                                Disappearing Messages
+                                {t("chat.disappearing.title")}
                             </h2>
                         </div>
                         <button
                             onClick={onClose}
+                            aria-label={t("common.close")}
                             className="text-muted-foreground hover:text-foreground transition-colors"
                             disabled={saving}
                         >
@@ -74,10 +77,10 @@ export default function DisappearingMessagesModal({ conversationId, onClose, onS
                     </div>
 
                     <p className="text-gray-700 dark:text-gray-300 mb-4">
-                        New messages sent after you save this will be removed automatically. Messages already in this chat are not affected.
+                        {t("chat.disappearing.body")}
                     </p>
 
-                    <div className="space-y-2 mb-6" role="radiogroup" aria-label="Disappearing messages duration">
+                    <div className="space-y-2 mb-6" role="radiogroup" aria-label={t("chat.disappearing.duration")}>
                         {DISAPPEARING_MESSAGES_OPTIONS.map(option => (
                             <label
                                 key={option.seconds}
@@ -90,7 +93,7 @@ export default function DisappearingMessagesModal({ conversationId, onClose, onS
                                     onChange={() => setSelectedSeconds(option.seconds)}
                                     disabled={loading || saving}
                                 />
-                                <span className="text-gray-900 dark:text-gray-100">{option.label}</span>
+                                <span className="text-gray-900 dark:text-gray-100">{t(option.labelKey)}</span>
                             </label>
                         ))}
                     </div>
@@ -101,7 +104,7 @@ export default function DisappearingMessagesModal({ conversationId, onClose, onS
                             disabled={saving}
                             className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Cancel
+                            {t("chat.disappearing.cancel")}
                         </button>
                         <button
                             onClick={handleSave}
@@ -111,10 +114,10 @@ export default function DisappearingMessagesModal({ conversationId, onClose, onS
                             {saving ? (
                                 <>
                                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    Saving...
+                                    {t("chat.disappearing.saving")}
                                 </>
                             ) : (
-                                'Save'
+                                t("chat.disappearing.save")
                             )}
                         </button>
                     </div>

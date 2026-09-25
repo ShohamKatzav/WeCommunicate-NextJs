@@ -9,6 +9,7 @@ import { AsShortName } from '../../utils/stringFormat';
 import { answerOnArrival, closeIncomingCallNotifications, getOwnPushEndpoint, refreshOwnPushEndpoint } from '../../lib/callNotifications';
 import useMediaDeviceAvailability from '../../hooks/useMediaDeviceAvailability';
 import { unavailableDevicesReason } from '../../lib/mediaDeviceError';
+import { useT } from '../../i18n/client';
 
 interface Invite {
     callId: string;
@@ -37,6 +38,11 @@ const isChatPath = (pathname: string | null) => pathname === '/chat' || !!pathna
 // "online" no push went out either. This only rings and hands off: Answer
 // opens the chat, which picks the call up with 'call sync' and answers it.
 const IncomingCallNotice = () => {
+    // Read from a ref inside the socket effect below, so switching language
+    // mid-ring doesn't tear down the listeners and the ring timer.
+    const t = useT();
+    const tRef = useRef(t);
+    useEffect(() => { tRef.current = t; });
     const { socket } = useSocket();
     const pathname = usePathname();
     const router = useRouter();
@@ -86,7 +92,7 @@ const IncomingCallNotice = () => {
             clear();
             closeIncomingCallNotifications();
             if (data.reason === 'answered-elsewhere' || data.reason === 'declined-elsewhere') return;
-            toast(`Missed call from ${missed.fromName || AsShortName(missed.from)}`);
+            toast(tRef.current("calls.missedFrom", { name: missed.fromName || AsShortName(missed.from) }));
         };
 
         // A call that started ringing while this socket was down (a frozen
@@ -111,7 +117,6 @@ const IncomingCallNotice = () => {
     if (!active || !invite) return null;
 
     const name = invite.fromName || AsShortName(invite.from);
-    const kind = invite.video ? 'video' : 'voice';
     const ids = { callId: invite.callId, conversationId: invite.conversationId };
 
     const decline = () => {
@@ -132,7 +137,7 @@ const IncomingCallNotice = () => {
     // microphone - Answer would open the chat only for the call to fail
     // and auto-decline there.
     const voiceOnly = invite.video && !devices.hasCamera && devices.hasMicrophone;
-    const unavailableReason = voiceOnly ? null : unavailableDevicesReason({ audio: true, video: invite.video }, devices);
+    const unavailableReason = voiceOnly ? null : unavailableDevicesReason({ audio: true, video: invite.video }, devices, t);
 
     return (
         <div
@@ -141,7 +146,7 @@ const IncomingCallNotice = () => {
             aria-labelledby="incoming-call-notice-name"
             aria-describedby="incoming-call-notice-kind"
             // Same placement as CallOverlay's incoming card.
-            className="fixed left-1/2 top-[calc(var(--navbar-height)+0.75rem)] z-60 w-[min(24rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-gray-200 bg-white p-4 shadow-2xl dark:border-gray-700 dark:bg-gray-800"
+            className="fixed start-1/2 top-[calc(var(--navbar-height)+0.75rem)] z-60 w-[min(24rem,calc(100vw-2rem))] -translate-x-1/2 rtl:translate-x-1/2 rounded-2xl border border-gray-200 bg-white p-4 shadow-2xl dark:border-gray-700 dark:bg-gray-800"
         >
             <div className="flex items-center gap-3">
                 <div className="relative shrink-0">
@@ -151,50 +156,52 @@ const IncomingCallNotice = () => {
                 <div className="min-w-0 flex-1">
                     <p id="incoming-call-notice-name" className="truncate font-semibold text-gray-900 dark:text-white">{name}</p>
                     <p id="incoming-call-notice-kind" aria-live="assertive" className="text-sm text-gray-500 dark:text-gray-400">
-                        Incoming {kind} call
+                        {invite.video ? t("calls.incomingVideo") : t("calls.incomingVoice")}
                     </p>
                 </div>
             </div>
             {voiceOnly && (
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                    No camera was found on this device. You can answer with voice only.
+                    {t("calls.noCamera")}
                 </p>
             )}
             {unavailableReason && (
                 <p className="mt-2 text-sm text-red-600 dark:text-red-400">
-                    {unavailableReason}. You can still decline.
+                    {t("calls.canStillDecline", { reason: unavailableReason })}
                 </p>
             )}
             <div className="mt-4 flex gap-3">
                 <button
                     type="button"
                     onClick={decline}
-                    aria-label={`Decline call from ${name}`}
+                    aria-label={t("calls.declineFrom", { name })}
                     className={`flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-red-700 ${FOCUS_RING}`}
                 >
                     <PhoneOff size={18} aria-hidden="true" />
-                    Decline
+                    {t("calls.decline")}
                 </button>
                 {voiceOnly ? (
                     <button
                         type="button"
                         onClick={() => answer(true)}
-                        aria-label={`Answer voice only, no camera, from ${name}`}
+                        aria-label={t("calls.voiceOnlyFrom", { name })}
                         className={`flex flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-green-700 ${FOCUS_RING}`}
                     >
                         <Phone size={18} aria-hidden="true" />
-                        Voice only
+                        {t("calls.voiceOnly")}
                     </button>
                 ) : (
                     <button
                         type="button"
                         onClick={() => answer(false)}
                         disabled={!!unavailableReason}
-                        aria-label={unavailableReason ? `Can't answer: ${unavailableReason.charAt(0).toLowerCase()}${unavailableReason.slice(1)}` : `Answer ${kind} call from ${name}`}
+                        aria-label={unavailableReason
+                            ? t("calls.cantAnswer", { reason: unavailableReason.charAt(0).toLocaleLowerCase(t.dateLocale) + unavailableReason.slice(1) })
+                            : invite.video ? t("calls.answerVideoFrom", { name }) : t("calls.answerVoiceFrom", { name })}
                         className={`flex flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-green-600 ${FOCUS_RING}`}
                     >
                         {invite.video ? <Video size={18} aria-hidden="true" /> : <Phone size={18} aria-hidden="true" />}
-                        Answer
+                        {t("calls.answer")}
                     </button>
                 )}
             </div>

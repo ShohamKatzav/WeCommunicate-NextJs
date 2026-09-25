@@ -34,7 +34,7 @@ customTest.describe('Edit sent messages', () => {
         const editedBubble = chat.getSentMessagesLocator().filter({ hasText: editedText }).first();
         await expect(chat.getEditedLabel(editedBubble)).toBeVisible();
         await expect(chat.getSentMessagesLocator().filter({ hasText: originalText })).toHaveCount(0);
-        await expect(editedBubble.locator(':scope > div').last()).toHaveText(`Edited${timestampBefore}`);
+        await expect(editedBubble.locator(':scope > div').last()).toHaveText(`Edited·${timestampBefore}`);
         await expect(chat.getSentMessageByText(replyText)).toContainText(editedText);
 
         // The other user already has the conversation open - no reload.

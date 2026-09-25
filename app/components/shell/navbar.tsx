@@ -9,6 +9,7 @@ import { useSocket } from "../../hooks/useSocket";
 import { AsShortName } from "../../utils/stringFormat";
 import ThemeToggle from "../ui/themeToggle";
 import Avatar from "../ui/avatar";
+import { useT } from "../../i18n/client";
 import './bars.css';
 
 const DYNAMIC_OFFLINE_LINKS = ['/chat', '/locations'];
@@ -20,20 +21,21 @@ function LogOutButton({
   variant: "icon" | "labelled";
   onClick: () => void;
 }) {
+  const t = useT();
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label="Log out"
-      title="Log out"
+      aria-label={t("nav.logOut")}
+      title={t("nav.logOut")}
       className={
         variant === "icon"
           ? "flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-foreground/5 hover:text-foreground transition-colors"
           : "flex items-center justify-center gap-3 text-3xl capitalize text-muted-foreground hover:text-foreground transition-colors"
       }
     >
-      <LogOut className={variant === "icon" ? "h-5 w-5" : "h-7 w-7"} aria-hidden="true" />
-      {variant === "labelled" && <span>log out</span>}
+      <LogOut className={`${variant === "icon" ? "h-5 w-5" : "h-7 w-7"} rtl:-scale-x-100`} aria-hidden="true" />
+      {variant === "labelled" && <span>{t("nav.logOutLabelled")}</span>}
     </button>
   );
 }
@@ -44,6 +46,7 @@ const Navbar = () => {
   const { socket } = useSocket();
   const router = useRouter();
   const pathname = usePathname();
+  const t = useT();
 
   const toggleNav = () => {
     setNav(!nav);
@@ -93,12 +96,12 @@ const Navbar = () => {
   // next to nothing else reads as log out. Log out is an action, rendered
   // separately after the account controls.
   const links = [
-    { id: 1, text: "login", link: "/login", auth: false, action: () => { } },
-    { id: 2, text: "chat", link: "/chat", auth: true, action: () => { } },
-    { id: 3, text: "locations", link: "/locations", auth: true, action: () => { } },
-    { id: 4, text: "moderator", link: "/moderator", auth: true, moderatorOnly: true, action: () => { } },
-    { id: 5, text: "about", link: "/about", auth: null, action: () => { } },
-    { id: 6, text: "contact", link: "/contact", auth: null, action: () => { } },
+    { id: 1, text: t("nav.login"), link: "/login", auth: false, action: () => { } },
+    { id: 2, text: t("nav.chat"), link: "/chat", auth: true, action: () => { } },
+    { id: 3, text: t("nav.locations"), link: "/locations", auth: true, action: () => { } },
+    { id: 4, text: t("nav.moderator"), link: "/moderator", auth: true, moderatorOnly: true, action: () => { } },
+    { id: 5, text: t("nav.about"), link: "/about", auth: null, action: () => { } },
+    { id: 6, text: t("nav.contact"), link: "/contact", auth: null, action: () => { } },
   ];
 
   const isUserConnected = () => {
@@ -159,7 +162,7 @@ const Navbar = () => {
         // underneath shows through - shadow-md casts down onto the page to
         // read as a lifted band, and the gradient strip below is the seam.
         className="navbar flex items-center bg-bar-background shadow-md nav wrap-break-word"
-        aria-label="Main"
+        aria-label={t("nav.main")}
       >
         <div className="flex w-full items-center justify-between px-3 md:px-5">
           <Link
@@ -195,11 +198,11 @@ const Navbar = () => {
                 </Link>
               </li>
             ))}
-            <li className="ml-1">
+            <li className="ms-1">
               <ThemeToggle variant="icon" />
             </li>
             {isUserConnected() && displayName && (
-              <li className="ml-1">
+              <li className="ms-1">
                 <Link
                   href="/profile/edit"
                   data-testid="navbar-profile-link"
@@ -212,7 +215,7 @@ const Navbar = () => {
               </li>
             )}
             {isUserConnected() && (
-              <li className="ml-1">
+              <li className="ms-1">
                 <LogOutButton variant="icon" onClick={() => { void handleLogOut(); }} />
               </li>
             )}
@@ -222,7 +225,7 @@ const Navbar = () => {
             type="button"
             onClick={() => toggleNav()}
             className="relative z-50 cursor-pointer rounded-md p-2 text-muted-foreground hover:bg-foreground/10 hover:text-foreground md:hidden"
-            aria-label={nav ? "Close menu" : "Open menu"}
+            aria-label={nav ? t("nav.closeMenu") : t("nav.openMenu")}
             aria-expanded={nav}
           >
             {nav ? <X size={22} /> : <Menu size={22} />}

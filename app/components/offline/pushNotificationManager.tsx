@@ -9,6 +9,7 @@ import { useUser } from '../../hooks/useUser';
 import { usePromptDismissal } from '../../hooks/usePromptDismissal';
 import { usePromptSlot } from '../../hooks/usePromptSlot';
 import PromptBar from '../shell/promptBar';
+import { useT } from '../../i18n/client';
 import { BOTTOM_PROMPT_STACK_ID } from '../shell/bottomPromptStack';
 
 // Push notifications are triggered server-side (see saveMessage in
@@ -20,6 +21,7 @@ const PROMPT_ID = "push-soft-ask";
 
 export default function PushNotificationManager() {
     const { user, loadingUser } = useUser();
+    const t = useT();
     // null = not yet determined. Browser support can't be known during SSR
     // (there's no navigator/window on the server), so defaulting this to
     // false would render the "not supported" message on every load, even in
@@ -46,10 +48,10 @@ export default function PushNotificationManager() {
             const sub = await enableDevicePush(user.token)
             setPermission(Notification.permission)
             setSubscription(sub)
-            toast.success('Notifications enabled');
+            toast.success(t('push.enabled'));
         } catch (error) {
             console.error("Subscription failed:", error);
-            toast.error("Couldn't enable notifications. Please try again.");
+            toast.error(t('push.enableFailed'));
             // Re-read rather than assume: the browser may have just recorded
             // a "denied" (permanently gating the soft-ask below) or the
             // subscribe() call could have failed for an unrelated reason
@@ -102,11 +104,11 @@ export default function PushNotificationManager() {
     const banner = (
         <PromptBar
             icon={<Bell className="h-5 w-5" />}
-            message="Get instant alerts for new messages"
-            primaryAction={{ label: "Enable", onClick: subscribeToPush }}
-            secondaryAction={{ label: "Later", onClick: snooze }}
+            message={t("push.message")}
+            primaryAction={{ label: t("push.enable"), onClick: subscribeToPush }}
+            secondaryAction={{ label: t("push.later"), onClick: snooze }}
             onDismiss={dismiss}
-            dismissLabel="Permanently dismiss notification prompt"
+            dismissLabel={t("push.dismiss")}
             queuedCount={queuedBehind}
             accentClassName="bg-blue-600 text-white"
         />

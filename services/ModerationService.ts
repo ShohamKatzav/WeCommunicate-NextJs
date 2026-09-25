@@ -107,6 +107,9 @@ export default class ModerationService {
         isAllowed: boolean;
         reason?: string;
         categories?: string[];
+        // The same top categories `reason` names, by their API names, so the
+        // caller can word them in the user's language.
+        topCategories?: { category: string; score: number }[];
         severity?: 'low' | 'medium' | 'high';
         scores?: CategoryScores;
     }> {
@@ -127,24 +130,27 @@ export default class ModerationService {
             // Determine severity
             const severity = result.flagged ? this.determineSeverity(scores) : undefined;
 
-            // Create detailed reason
+            // Create detailed reason. This English one is what's stored on the
+            // account (banReason) and shown to moderators.
             let reason: string | undefined;
+            let topCategories: { category: string; score: number }[] | undefined;
             if (flaggedCategories.length > 0) {
-                const topCategories = Object.entries(scores)
+                topCategories = Object.entries(scores)
                     .filter(([category]) => result.categories[category as keyof typeof result.categories])
                     .sort(([, scoreA], [, scoreB]) => scoreB - scoreA)
                     .slice(0, 3)
-                    .map(([category, score]) =>
-                        `${this.formatCategory(category)} (${(score * 100).toFixed(1)}%)`
-                    );
+                    .map(([category, score]) => ({ category, score }));
 
-                reason = `Content flagged for: ${topCategories.join(', ')}`;
+                reason = `Content flagged for: ${topCategories
+                    .map(({ category, score }) => `${this.formatCategory(category)} (${(score * 100).toFixed(1)}%)`)
+                    .join(', ')}`;
             }
 
             return {
                 isAllowed: !result.flagged,
                 reason,
                 categories: flaggedCategories,
+                topCategories,
                 severity,
                 scores
             };
@@ -223,8 +229,12 @@ export default class ModerationService {
     ): Promise<{
         action: 'warning' | 'temp_ban' | 'permanent_ban';
         warningCount: number;
+        // Out of how many before a ban, for "Warning 2/3".
+        maxWarnings: number;
         bannedUntil?: Date;
-        message: string;
+        banDurationHours?: number;
+        // A permanent ban for piling up violations rather than one severe one.
+        repeated?: boolean;
     }> {
         try {
             // Record the violation
@@ -262,7 +272,7 @@ export default class ModerationService {
                 return {
                     action: 'permanent_ban',
                     warningCount: user.warningCount || 0,
-                    message: `You have been permanently banned. Reason: ${reason}`
+                    maxWarnings: this.config.warningsBeforeBan,
                 };
             }
 
@@ -300,7 +310,8 @@ export default class ModerationService {
                     return {
                         action: 'permanent_ban',
                         warningCount: user.warningCount,
-                        message: 'You have been permanently banned for repeated violations.'
+                        maxWarnings: this.config.warningsBeforeBan,
+                        repeated: true,
                     };
                 } else {
                     // Temporary ban - escalating duration
@@ -317,8 +328,9 @@ export default class ModerationService {
                     return {
                         action: 'temp_ban',
                         warningCount: 0,
+                        maxWarnings: this.config.warningsBeforeBan,
                         bannedUntil,
-                        message: `You have been temporarily banned for ${banDuration} hours until ${bannedUntil.toLocaleString()}`
+                        banDurationHours: banDuration,
                     };
                 }
             } else {
@@ -328,7 +340,7 @@ export default class ModerationService {
                 return {
                     action: 'warning',
                     warningCount: user.warningCount,
-                    message: `Warning ${user.warningCount}/${this.config.warningsBeforeBan}: ${reason}`
+                    maxWarnings: this.config.warningsBeforeBan,
                 };
             }
         } catch (error) {

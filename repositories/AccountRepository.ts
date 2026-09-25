@@ -33,7 +33,7 @@ export default class AccountRepository {
     static async getUsersByID(IDs: string[]) {
         try {
             const obj_ids = IDs.map(id => new Types.ObjectId(id));
-            return await Account.find({ _id: { $in: obj_ids } }).select('_id email nickname avatarUrl accentColor lastSeen').exec();
+            return await Account.find({ _id: { $in: obj_ids } }).select('_id email nickname avatarUrl accentColor locale lastSeen').exec();
         } catch (err) {
             console.error('Failed to find users by ID:', err);
             throw new Error('Failed to find users by ID');
@@ -73,9 +73,9 @@ export default class AccountRepository {
             throw new Error('Failed to find user by ID');
         }
     }
-    static async addUser(email: string, hash: string, nickname?: string, phone?: string) {
+    static async addUser(email: string, hash: string, nickname?: string, phone?: string, locale?: string) {
         try {
-            const result = await Account.create({ email, password: hash, nickname, phone });
+            const result = await Account.create({ email, password: hash, nickname, phone, locale });
             return result._id;
         } catch (err) {
             console.error('Failed to create user:', err);
@@ -270,7 +270,7 @@ export default class AccountRepository {
     // selects public-safe fields - never password/ban/blocked internals.
     static async getProfileByIdentifier(identifier: string) {
         try {
-            const projection = '_id email phone nickname about avatarUrl accentColor lastSeen';
+            const projection = '_id email phone nickname about avatarUrl accentColor locale lastSeen';
             if (Types.ObjectId.isValid(identifier)) {
                 const byId = await Account.findById(identifier).select(projection).lean().exec();
                 if (byId) return byId;
@@ -282,7 +282,24 @@ export default class AccountRepository {
         }
     }
 
-    static async updateProfile(userId: string, updates: { nickname?: string; about?: string; accentColor?: string; avatarUrl?: string | null; phone?: string | null }) {
+    // The signed-in user's own account, for cookieActions.getCurrentUser: the
+    // same display fields as getProfileByIdentifier plus isModerator, which
+    // stays out of that shared projection because it also serves other
+    // people's profiles.
+    static async getSessionProfileById(userId: string) {
+        try {
+            if (!Types.ObjectId.isValid(userId)) return null;
+            return await Account.findById(userId)
+                .select('_id email nickname avatarUrl accentColor locale isModerator')
+                .lean<{ email?: string; nickname?: string; avatarUrl?: string; accentColor?: string; locale?: string; isModerator?: boolean }>()
+                .exec();
+        } catch (err) {
+            console.error('Failed to find session profile:', err);
+            throw new Error('Failed to find session profile');
+        }
+    }
+
+    static async updateProfile(userId: string, updates: { nickname?: string; about?: string; accentColor?: string; locale?: string; avatarUrl?: string | null; phone?: string | null }) {
         try {
             const set: Record<string, unknown> = {};
             const unset: Record<string, ''> = {};
@@ -293,6 +310,7 @@ export default class AccountRepository {
                 else unset.about = '';
             }
             if (updates.accentColor !== undefined) set.accentColor = updates.accentColor;
+            if (updates.locale !== undefined) set.locale = updates.locale;
             if (updates.avatarUrl !== undefined) {
                 if (updates.avatarUrl) set.avatarUrl = updates.avatarUrl;
                 else unset.avatarUrl = '';
@@ -308,7 +326,7 @@ export default class AccountRepository {
             if (!Object.keys(update).length) return null;
 
             return await Account.findByIdAndUpdate(userId, update, { new: true })
-                .select('_id email phone nickname about avatarUrl accentColor')
+                .select('_id email phone nickname about avatarUrl accentColor locale')
                 .lean()
                 .exec();
         } catch (err) {
@@ -330,7 +348,7 @@ export default class AccountRepository {
     static async updateEmail(userId: string, newEmail: string) {
         try {
             return await Account.findByIdAndUpdate(userId, { $set: { email: newEmail } }, { new: true })
-                .select('_id email phone nickname about avatarUrl accentColor')
+                .select('_id email phone nickname about avatarUrl accentColor locale')
                 .lean()
                 .exec();
         } catch (err) {

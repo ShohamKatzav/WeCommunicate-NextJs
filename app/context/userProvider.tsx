@@ -31,6 +31,17 @@ export const UserProvider = ({ children }: UserProviderProps) => {
         fetchUserHandler();
     }, [fetchUserHandler]);
 
+    // A later re-read (see socketProvider.tsx's 'moderator status changed'):
+    // unlike the first load, a failure keeps the user as they were rather
+    // than signing them out of the UI.
+    const refreshUser = useCallback(async () => {
+        try {
+            setUser(await getCurrentUser());
+        } catch (error) {
+            console.error("Failed to refresh user:", error);
+        }
+    }, []);
+
     // Here rather than in PushNotificationManager (only on /chat) so the
     // device stops notifying a previous user whatever page the new one
     // lands on. Gated on loadingUser: a second server action during the
@@ -78,7 +89,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     }, []);
 
     return (
-        <UserContext.Provider value={{ user, loadingUser, updateUser }}>
+        <UserContext.Provider value={{ user, loadingUser, updateUser, refreshUser }}>
             {children}
         </UserContext.Provider>
     );

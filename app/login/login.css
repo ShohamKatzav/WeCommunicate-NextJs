@@ -100,7 +100,7 @@ code {
   font-size: 0.95rem;
   border-radius: 8px;
   border: 1px solid var(--border);
-  padding-left: 8px;
+  padding-inline-start: 8px;
   box-sizing: border-box;
 }
 

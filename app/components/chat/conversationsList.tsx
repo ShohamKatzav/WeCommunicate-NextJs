@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useState } from "react";
+import { useT } from "../../i18n/client";
 import ChatUser from "@/types/chatUser";
 import ConversationSummary from "./conversationSummary";
 import Conversation from "@/types/conversation";
@@ -21,6 +22,7 @@ const ConversationsList =
         query,
         initialConversations,
         pendingClears }: ConversationsListProps) => {
+        const t = useT();
 
         // Only the most recently loaded message per conversation is present in
         // initialConversations (see ConversationRepository.GetRecentConversations'
@@ -60,7 +62,7 @@ const ConversationsList =
                 {
                     initialConversations?.length < 1 &&
                     <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-gray-300 dark:border-gray-700 flex items-center gap-4 hover:shadow-lg transition-shadow">
-                        <p className="text-gray-600 dark:text-gray-400 text-center">No recent conversations available.</p>
+                        <p className="text-gray-600 dark:text-gray-400 text-center">{t("chat.sidebar.noRecent")}</p>
                     </div>
                 }
 

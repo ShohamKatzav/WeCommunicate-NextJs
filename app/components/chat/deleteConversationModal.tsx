@@ -1,4 +1,5 @@
 import { X, AlertTriangle } from 'lucide-react';
+import { useT } from '../../i18n/client';
 
 interface DeleteConversationModalProps {
     isOpen: boolean;
@@ -13,6 +14,7 @@ export default function DeleteConversationModal({
     onClose,
     onConfirm
 }: DeleteConversationModalProps) {
+    const t = useT();
     if (!isOpen) return null;
 
     return (
@@ -25,11 +27,12 @@ export default function DeleteConversationModal({
                                 <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
                             </div>
                             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                                Delete Conversation?
+                                {t("chat.deleteModal.title")}
                             </h2>
                         </div>
                         <button
                             onClick={onClose}
+                            aria-label={t("common.close")}
                             className="text-muted-foreground hover:text-foreground transition-colors"
                             disabled={isDeleting}
                         >
@@ -39,13 +42,13 @@ export default function DeleteConversationModal({
 
                     <div className="space-y-3 mb-6">
                         <p className="text-gray-700 dark:text-gray-300">
-                            This will permanently delete the conversation from your view. This action cannot be undone.
+                            {t("chat.deleteModal.body")}
                         </p>
 
                         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3">
                             <p className="text-sm text-amber-900 dark:text-amber-200 font-medium flex items-start gap-2">
                                 <span className="text-amber-600 dark:text-amber-400 mt-0.5">⚠️</span>
-                                <span>Other participants will still be able to see all messages in this conversation.</span>
+                                <span>{t("chat.deleteModal.warning")}</span>
                             </p>
                         </div>
                     </div>
@@ -56,7 +59,7 @@ export default function DeleteConversationModal({
                             disabled={isDeleting}
                             className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Cancel
+                            {t("chat.deleteModal.cancel")}
                         </button>
                         <button
                             onClick={onConfirm}
@@ -66,10 +69,10 @@ export default function DeleteConversationModal({
                             {isDeleting ? (
                                 <>
                                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    Deleting...
+                                    {t("chat.deleteModal.deleting")}
                                 </>
                             ) : (
-                                'Delete'
+                                t("chat.deleteModal.delete")
                             )}
                         </button>
                     </div>

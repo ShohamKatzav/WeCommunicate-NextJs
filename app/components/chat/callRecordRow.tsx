@@ -2,6 +2,7 @@
 import { Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Video } from "lucide-react";
 import MessageCall from "@/types/messageCall";
 import { describeCallRecord } from "../../utils/callRecord";
+import { useT } from "../../i18n/client";
 
 interface CallRecordRowProps {
     call: MessageCall;
@@ -13,7 +14,8 @@ interface CallRecordRowProps {
 // rather than a bubble from either side, and without reply/react/delete:
 // it's a record of something that happened, not something anyone said.
 const CallRecordRow = ({ call, isCaller, date }: CallRecordRowProps) => {
-    const { label, detail, missed } = describeCallRecord(call, isCaller);
+    const t = useT();
+    const { label, detail, missed } = describeCallRecord(call, isCaller, t);
     const Icon = missed
         ? PhoneMissed
         : call.video
@@ -22,7 +24,7 @@ const CallRecordRow = ({ call, isCaller, date }: CallRecordRowProps) => {
                 ? (isCaller ? PhoneOutgoing : PhoneIncoming)
                 : Phone;
     const time = date
-        ? new Date(date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })
+        ? new Date(date).toLocaleTimeString(t.dateLocale, { hour: "2-digit", minute: "2-digit", hour12: false })
         : null;
 
     return (

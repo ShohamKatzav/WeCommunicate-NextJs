@@ -13,6 +13,7 @@ import { getDisappearingMessagesSetting } from "../../lib/conversationActions";
 import { DISAPPEARING_MESSAGES_OPTIONS } from "../../config/limits";
 import useMediaDeviceAvailability from "../../hooks/useMediaDeviceAvailability";
 import { unavailableDevicesReason } from "../../lib/mediaDeviceError";
+import { useT } from "../../i18n/client";
 
 // Every icon button in the header shares one box: 44px on phones (the usual
 // minimum touch target), 40px from md up where a pointer is likely. The
@@ -53,6 +54,7 @@ const ChatHeader = ({
     isBlocked,
     onStartCall,
     ensureConversationId }: ChatHeaderProps) => {
+    const t = useT();
 
     const { user } = useUser();
     const devices = useMediaDeviceAvailability();
@@ -81,8 +83,9 @@ const ChatHeader = ({
         return () => { cancelled = true; };
     }, [conversationId]);
 
-    const disappearingLabel = DISAPPEARING_MESSAGES_OPTIONS
-        .find(option => option.seconds === disappearingSeconds && option.seconds !== 0)?.label;
+    const disappearingLabelKey = DISAPPEARING_MESSAGES_OPTIONS
+        .find(option => option.seconds === disappearingSeconds && option.seconds !== 0)?.labelKey;
+    const disappearingLabel = disappearingLabelKey ? t(disappearingLabelKey) : undefined;
 
     // 1:1 only - a group has several people with several last-seen times,
     // and the header already summarises those as "N of M members online".
@@ -92,7 +95,8 @@ const ChatHeader = ({
         ? null
         : formatLastSeen(
             (otherParticipant.email ? lastSeenByEmail[otherParticipant.email.toLowerCase()] : undefined)
-            ?? otherParticipant.lastSeen
+            ?? otherParticipant.lastSeen,
+            t
         );
 
     // Calls are 1:1 only (see the call handlers in socket/handlers.ts) and
@@ -106,8 +110,8 @@ const ChatHeader = ({
     // already reject and toast this once a call is attempted; disabling up
     // front (not hiding - the buttons still explain themselves) names the
     // device that is actually missing.
-    const voiceUnavailable = unavailableDevicesReason({ audio: true, video: false }, devices);
-    const videoUnavailable = unavailableDevicesReason({ audio: true, video: true }, devices);
+    const voiceUnavailable = unavailableDevicesReason({ audio: true, video: false }, devices, t);
+    const videoUnavailable = unavailableDevicesReason({ audio: true, video: true }, devices, t);
 
     const getOnlineParticipantsInRoom = () => {
         if (!participants.current) return [];
@@ -126,12 +130,10 @@ const ChatHeader = ({
         ?.map(p => p.nickname || AsShortName(p.email))
         .join(", ");
     const presenceText = isGroup
-        ? `${onlineCount} of ${roomParticipants!.length} members online`
+        ? t("chat.header.membersOnline", { online: onlineCount, count: roomParticipants!.length })
         : onlineCount > 0
-            ? "Online"
-            : lastSeenText
-                ? `Last seen ${lastSeenText}`
-                : "Not here right now";
+            ? t("presence.online")
+            : lastSeenText ?? t("chat.header.notHere");
     const typingEmails = Object.keys(typingUsers);
 
     return (
@@ -151,7 +153,7 @@ const ChatHeader = ({
             <button
                 type="button"
                 onClick={() => setMobileChatsSidebarOpen(true)}
-                aria-label="Open conversations"
+                aria-label={t("chat.header.openConversations")}
                 className={`order-1 xl:hidden ${ICON_BUTTON}`}
             >
                 <HiChatBubbleLeftRight color="rgb(152, 65, 249)" size={24} aria-hidden="true" />
@@ -161,7 +163,7 @@ const ChatHeader = ({
                 {otherParticipant && (
                     <Link
                         href={`/profile/${otherParticipant._id}`}
-                        aria-label={`View ${callTargetName}'s profile`}
+                        aria-label={t("chat.header.viewProfile", { name: callTargetName })}
                         className="shrink-0 self-start rounded-full outline-none focus-visible:ring-2 focus-visible:ring-purple-500 md:self-center"
                     >
                         <Avatar
@@ -193,8 +195,8 @@ const ChatHeader = ({
                                 </div>
                                 <span className="wrap-break-word text-xs font-medium italic leading-4 text-purple-600 dark:text-purple-400">
                                     {typingEmails.length === 1
-                                        ? `${AsShortName(typingEmails[0])} is typing...`
-                                        : "Multiple people are typing..."
+                                        ? t("chat.header.typing", { name: AsShortName(typingEmails[0]) })
+                                        : t("chat.header.multipleTyping")
                                     }
                                 </span>
                             </div>
@@ -212,10 +214,10 @@ const ChatHeader = ({
                     <div className="min-w-0 flex-1">
                         <h1 className="wrap-break-word text-lg font-bold leading-6 md:text-xl xl:text-2xl">
                             <span className="bg-linear-to-r from-blue-600 to-purple-700 bg-clip-text text-transparent dark:from-blue-300 dark:to-purple-400">
-                                {"Welcome " + (user?.nickname || AsShortName(user?.email as string))}
+                                {t("chat.header.welcome", { name: user?.nickname || AsShortName(user?.email as string) })}
                             </span>
                         </h1>
-                        <p className="text-xs font-medium text-success">Select a chat to start</p>
+                        <p className="text-xs font-medium text-success">{t("chat.header.selectChat")}</p>
                     </div>
                 )}
             </div>
@@ -223,7 +225,7 @@ const ChatHeader = ({
             <button
                 type="button"
                 onClick={() => setMobileUsersSidebarOpen(true)}
-                aria-label="Open people"
+                aria-label={t("chat.header.openPeople")}
                 className={`order-3 md:order-last xl:hidden ${ICON_BUTTON}`}
             >
                 <HiUsers color="rgb(152, 65, 249)" size={24} aria-hidden="true" />
@@ -242,20 +244,20 @@ const ChatHeader = ({
                         <div className="order-5 flex min-h-11 min-w-0 flex-1 basis-0 items-center md:min-h-0 md:flex-none md:basis-auto">
                             <span className="inline-flex min-w-0 items-start gap-1 rounded-xl bg-purple-50 px-2.5 py-1 text-xs font-medium leading-4 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
                                 <Timer size={14} aria-hidden="true" className="mt-px shrink-0" />
-                                <span className="wrap-break-word">Disappearing: {disappearingLabel}</span>
+                                <span className="wrap-break-word">{t("chat.header.disappearing", { duration: disappearingLabel })}</span>
                             </span>
                         </div>
                     )}
 
-                    <div className="order-6 ml-auto flex shrink-0 items-center gap-1">
+                    <div className="order-6 ms-auto flex shrink-0 items-center gap-1">
                         {canCall && (
                             <>
                                 <button
                                     type="button"
                                     onClick={() => onStartCall(false)}
                                     disabled={!!voiceUnavailable}
-                                    aria-label={voiceUnavailable ? `Can't start a voice call with ${callTargetName}: ${voiceUnavailable}` : `Start voice call with ${callTargetName}`}
-                                    title={voiceUnavailable || "Voice call"}
+                                    aria-label={voiceUnavailable ? t("chat.header.cantVoiceCall", { name: callTargetName, reason: voiceUnavailable }) : t("chat.header.startVoiceCall", { name: callTargetName })}
+                                    title={voiceUnavailable || t("chat.header.voiceCall")}
                                     className={ICON_BUTTON}
                                 >
                                     <Phone size={22} aria-hidden="true" />
@@ -264,8 +266,8 @@ const ChatHeader = ({
                                     type="button"
                                     onClick={() => onStartCall(true)}
                                     disabled={!!videoUnavailable}
-                                    aria-label={videoUnavailable ? `Can't start a video call with ${callTargetName}: ${videoUnavailable}` : `Start video call with ${callTargetName}`}
-                                    title={videoUnavailable || "Video call"}
+                                    aria-label={videoUnavailable ? t("chat.header.cantVideoCall", { name: callTargetName, reason: videoUnavailable }) : t("chat.header.startVideoCall", { name: callTargetName })}
+                                    title={videoUnavailable || t("chat.header.videoCall")}
                                     className={ICON_BUTTON}
                                 >
                                     <Video size={22} aria-hidden="true" />

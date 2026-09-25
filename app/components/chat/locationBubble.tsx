@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
 import { MapPin } from 'lucide-react';
+import { useT } from '../../i18n/client';
 import MessageLocation from '@/types/messageLocation';
 import useIsMobile from '../../hooks/useIsMobile';
 
@@ -55,6 +56,7 @@ const previewOptions: google.maps.MapOptions = {
 };
 
 const LocationBubble = ({ location, onOpen }: LocationBubbleProps) => {
+    const t = useT();
     const isMobile = useIsMobile();
     // Shares the loader id with /locations so the Maps script is fetched
     // once per session no matter which of them mounts first.
@@ -88,8 +90,8 @@ const LocationBubble = ({ location, onOpen }: LocationBubbleProps) => {
             // see messageBubble.tsx's own onClick), single click on desktop.
             onDoubleClick={() => { if (isMobile) onOpen(); }}
             onClick={() => { if (!isMobile) onOpen(); }}
-            aria-label={`Open shared location ${label} fullscreen`}
-            className="relative block w-full max-w-[240px] overflow-hidden rounded-xl border border-white/30 bg-black/10 text-left"
+            aria-label={t("chat.bubble.openLocation", { label })}
+            className="relative block w-full max-w-[240px] overflow-hidden rounded-xl border border-white/30 bg-black/10 text-start"
         >
             <div className="h-[110px] w-full md:h-[140px]">
                 {isLoaded && !authFailed ? (

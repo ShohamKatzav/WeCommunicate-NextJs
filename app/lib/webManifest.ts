@@ -1,3 +1,4 @@
+import type { TFunction } from '../i18n/messages';
 import { isSamsungInternet } from '@/app/utils/samsungInternet';
 
 const ICONS = [
@@ -62,7 +63,9 @@ export function wantsPostShareTarget(userAgent: string | null): boolean {
     return /\b(Chrome|Edg|OPR)\//.test(userAgent ?? '');
 }
 
-export function buildWebManifest(userAgent: string | null) {
+// `t` is the requester's language - the manifest request carries no
+// cookie, so in practice that's their browser's Accept-Language.
+export function buildWebManifest(userAgent: string | null, t: TFunction) {
     const postShare = wantsPostShareTarget(userAgent);
     return {
         // Explicit, but identical to what browsers derive from start_url when
@@ -71,11 +74,11 @@ export function buildWebManifest(userAgent: string | null) {
         id: '/',
         name: 'WeCommunicate',
         short_name: 'WeCommunicate',
-        description: 'WeCommunicate is a chat app',
+        description: t('meta.description'),
         start_url: '/',
         scope: '/',
         display: 'standalone',
-        lang: 'en-US',
+        lang: t.dateLocale,
         theme_color: '#8936FF',
         background_color: '#2EC6FE',
         // `dir` / `orientation` are omitted outside Chromium: Samsung's

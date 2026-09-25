@@ -2,6 +2,7 @@ import connectDB from "@/app/lib/MongoDb";
 import AccountRepository from "@/repositories/AccountRepository";
 import bcrypt from 'bcryptjs';
 import { isPhone, normalizePhone } from './contact';
+import { getT } from '@/app/i18n/server';
 
 // Plain server-only helpers (no "use server" directive) shared between
 // accountActions.ts and OTPActions.ts. Because this file is not a server
@@ -18,7 +19,7 @@ export async function findAccount(identifier: string) {
 export async function updateAccountPassword(identifier: string, newPassword: string) {
     await connectDB();
     const user = await findAccount(identifier);
-    if (!user) return { message: 'Account not found', status: 404 };
+    if (!user) return { message: (await getT())('errors.accountNotFound'), status: 404 };
     await AccountRepository.updatePassword(user.email, await bcrypt.hash(newPassword, 10));
     return { success: true, status: 201 };
 }

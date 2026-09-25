@@ -6,8 +6,10 @@ import { revalidatePath } from "next/cache";
 import { Types } from "mongoose";
 import ConversationRepository from "@/repositories/ConversationRepository";
 import { DISAPPEARING_MESSAGES_OPTIONS } from "@/app/config/limits";
+import { getT } from "@/app/i18n/server";
 
 const applyCleanHistory = async (conversationId: string, cutoff: number) => {
+    const t = await getT();
     if (!conversationId) throw new Error("Invalid Conversation Id")
     try {
         await connectDB();
@@ -20,11 +22,11 @@ const applyCleanHistory = async (conversationId: string, cutoff: number) => {
             return { success: true };
         }
 
-        return { success: false, error: 'Write not acknowledged' };
+        return { success: false, error: t('errors.writeNotAcknowledged') };
     }
     catch (err) {
         console.error('Failed to clean history', err);
-        return { success: false, error: 'Failed to clean history' };
+        return { success: false, error: t('errors.cleanHistoryFailed') };
     }
 }
 
@@ -51,17 +53,18 @@ export const cleanHistoryReplay = async (conversationId: string, cutoff: number)
 // authenticated user can open a conversation with any other account id,
 // which is the existing model for starting a chat at all.
 export const getOrCreateConversationId = async (participantIds: string[]) => {
+    const t = await getT();
     if (!Array.isArray(participantIds) || participantIds.length === 0) {
-        return { success: false, error: 'Invalid participants' };
+        return { success: false, error: t('errors.invalidParticipants') };
     }
     if (!participantIds.every(id => Types.ObjectId.isValid(id))) {
-        return { success: false, error: 'Invalid participants' };
+        return { success: false, error: t('errors.invalidParticipants') };
     }
     try {
         await connectDB();
         const userID = await extractUserIDFromCoockie();
         if (typeof userID !== 'string') {
-            return { success: false, error: 'Unauthorized' };
+            return { success: false, error: t('errors.unauthorized') };
         }
 
         const memberIDs = [
@@ -74,7 +77,7 @@ export const getOrCreateConversationId = async (participantIds: string[]) => {
         return { success: true, conversationId: conversation._id.toString() };
     } catch (err) {
         console.error('Failed to get or create conversation:', err);
-        return { success: false, error: 'Failed to open conversation' };
+        return { success: false, error: t('errors.openConversationFailed') };
     }
 }
 
@@ -131,17 +134,18 @@ export const getDisappearingMessagesSetting = async (conversationId: string) => 
 }
 
 export const setDisappearingMessages = async (conversationId: string, seconds: number) => {
+    const t = await getT();
     if (!conversationId) throw new Error("Invalid Conversation Id");
     // Only ever one of the offered durations - never an arbitrary
     // client-supplied number of seconds.
     if (!DISAPPEARING_MESSAGES_OPTIONS.some(option => option.seconds === seconds)) {
-        return { success: false, error: 'Invalid duration' };
+        return { success: false, error: t('errors.invalidDuration') };
     }
     try {
         await connectDB();
         const userID = await extractUserIDFromCoockie();
         if (typeof userID !== 'string') {
-            return { success: false, error: 'Unauthorized' };
+            return { success: false, error: t('errors.unauthorized') };
         }
 
         const result = await ConversationRepository.SetDisappearingMessages(
@@ -154,18 +158,19 @@ export const setDisappearingMessages = async (conversationId: string, seconds: n
         // the caller isn't a member of it (see SetDisappearingMessages'
         // membership filter) - either way, nothing was changed.
         if (result.matchedCount === 0) {
-            return { success: false, error: 'Not a member of this conversation' };
+            return { success: false, error: t('errors.notAMember') };
         }
 
         revalidatePath('/chat');
         return { success: true };
     } catch (err) {
         console.error('Failed to set disappearing messages:', err);
-        return { success: false, error: 'Failed to update setting' };
+        return { success: false, error: t('errors.updateSettingFailed') };
     }
 }
 
 export const deleteConversation = async (conversationId: string, type: string = "conversation") => {
+    const t = await getT();
     if (!conversationId) throw new Error("Invalid Conversation Id")
     try {
         await connectDB();
@@ -180,10 +185,10 @@ export const deleteConversation = async (conversationId: string, type: string = 
             return { success: true };
         }
 
-        return { success: false, error: 'Write not acknowledged' };
+        return { success: false, error: t('errors.writeNotAcknowledged') };
     }
     catch (err) {
         console.error('Failed to delete conversation', err);
-        return { success: false, error: 'Failed to delete conversation' };
+        return { success: false, error: t('errors.deleteConversationFailed') };
     }
 }

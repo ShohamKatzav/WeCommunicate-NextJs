@@ -22,6 +22,140 @@
                 if (dark) document.documentElement.classList.add('dark');
             } catch (e) { }
         })();
+
+        // The UI language, chosen the same way the app's layout does: the
+        // `locale` cookie, then the browser's languages. This page is static
+        // and served from the service worker's cache, so it can't use the
+        // app's catalogs - these few strings mirror the `offline` section of
+        // app/i18n/*.ts and must be kept in step with it. Set before first
+        // paint so a Hebrew or Arabic page never flashes left to right.
+        var OFFLINE_STRINGS = {
+            en: {
+                title: 'Offline - WeCommunicate',
+                offline: "You're offline",
+                backOnline: "You're back online! 🎉",
+                lost: "Looks like you've lost your <strong>internet connection</strong>",
+                restored: 'Your <strong>internet connection</strong> has been restored',
+                quote: '"Sometimes you need to disconnect to reconnect." — Anonymous',
+                connected: '✓ Connected',
+                noConnection: '✗ No connection',
+                retry: '🔄 Retry connection',
+                goBack: '❌ Go back',
+                tipWifi: 'Check your WiFi or mobile data',
+                tipAirplane: 'Try airplane mode on/off',
+                tipCached: 'Some features may be cached and still work',
+                restoredToast: 'Connection restored! Redirecting...',
+                redirectingIn: 'Redirecting in {n} seconds...',
+                lostToast: 'Connection lost',
+                redirecting: 'Redirecting...',
+                redirectingButton: '⏳ Redirecting...',
+                stillOffline: 'Still offline. Please check your connection.'
+            },
+            he: {
+                title: 'אין חיבור - WeCommunicate',
+                offline: 'אין חיבור לאינטרנט',
+                backOnline: 'חזרתם לאינטרנט! 🎉',
+                lost: 'נראה שאבד לכם <strong>החיבור לאינטרנט</strong>',
+                restored: '<strong>החיבור לאינטרנט</strong> חזר',
+                quote: '"לפעמים צריך להתנתק כדי להתחבר מחדש." — אנונימי',
+                connected: '✓ מחובר',
+                noConnection: '✗ אין חיבור',
+                retry: '🔄 ניסיון התחברות',
+                goBack: '❌ חזרה',
+                tipWifi: 'בדקו את ה-WiFi או את חבילת הגלישה',
+                tipAirplane: 'נסו להפעיל ולכבות את מצב טיסה',
+                tipCached: 'חלק מהתכונות אולי שמורות במטמון וימשיכו לעבוד',
+                restoredToast: 'החיבור חזר! מעבירים אתכם...',
+                redirectingIn: 'מעבירים אתכם בעוד {n} שניות...',
+                lostToast: 'החיבור אבד',
+                redirecting: 'מעבירים אתכם...',
+                redirectingButton: '⏳ מעבירים...',
+                stillOffline: 'עדיין אין חיבור. בדקו את החיבור לאינטרנט.'
+            },
+            ar: {
+                title: 'غير متصل - WeCommunicate',
+                offline: 'أنت غير متصل',
+                backOnline: 'عدت إلى الإنترنت! 🎉',
+                lost: 'يبدو أنك فقدت <strong>الاتصال بالإنترنت</strong>',
+                restored: 'تمت استعادة <strong>الاتصال بالإنترنت</strong>',
+                quote: '"أحيانًا تحتاج إلى الانفصال لتعيد الاتصال." — مجهول',
+                connected: '✓ متصل',
+                noConnection: '✗ لا يوجد اتصال',
+                retry: '🔄 إعادة محاولة الاتصال',
+                goBack: '❌ رجوع',
+                tipWifi: 'تحقق من شبكة WiFi أو بيانات الجوال',
+                tipAirplane: 'جرّب تشغيل وضع الطيران ثم إيقافه',
+                tipCached: 'قد تكون بعض الميزات محفوظة مؤقتًا وتعمل دون اتصال',
+                restoredToast: 'عاد الاتصال! جارٍ التحويل...',
+                redirectingIn: 'جارٍ التحويل خلال {n} ثوانٍ...',
+                lostToast: 'انقطع الاتصال',
+                redirecting: 'جارٍ التحويل...',
+                redirectingButton: '⏳ جارٍ التحويل...',
+                stillOffline: 'ما زلت غير متصل. تحقق من اتصالك.'
+            },
+            ru: {
+                title: 'Нет подключения - WeCommunicate',
+                offline: 'Нет подключения',
+                backOnline: 'Вы снова онлайн! 🎉',
+                lost: 'Похоже, пропало <strong>подключение к интернету</strong>',
+                restored: '<strong>Подключение к интернету</strong> восстановлено',
+                quote: '«Иногда нужно отключиться, чтобы снова подключиться». — Аноним',
+                connected: '✓ Подключено',
+                noConnection: '✗ Нет подключения',
+                retry: '🔄 Повторить подключение',
+                goBack: '❌ Назад',
+                tipWifi: 'Проверьте Wi-Fi или мобильный интернет',
+                tipAirplane: 'Включите и выключите режим полёта',
+                tipCached: 'Некоторые функции могут работать из кэша',
+                restoredToast: 'Подключение восстановлено! Переходим...',
+                redirectingIn: 'Переход через {n} с...',
+                lostToast: 'Подключение потеряно',
+                redirecting: 'Переходим...',
+                redirectingButton: '⏳ Переходим...',
+                stillOffline: 'Подключения всё ещё нет. Проверьте соединение.'
+            },
+            fr: {
+                title: 'Hors ligne - WeCommunicate',
+                offline: 'Vous êtes hors ligne',
+                backOnline: 'Vous êtes de nouveau en ligne ! 🎉',
+                lost: 'On dirait que vous avez perdu votre <strong>connexion Internet</strong>',
+                restored: 'Votre <strong>connexion Internet</strong> est rétablie',
+                quote: '« Parfois, il faut se déconnecter pour mieux se reconnecter. » — Anonyme',
+                connected: '✓ Connecté',
+                noConnection: '✗ Pas de connexion',
+                retry: '🔄 Réessayer la connexion',
+                goBack: '❌ Retour',
+                tipWifi: 'Vérifiez votre Wi-Fi ou vos données mobiles',
+                tipAirplane: 'Activez puis désactivez le mode avion',
+                tipCached: 'Certaines fonctions peuvent être en cache et fonctionner quand même',
+                restoredToast: 'Connexion rétablie ! Redirection...',
+                redirectingIn: 'Redirection dans {n} secondes...',
+                lostToast: 'Connexion perdue',
+                redirecting: 'Redirection...',
+                redirectingButton: '⏳ Redirection...',
+                stillOffline: 'Toujours hors ligne. Vérifiez votre connexion.'
+            }
+        };
+        var OFFLINE_LOCALE = (function () {
+            var supported = ['en', 'he', 'ar', 'ru', 'fr'];
+            try {
+                var fromCookie = (document.cookie.match(/(?:^|; )locale=([^;]+)/) || [])[1];
+                if (supported.indexOf(fromCookie) !== -1) return fromCookie;
+            } catch (e) { }
+            var languages = navigator.languages || [navigator.language || 'en'];
+            for (var i = 0; i < languages.length; i++) {
+                var primary = String(languages[i]).toLowerCase().split('-')[0];
+                if (primary === 'iw') primary = 'he';
+                if (supported.indexOf(primary) !== -1) return primary;
+            }
+            return 'en';
+        })();
+        function offlineText(key, vars) {
+            var text = OFFLINE_STRINGS[OFFLINE_LOCALE][key] || OFFLINE_STRINGS.en[key];
+            return vars ? text.replace(/\{(\w+)\}/g, function (m, name) { return name in vars ? vars[name] : m; }) : text;
+        }
+        document.documentElement.lang = OFFLINE_LOCALE;
+        document.documentElement.dir = OFFLINE_LOCALE === 'he' || OFFLINE_LOCALE === 'ar' ? 'rtl' : 'ltr';
     </script>
     <style>
         body {
@@ -157,9 +291,9 @@
         ul {
             margin-top: 3rem;
             list-style: disc;
-            text-align: left;
+            text-align: start;
             max-width: 20rem;
-            padding-left: 1.25rem;
+            padding-inline-start: 1.25rem;
             color: inherit;
         }
 
@@ -300,24 +434,36 @@
     <h1 id="status-text">You're offline <span aria-hidden="true">📡</span></h1>
 
     <p id="description-text">Looks like you've lost your <strong>internet connection</strong></p>
-    <p class="italic">"Sometimes you need to disconnect to reconnect." — Anonymous</p>
+    <p class="italic" data-i18n="quote">"Sometimes you need to disconnect to reconnect." — Anonymous</p>
 
     <div id="redirect-message" class="redirect-message" style="display: none;"></div>
 
     <div id="connection-indicator" class="status offline">✗ No connection</div>
 
     <div>
-        <button id="retry-btn" class="button retry">🔄 Retry connection</button>
-        <button id="back-btn" class="button back">❌ Go back</button>
+        <button id="retry-btn" class="button retry" data-i18n="retry">🔄 Retry connection</button>
+        <button id="back-btn" class="button back" data-i18n="goBack">❌ Go back</button>
     </div>
 
     <ul>
-        <li>Check your WiFi or mobile data</li>
-        <li>Try airplane mode on/off</li>
-        <li>Some features may be cached and still work</li>
+        <li data-i18n="tipWifi">Check your WiFi or mobile data</li>
+        <li data-i18n="tipAirplane">Try airplane mode on/off</li>
+        <li data-i18n="tipCached">Some features may be cached and still work</li>
     </ul>
 
     <script>
+        (function () {
+            // The markup above is the English fallback; swap in the
+            // visitor's language (chosen in <head>) before anything else.
+            document.title = offlineText('title');
+            document.querySelectorAll('[data-i18n]').forEach(function (el) {
+                el.textContent = offlineText(el.getAttribute('data-i18n'));
+            });
+            document.getElementById('status-text').innerHTML = offlineText('offline') + ' <span aria-hidden="true">📡</span>';
+            document.getElementById('description-text').innerHTML = offlineText('lost');
+            document.getElementById('connection-indicator').textContent = offlineText('noConnection');
+        })();
+
         (function () {
             const statusIcon = document.getElementById('status-icon');
             const statusText = document.getElementById('status-text');
@@ -361,15 +507,15 @@
                 const online = await probeNetwork();
 
                 if (online) {
-                    statusText.textContent = "You're back online! 🎉";
-                    descriptionText.innerHTML = 'Your <strong>internet connection</strong> has been restored';
+                    statusText.textContent = offlineText('backOnline');
+                    descriptionText.innerHTML = offlineText('restored');
 
                     statusIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                     </svg>`;
                     statusIcon.className = "icon animate-pulse online";
 
-                    connectionIndicator.textContent = "✓ Connected";
+                    connectionIndicator.textContent = offlineText('connected');
                     connectionIndicator.className = "status online";
 
                     retryBtn.disabled = false;
@@ -378,15 +524,15 @@
                     // offlinePage.tsx's React version ("You're offline 📡") -
                     // this used to drop the emoji on every status refresh,
                     // including the very first one on page load.
-                    statusText.innerHTML = 'You\'re offline <span aria-hidden="true">📡</span>';
-                    descriptionText.innerHTML = 'Looks like you\'ve lost your <strong>internet connection</strong>';
+                    statusText.innerHTML = offlineText('offline') + ' <span aria-hidden="true">📡</span>';
+                    descriptionText.innerHTML = offlineText('lost');
 
                     statusIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M2 12h20M2 6h20M2 18h20"/>
                     </svg>`;
                     statusIcon.className = "icon animate-bounce offline";
 
-                    connectionIndicator.textContent = "✗ No connection";
+                    connectionIndicator.textContent = offlineText('noConnection');
                     connectionIndicator.className = "status offline";
 
                     redirectMessage.style.display = 'none';
@@ -400,17 +546,17 @@
             // Handle online event
             function handleOnline() {
                 updateStatus();
-                showToast("Connection restored! Redirecting...", "success");
+                showToast(offlineText('restoredToast'), "success");
 
                 // Show countdown message
                 let countdown = 3;
-                redirectMessage.textContent = `Redirecting in ${countdown} seconds...`;
+                redirectMessage.textContent = offlineText("redirectingIn", { n: countdown });
                 redirectMessage.style.display = 'block';
 
                 const countdownInterval = setInterval(() => {
                     countdown--;
                     if (countdown > 0) {
-                        redirectMessage.textContent = `Redirecting in ${countdown} seconds...`;
+                        redirectMessage.textContent = offlineText("redirectingIn", { n: countdown });
                     } else {
                         clearInterval(countdownInterval);
                     }
@@ -425,20 +571,20 @@
             // Handle offline event
             function handleOffline() {
                 updateStatus();
-                showToast("Connection lost", "error");
+                showToast(offlineText('lostToast'), "error");
             }
 
             // Retry button click handler
             function handleRetry() {
                 if (navigator.onLine) {
-                    showToast("Redirecting...", "info");
+                    showToast(offlineText('redirecting'), "info");
                     retryBtn.disabled = true;
-                    retryBtn.textContent = "⏳ Redirecting...";
+                    retryBtn.textContent = offlineText('redirectingButton');
                     setTimeout(() => {
                         window.location.href = '/chat';
                     }, 500);
                 } else {
-                    showToast("Still offline. Please check your connection.", "error");
+                    showToast(offlineText('stillOffline'), "error");
                 }
             }
 

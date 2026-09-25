@@ -6,6 +6,8 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Mail, Linkedin, Facebook, Github } from "lucide-react";
 import { useUser } from "../../hooks/useUser";
+import { useT } from "../../i18n/client";
+import LanguagePicker from "./languagePicker";
 import "./bars.css";
 
 // Chat is a full-viewport shell sized to the gap under the navbar
@@ -25,17 +27,19 @@ const APP_SHELL_PATHS = ["/chat"];
 const COMPACT_SHELL_QUERY = "(max-width: 768px), (max-height: 500px) and (max-width: 1024px)";
 
 const productLinks = [
-    { href: "/chat", label: "Chat" },
-    { href: "/locations", label: "Locations" },
-    { href: "/about", label: "About" },
-    { href: "/contact", label: "Contact" },
-];
+    { href: "/chat", labelKey: "footer.chat" },
+    { href: "/locations", labelKey: "footer.locations" },
+    { href: "/about", labelKey: "footer.about" },
+    { href: "/contact", labelKey: "footer.contact" },
+] as const;
 
+// GitHub, LinkedIn and Facebook are names, not copy - only Email translates.
 const socialLinks = [
     {
         href: "mailto:shohamkatzav95@gmail.com",
-        label: "Email",
+        labelKey: "footer.email",
         icon: Mail,
+        external: false,
     },
     {
         href: "https://github.com/ShohamKatzav/",
@@ -55,11 +59,12 @@ const socialLinks = [
         icon: Facebook,
         external: true,
     },
-];
+] as const;
 
 const Footer = () => {
     const pathname = usePathname();
     const { user } = useUser();
+    const t = useT();
     const year = new Date().getFullYear();
     const signedIn = Boolean(user && Object.keys(user).length > 0);
     const footerRef = useRef<HTMLElement>(null);
@@ -143,8 +148,7 @@ const Footer = () => {
                             </span>
                         </Link>
                         <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground sm:mt-4">
-                            Real-time chat with voice notes, disappearing messages, and full
-                            offline support - free, in your browser.
+                            {t("footer.tagline")}
                         </p>
                     </div>
 
@@ -157,7 +161,7 @@ const Footer = () => {
                     <div className="grid grid-cols-2 gap-6 sm:contents">
                         <div>
                             <h2 className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-                                Explore
+                                {t("footer.explore")}
                             </h2>
                             <ul className="mt-3 space-y-2 sm:mt-4 sm:space-y-2.5">
                                 {productLinks.map((item) => (
@@ -166,7 +170,7 @@ const Footer = () => {
                                             href={item.href}
                                             className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                                         >
-                                            {item.label}
+                                            {t(item.labelKey)}
                                         </Link>
                                     </li>
                                 ))}
@@ -175,7 +179,7 @@ const Footer = () => {
 
                         <div>
                             <h2 className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-                                Account
+                                {t("footer.account")}
                             </h2>
                             <ul className="mt-3 space-y-2 sm:mt-4 sm:space-y-2.5">
                                 {signedIn ? (
@@ -185,7 +189,7 @@ const Footer = () => {
                                                 href="/chat"
                                                 className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                                             >
-                                                Open chat
+                                                {t("footer.openChat")}
                                             </Link>
                                         </li>
                                         {user?.isModerator && (
@@ -194,7 +198,7 @@ const Footer = () => {
                                                     href="/moderator"
                                                     className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                                                 >
-                                                    Moderator
+                                                    {t("footer.moderator")}
                                                 </Link>
                                             </li>
                                         )}
@@ -206,7 +210,7 @@ const Footer = () => {
                                                 href="/login"
                                                 className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                                             >
-                                                Log in
+                                                {t("footer.logIn")}
                                             </Link>
                                         </li>
                                         <li>
@@ -214,7 +218,7 @@ const Footer = () => {
                                                 href="/sign-up"
                                                 className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                                             >
-                                                Create an account
+                                                {t("footer.createAccount")}
                                             </Link>
                                         </li>
                                     </>
@@ -225,7 +229,7 @@ const Footer = () => {
 
                     <div>
                         <h2 className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-                            Connect
+                            {t("footer.connect")}
                         </h2>
                         {/* flex-nowrap: only 4 icons, so they always fit one
                             row even at the narrowest supported width - wrapping
@@ -233,6 +237,7 @@ const Footer = () => {
                         <div className="mt-3 flex flex-nowrap gap-2 sm:mt-4">
                             {socialLinks.map((item) => {
                                 const Icon = item.icon;
+                                const label = "labelKey" in item ? t(item.labelKey) : item.label;
                                 return (
                                     <a
                                         key={item.href}
@@ -240,8 +245,8 @@ const Footer = () => {
                                         {...(item.external
                                             ? { target: "_blank", rel: "noopener noreferrer" }
                                             : {})}
-                                        aria-label={item.label}
-                                        title={item.label}
+                                        aria-label={label}
+                                        title={label}
                                         className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border/40 bg-foreground/5 text-muted-foreground transition-colors hover:border-border hover:bg-foreground/10 hover:text-foreground"
                                     >
                                         <Icon className="h-4 w-4" aria-hidden="true" />
@@ -250,20 +255,20 @@ const Footer = () => {
                             })}
                         </div>
                         <p className="mt-3 text-sm text-muted-foreground sm:mt-4">
-                            Questions or feedback?{" "}
+                            {t("footer.questions")}{" "}
                             <Link
                                 href="/contact"
                                 className="font-medium text-primary underline-offset-2 hover:underline"
                             >
-                                Get in touch
+                                {t("footer.getInTouch")}
                             </Link>
                         </p>
                     </div>
                 </div>
 
                 <div className="mt-6 flex flex-col gap-2 border-t border-border/40 pt-4 text-xs text-muted-foreground sm:mt-10 sm:flex-row sm:items-center sm:justify-between sm:pt-6">
-                    <p>&copy; {year} WeCommunicate. Built by Shoham Katzav.</p>
-                    <p>A real-time chat app running on free-tier infrastructure.</p>
+                    <p>{t("footer.copyright", { year })}</p>
+                    <LanguagePicker />
                 </div>
             </div>
         </footer>

@@ -3,6 +3,7 @@ import { ShieldOff, ShieldCheck } from "lucide-react";
 import ChatUser from "@/types/chatUser";
 import { AsShortName } from "../../utils/stringFormat";
 import { formatLastSeen } from "../../utils/lastSeen";
+import { useT } from "../../i18n/client";
 import { useSocket } from "../../hooks/useSocket";
 import Avatar from "../ui/avatar";
 
@@ -16,11 +17,12 @@ interface ListProps {
 }
 
 const UsersRow = ({ chatUser, getLastMessages, active, isBlocked, onToggleBlock, lastSeen }: ListProps) => {
+    const t = useT();
 
     const { socket } = useSocket();
     // Never for a blocked user: how recently someone was around is exactly
     // the kind of visibility blocking them is meant to end.
-    const lastSeenText = isBlocked ? null : formatLastSeen(lastSeen);
+    const lastSeenText = isBlocked ? null : formatLastSeen(lastSeen, t);
 
     const switchRoom = async (participant: ChatUser) => {
         if (socket && participant) {
@@ -38,14 +40,14 @@ const UsersRow = ({ chatUser, getLastMessages, active, isBlocked, onToggleBlock,
                     <Link
                         href={`/profile/${chatUser._id}`}
                         onClick={(e) => e.stopPropagation()}
-                        aria-label={`View ${chatUser.nickname || AsShortName(chatUser.email || '')}'s profile`}
+                        aria-label={t("people.viewProfile", { name: chatUser.nickname || AsShortName(chatUser.email || '') })}
                     >
                         <Avatar avatarUrl={chatUser.avatarUrl} nickname={chatUser.nickname} email={chatUser.email} size={40} />
                     </Link>
                     {
                         active ?
-                            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div> :
-                            <div className="absolute bottom-0 right-0 w-3 h-3 bg-red-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
+                            <div className="absolute bottom-0 end-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div> :
+                            <div className="absolute bottom-0 end-0 w-3 h-3 bg-red-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
                     }
 
                 </div>
@@ -56,18 +58,18 @@ const UsersRow = ({ chatUser, getLastMessages, active, isBlocked, onToggleBlock,
                     {
                         isBlocked ?
                             <div className="text-xs text-muted-foreground">
-                                Blocked
+                                {t("people.blocked")}
                             </div> :
                             active ?
                                 <div className="text-xs text-success">
-                                    Online
+                                    {t("presence.online")}
                                 </div> :
                                 lastSeenText ?
                                     <div className="text-xs text-muted-foreground truncate">
-                                        Last seen {lastSeenText}
+                                        {lastSeenText}
                                     </div> :
                                     <div className="text-xs text-red-600 dark:text-red-400">
-                                        Offline
+                                        {t("presence.offline")}
                                     </div>
                     }
                 </div>
@@ -77,8 +79,8 @@ const UsersRow = ({ chatUser, getLastMessages, active, isBlocked, onToggleBlock,
                         e.stopPropagation();
                         onToggleBlock(chatUser._id, !isBlocked);
                     }}
-                    aria-label={isBlocked ? `Unblock ${chatUser.nickname || chatUser.email}` : `Block ${chatUser.nickname || chatUser.email}`}
-                    title={isBlocked ? 'Unblock' : 'Block'}
+                    aria-label={isBlocked ? t("people.unblockUser", { name: chatUser.nickname || chatUser.email || '' }) : t("people.blockUser", { name: chatUser.nickname || chatUser.email || '' })}
+                    title={isBlocked ? t("people.unblock") : t("people.block")}
                     className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 text-muted-foreground hover:text-foreground shrink-0"
                 >
                     {isBlocked ? <ShieldCheck size={18} /> : <ShieldOff size={18} />}

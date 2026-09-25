@@ -1,6 +1,7 @@
 "use client"
 import { useState } from "react";
 import { Plus } from "lucide-react";
+import { useT } from "../../i18n/client";
 import { MESSAGE_REACTIONS, MORE_MESSAGE_REACTIONS } from "../../config/limits";
 
 interface ReactionPickerProps {
@@ -12,6 +13,7 @@ interface ReactionPickerProps {
 // underneath it. Shared by the desktop popover and the mobile action menu in
 // messageBubble.tsx, which each supply their own frame around it.
 const ReactionPicker = ({ selected, onPick }: ReactionPickerProps) => {
+  const t = useT();
   // Opens already expanded when the user's current reaction is one of the
   // extra ones, so they can see (and tap to remove) what they picked.
   const [expanded, setExpanded] = useState(
@@ -23,7 +25,7 @@ const ReactionPicker = ({ selected, onPick }: ReactionPickerProps) => {
       key={emoji}
       type="button"
       onClick={() => onPick(emoji)}
-      aria-label={`React with ${emoji}`}
+      aria-label={t("chat.reactions.reactWith", { emoji })}
       aria-pressed={selected === emoji}
       className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full text-xl leading-none hover:bg-foreground/10 ${selected === emoji ? "bg-foreground/15" : ""
         }`}
@@ -33,13 +35,13 @@ const ReactionPicker = ({ selected, onPick }: ReactionPickerProps) => {
   );
 
   return (
-    <div role="group" aria-label="Pick a reaction" className="flex flex-col gap-1 p-1">
+    <div role="group" aria-label={t("chat.reactions.pick")} className="flex flex-col gap-1 p-1">
       <div className="flex items-center justify-between gap-0.5">
         {MESSAGE_REACTIONS.map(emojiButton)}
         <button
           type="button"
           onClick={() => setExpanded(prev => !prev)}
-          aria-label={expanded ? "Fewer reactions" : "More reactions"}
+          aria-label={expanded ? t("chat.reactions.fewer") : t("chat.reactions.more")}
           aria-expanded={expanded}
           className={`flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/10 hover:text-foreground ${expanded ? "bg-foreground/15" : ""
             }`}

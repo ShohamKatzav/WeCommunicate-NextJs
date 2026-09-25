@@ -8,6 +8,8 @@ import jwt from 'jsonwebtoken';
 import connectDB from '@/app/lib/MongoDb';
 import AccountRepository from '@/repositories/AccountRepository';
 import { Types } from 'mongoose';
+import { setLocaleCookie } from '@/app/i18n/server';
+import { isLocale } from '@/app/i18n/config';
 
 interface DecodedToken {
   _id: string;
@@ -17,18 +19,10 @@ interface DecodedToken {
   iat: number;
 }
 
-export async function createUserCoockie(data: User): Promise<any> {
+// Not exported, so no client can call it: isModerator here always comes from
+// the server - the token's claim or a fresh account read.
+async function writeUserCookie(data: User, isModerator: boolean) {
   const cookieStore = await cookies();
-  let isModerator = false;
-  if (data.token) {
-    try {
-      const decoded = jwt.verify(data.token, env.JWT_SECRET_KEY) as DecodedToken;
-      isModerator = decoded.isModerator || false;
-    } catch (err) {
-      console.error("Failed to decode token:", err);
-    }
-  }
-
   cookieStore.set({
     httpOnly: true,
     secure: true,
@@ -44,6 +38,34 @@ export async function createUserCoockie(data: User): Promise<any> {
       accentColor: data.accentColor
     }),
   });
+}
+
+// data.isModerator is ignored: a tab can't grant itself the flag. A new
+// token (login) takes the claim it was signed with. The same token again
+// (a profile edit re-saving the user) keeps the cookie's current flag,
+// which getCurrentUser may have corrected from the account since login -
+// the token's claim is as old as the session.
+export async function createUserCoockie(data: User): Promise<any> {
+  let isModerator = false;
+  if (data.token) {
+    try {
+      const decoded = jwt.verify(data.token, env.JWT_SECRET_KEY) as DecodedToken;
+      const current = await getUserObJFromCoockie();
+      isModerator = current.token === data.token && typeof current.isModerator === 'boolean'
+        ? current.isModerator
+        : decoded.isModerator || false;
+    } catch (err) {
+      console.error("Failed to decode token:", err);
+    }
+  }
+
+  await writeUserCookie(data, isModerator);
+
+  // The account's language wins over whatever this device had picked
+  // anonymously. An account that never chose one leaves the device's choice
+  // alone - it would otherwise flip every existing Hebrew-browser user to
+  // English on their next login.
+  if (isLocale(data.locale)) await setLocaleCookie(data.locale);
 }
 
 export const getUserObJFromCoockie = async (): Promise<User> => {
@@ -70,15 +92,22 @@ export const getUserObJFromCoockie = async (): Promise<User> => {
 // stale URL 404s). Overlay those display fields from the DB on every load.
 // Done inside the same server action as the cookie read on purpose - see
 // userProvider.tsx; a second mount-time action can cause a spurious remount.
+// isModerator comes from the same read: the token's claim is from login, so
+// a promotion or demotion since then would otherwise wait for the next one.
+// It only drives the UI (the Moderator links, /moderator's redirect) -
+// moderator actions check the account themselves.
 export const getCurrentUser = async (): Promise<User> => {
   const user = await getUserObJFromCoockie();
   if (!user.token) return user;
   try {
     const decoded = jwt.verify(user.token, env.JWT_SECRET_KEY) as DecodedToken;
     await connectDB();
-    const profile = await AccountRepository.getProfileByIdentifier(decoded._id) as
-      { email?: string; nickname?: string; avatarUrl?: string; accentColor?: string } | null;
+    const profile = await AccountRepository.getSessionProfileById(decoded._id);
     if (!profile) return user;
+    const isModerator = profile.isModerator === true;
+    // Only when it changed: setting a cookie from a server action re-renders
+    // the page, which every load shouldn't pay for.
+    if (user.isModerator !== isModerator) await writeUserCookie(user, isModerator);
     return {
       ...user,
       // The cookie's email isn't signed - show the account's, not whatever
@@ -87,6 +116,8 @@ export const getCurrentUser = async (): Promise<User> => {
       nickname: profile.nickname,
       avatarUrl: profile.avatarUrl || undefined,
       accentColor: profile.accentColor,
+      locale: isLocale(profile.locale) ? profile.locale : undefined,
+      isModerator,
     };
   } catch (error) {
     // Fall back to the cookie's copy - stale display fields beat no user.
@@ -125,6 +156,27 @@ export async function extractUsersEmailFromCoockie(): Promise<string | null> {
   catch {
     return null;
   }
+}
+
+// The footer's language picker, for signed-out visitors as much as anyone.
+// A signed-in account gets the choice saved too: login copies the account's
+// language over the cookie, so a cookie-only change would be undone on the
+// next sign-in. Setting the cookie re-renders the page in the new language.
+export async function setMyLocale(locale: string): Promise<{ success: boolean }> {
+  if (!isLocale(locale)) return { success: false };
+  await setLocaleCookie(locale);
+  try {
+    const user = await getUserObJFromCoockie();
+    if (!user.token) return { success: true };
+    const decoded = jwt.verify(user.token, env.JWT_SECRET_KEY) as unknown as DecodedToken;
+    if (!decoded._id || !Types.ObjectId.isValid(decoded._id)) return { success: true };
+    await connectDB();
+    await AccountRepository.updateProfile(decoded._id, { locale });
+  } catch (error) {
+    // This device still switched; only the account copy is missing.
+    console.error("Failed to save locale to account:", error);
+  }
+  return { success: true };
 }
 
 // Given this device's push endpoint, it also stops notifying this user on it.

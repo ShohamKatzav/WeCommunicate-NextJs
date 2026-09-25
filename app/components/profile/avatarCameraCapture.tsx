@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useT } from "../../i18n/client";
+import type { TFunction } from "../../i18n/messages";
 import { Camera, X } from "lucide-react";
 
 type CameraMode = "none" | "native" | "desktop";
@@ -39,10 +41,11 @@ function useCameraMode(): CameraMode {
 }
 
 const triggerButtonClass =
-    "absolute bottom-0 left-0 p-1.5 rounded-full bg-primary text-primary-foreground cursor-pointer hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed";
+    "absolute bottom-0 start-0 p-1.5 rounded-full bg-primary text-primary-foreground cursor-pointer hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed";
 
 export default function AvatarCameraCapture({ onCapture, disabled }: AvatarCameraCaptureProps) {
     const mode = useCameraMode();
+    const t = useT();
     const nativeInputRef = useRef<HTMLInputElement>(null);
     const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -54,7 +57,7 @@ export default function AvatarCameraCapture({ onCapture, disabled }: AvatarCamer
                 <label
                     htmlFor="avatar-take-photo"
                     className={triggerButtonClass}
-                    aria-label="Take photo"
+                    aria-label={t("profile.camera.takePhoto")}
                 >
                     <Camera size={16} />
                 </label>
@@ -81,7 +84,7 @@ export default function AvatarCameraCapture({ onCapture, disabled }: AvatarCamer
             <button
                 type="button"
                 className={triggerButtonClass}
-                aria-label="Take photo"
+                aria-label={t("profile.camera.takePhoto")}
                 disabled={disabled}
                 onClick={() => setPreviewOpen(true)}
             >
@@ -104,26 +107,27 @@ export default function AvatarCameraCapture({ onCapture, disabled }: AvatarCamer
 // camera on this machine" from "camera exists but access was refused" -
 // collapsing both into one permissions-flavored message (as a generic catch
 // would) is actively misleading on a desktop with no webcam at all.
-function cameraErrorMessage(err: unknown): string {
+function cameraErrorMessage(err: unknown, t: TFunction): string {
     const name = err instanceof DOMException ? err.name : undefined;
     switch (name) {
         case "NotFoundError":
         case "DevicesNotFoundError":
         case "OverconstrainedError":
-            return "No camera found on this device.";
+            return t("profile.camera.notFound");
         case "NotAllowedError":
         case "PermissionDeniedError":
         case "SecurityError":
-            return "Camera access was denied. Check your browser permissions.";
+            return t("profile.camera.denied");
         case "NotReadableError":
         case "TrackStartError":
-            return "The camera is already in use by another app.";
+            return t("profile.camera.inUse");
         default:
-            return "Couldn't access the camera. Please try again.";
+            return t("profile.camera.failed");
     }
 }
 
 function DesktopCameraPreview({ onCapture, onClose }: { onCapture: (file: File) => void; onClose: () => void }) {
+    const t = useT();
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const [ready, setReady] = useState(false);
@@ -144,7 +148,7 @@ function DesktopCameraPreview({ onCapture, onClose }: { onCapture: (file: File) 
             } catch (err) {
                 console.error("Failed to open camera:", err);
                 if (!cancelled) {
-                    toast.error(cameraErrorMessage(err));
+                    toast.error(cameraErrorMessage(err, t));
                     onClose();
                 }
             }
@@ -171,7 +175,7 @@ function DesktopCameraPreview({ onCapture, onClose }: { onCapture: (file: File) 
 
         canvas.toBlob(blob => {
             if (!blob) {
-                toast.error("Couldn't capture that photo. Please try again.");
+                toast.error(t("profile.camera.captureFailed"));
                 return;
             }
             onCapture(new File([blob], `avatar-${Date.now()}.jpg`, { type: "image/jpeg" }));
@@ -182,12 +186,12 @@ function DesktopCameraPreview({ onCapture, onClose }: { onCapture: (file: File) 
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
                 <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Take photo</h2>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t("profile.camera.takePhoto")}</h2>
                     <button
                         type="button"
                         onClick={onClose}
                         className="text-muted-foreground hover:text-foreground transition-colors"
-                        aria-label="Close"
+                        aria-label={t("profile.camera.close")}
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -206,7 +210,7 @@ function DesktopCameraPreview({ onCapture, onClose }: { onCapture: (file: File) 
                         type="button"
                         onClick={handleShutter}
                         disabled={!ready}
-                        aria-label="Capture photo"
+                        aria-label={t("profile.camera.capture")}
                         className="p-4 rounded-full bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Camera size={28} />

@@ -7,31 +7,41 @@ import InstallPrompt from "./components/offline/InstallPrompt";
 import BottomPromptStack from "./components/shell/bottomPromptStack";
 import OfflineHandler from "./components/offline/offlineHandler";
 import ServiceWorkerRegistrar from "./components/offline/serviceWorkerRegistrar";
+import { I18nProvider } from "./i18n/client";
+import { getLocale, getT } from "./i18n/server";
+import { messagesFor } from "./i18n/messages";
+import { localeDir } from "./i18n/config";
 import "./globals.css";
 
+// Cyrillic for the Russian UI. Geist has no Hebrew or Arabic, and a second
+// webfont just for those isn't worth the download: the family stack in
+// bodyClassName below falls through to a face every device already has.
 const geistSans = Geist({
   variable: "--font-geist-sans",
-  subsets: ["latin"],
+  subsets: ["latin", "cyrillic"],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
-  subsets: ["latin"],
+  subsets: ["latin", "cyrillic"],
 });
 
-export const metadata: Metadata = {
-  manifest: "/manifest.json",
-  title: "WeCommunicate",
-  description: "WeCommunicate is a chat app",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return {
+    manifest: "/manifest.json",
     title: "WeCommunicate",
-  },
-  verification: {
-    google: "DznpoaFMof5Nx5Ok_dgC9iQp-rk2lyb7jIv-ZFAb9Kk",
-  },
-};
+    description: t("meta.description"),
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: "WeCommunicate",
+    },
+    verification: {
+      google: "DznpoaFMof5Nx5Ok_dgC9iQp-rk2lyb7jIv-ZFAb9Kk",
+    },
+  };
+}
 
 export const viewport: Viewport = {
   // A pure-CSS fallback for a visitor who never touches the toggle: the
@@ -44,11 +54,14 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Read here, before anything paints, so a Hebrew or Arabic visitor never
+  // sees an English LTR frame first. This makes every route dynamic.
+  const locale = await getLocale();
   const bodyClassName = [
     geistSans.variable,
     geistMono.variable,
@@ -57,7 +70,9 @@ export default function RootLayout({
     // theme's font-sans resolves to nothing and the `font-sans` utility falls
     // through to the generic stack. Pointing at the variable directly is what
     // actually renders in Geist rather than merely downloading it.
-    "font-[family-name:var(--font-geist-sans)]",
+    // Geist covers Latin and Cyrillic; Hebrew and Arabic glyphs fall through
+    // to the system faces after it, character by character.
+    "font-[family-name:var(--font-geist-sans),'Segoe_UI',Arial,system-ui,sans-serif]",
     // A flat surface one step off white, not white and not a gradient: cards
     // are bg-card, so they need the page behind them to differ everywhere,
     // and a gradient on <body> tiles (and visibly seams) on any page whose
@@ -74,11 +89,12 @@ export default function RootLayout({
     // element before React hydrates, so server and client legitimately
     // disagree about this one attribute for one frame. Scoped to <html> only
     // - it does not suppress mismatches anywhere else in the tree.
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} dir={localeDir(locale)} suppressHydrationWarning>
       <head>
         <link rel="apple-touch-icon" href="/icon.png" />
       </head>
       <body className={bodyClassName}>
+        <I18nProvider locale={locale} messages={messagesFor(locale)}>
         <ThemeProvider>
           {/* One provider around both branches: PushNotificationManager (deep
               inside ClientProviders' children, wherever a page mounts it) and
@@ -97,6 +113,7 @@ export default function RootLayout({
             </BottomPromptStack>
           </BottomPromptProvider>
         </ThemeProvider>
+        </I18nProvider>
       </body>
     </html>
   );

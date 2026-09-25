@@ -15,6 +15,40 @@ import { revalidatePath } from 'next/cache';
 import RedisService from '@/services/RedisService';
 import { sendNotification } from '@/app/lib/pushActions';
 import { isTestBypass } from '@/app/lib/testBypass';
+import { getT } from '@/app/i18n/server';
+import type { TFunction } from '@/app/i18n/messages';
+import en from '@/app/i18n/en';
+
+type Moderation = Awaited<ReturnType<typeof ModerationService.moderateMessage>>;
+type Punishment = Awaited<ReturnType<typeof ModerationService.recordViolation>>;
+
+// The moderation outcome in the sender's language. The English reason the
+// service builds is what's stored on the account; this is the same
+// information, worded for the toast.
+function moderationReason(t: TFunction, moderation: Moderation) {
+    if (!moderation.topCategories?.length) return t('moderation.inappropriate');
+    const labels = moderation.topCategories.map(({ category, score }) => {
+        const label = category in en.moderation.categories
+            ? t(`moderation.categories.${category as keyof typeof en.moderation.categories}`)
+            : category;
+        return `${label} (${(score * 100).toFixed(1)}%)`;
+    });
+    return t('moderation.flaggedFor', { categories: labels.join(', ') });
+}
+
+function punishmentMessage(t: TFunction, punishment: Punishment, reason: string) {
+    switch (punishment.action) {
+        case 'warning':
+            return t('moderation.warning', { count: punishment.warningCount, max: punishment.maxWarnings, reason });
+        case 'temp_ban':
+            return t('moderation.tempBan', {
+                count: punishment.banDurationHours ?? 0,
+                date: punishment.bannedUntil?.toLocaleString(t.dateLocale, { hour12: false }) ?? '',
+            });
+        case 'permanent_ban':
+            return punishment.repeated ? t('moderation.permanentBanRepeated') : t('moderation.permanentBan', { reason });
+    }
+}
 
 // Push notifications are sent from here (server-side, right after a message
 // is persisted) rather than from the sender's browser - a push triggered
@@ -147,6 +181,7 @@ export const getMessages = async (participantsId: string[], page: number) => {
 }
 
 export const saveMessage = async (message: MessageDTO) => {
+    const t = await getT();
     try {
         await connectDB();
         const userID = await extractUserIDFromCoockie();
@@ -169,7 +204,7 @@ export const saveMessage = async (message: MessageDTO) => {
                 return JSON.parse(JSON.stringify({
                     success: false,
                     blocked: true,
-                    message: "That location couldn't be shared."
+                    message: t('errors.locationNotShared')
                 }));
             }
             message = {
@@ -189,7 +224,7 @@ export const saveMessage = async (message: MessageDTO) => {
                 success: false,
                 blocked: true,
                 tooLong: true,
-                message: `Messages are limited to ${MAX_MESSAGE_LENGTH} characters.`
+                message: t('errors.messageTooLong', { max: MAX_MESSAGE_LENGTH })
             }));
         }
 
@@ -203,7 +238,7 @@ export const saveMessage = async (message: MessageDTO) => {
                     success: false,
                     blocked: true,
                     rateLimited: true,
-                    message: "You're sending messages too quickly. Please slow down and try again shortly."
+                    message: t('errors.sendingTooFast')
                 }));
             }
         }
@@ -220,7 +255,7 @@ export const saveMessage = async (message: MessageDTO) => {
                 return JSON.parse(JSON.stringify({
                     success: false,
                     blocked: true,
-                    message: 'This message could not be delivered.'
+                    message: t('errors.notDelivered')
                 }));
             }
         }
@@ -234,8 +269,8 @@ export const saveMessage = async (message: MessageDTO) => {
                 reason: banStatus.reason,
                 bannedUntil: banStatus.bannedUntil,
                 message: banStatus.bannedUntil
-                    ? `You are banned until ${banStatus.bannedUntil.toLocaleString()}`
-                    : 'You are permanently banned from sending messages'
+                    ? t('errors.bannedUntil', { date: banStatus.bannedUntil.toLocaleString(t.dateLocale, { hour12: false }) })
+                    : t('errors.bannedPermanently')
             }));
         }
         if (message.text) {
@@ -250,6 +285,7 @@ export const saveMessage = async (message: MessageDTO) => {
                     moderation.categories || [],
                     moderation.severity || 'medium'
                 );
+                const reason = moderationReason(t, moderation);
 
                 return JSON.parse(JSON.stringify({
                     success: false,
@@ -257,8 +293,8 @@ export const saveMessage = async (message: MessageDTO) => {
                     punishment: punishment.action,
                     warningCount: punishment.warningCount,
                     bannedUntil: punishment.bannedUntil,
-                    reason: moderation.reason,
-                    message: punishment.message
+                    reason,
+                    message: punishmentMessage(t, punishment, reason)
                 }));
             }
         }
@@ -275,12 +311,13 @@ export const saveMessage = async (message: MessageDTO) => {
         }
     } catch (err) {
         console.error('Failed to save message:', err);
-        const result = JSON.parse(JSON.stringify({ success: false, message: 'Failed to save message' }))
+        const result = JSON.parse(JSON.stringify({ success: false, message: t('errors.saveFailed') }))
         return result;
     }
 }
 
 export const deleteMessage = async (id: string, type: string = "message") => {
+    const t = await getT();
     try {
         await connectDB();
         const userID = await extractUserIDFromCoockie();
@@ -299,10 +336,10 @@ export const deleteMessage = async (id: string, type: string = "message") => {
             return { success: true, message: "Message deleted" };
         }
         else
-            return { success: false, message: "Failed to delete message" };
+            return { success: false, message: t('errors.deleteFailed') };
     } catch (err) {
         console.error('Failed to delete message:', err);
-        const result = { success: false, message: 'Failed to delete message' };
+        const result = { success: false, message: t('errors.deleteFailed') };
         return result;
     }
 }
@@ -311,42 +348,43 @@ export const deleteMessage = async (id: string, type: string = "message") => {
 // new content, so it goes through the same checks a send does (length, block,
 // ban, moderation). The message keeps its original date; `edited` marks it.
 export const editMessage = async (id: string, text: string) => {
+    const t = await getT();
     try {
         if (typeof id !== 'string' || !Types.ObjectId.isValid(id)) {
-            return { success: false, message: 'Invalid message' };
+            return { success: false, message: t('errors.invalidMessage') };
         }
         const newText = typeof text === 'string' ? text.trim() : '';
         if (!newText) {
-            return { success: false, message: "A message can't be empty." };
+            return { success: false, message: t('errors.emptyMessage') };
         }
         if (newText.length > MAX_MESSAGE_LENGTH) {
-            return { success: false, tooLong: true, message: `Messages are limited to ${MAX_MESSAGE_LENGTH} characters.` };
+            return { success: false, tooLong: true, message: t('errors.messageTooLong', { max: MAX_MESSAGE_LENGTH }) };
         }
 
         await connectDB();
         const userID = await extractUserIDFromCoockie();
         if (typeof userID !== 'string') {
-            return { success: false, message: 'Unauthorized' };
+            return { success: false, message: t('errors.unauthorized') };
         }
         // Ownership is checked against the verified account's identity, the
         // same one saveMessage stamps as the sender - a phone:+... key for a
         // phone-only account, which is just as valid here as an email.
         const requesterEmail = await AccountRepository.getEmailById(new Types.ObjectId(userID));
         if (!requesterEmail) {
-            return { success: false, message: 'Unauthorized' };
+            return { success: false, message: t('errors.unauthorized') };
         }
 
         if (!(await isTestBypass())) {
             // Every edit is a moderation call and a write, same as a send.
             const allowed = await RedisService.checkRateLimit('edit-message', userID, 30, 60);
             if (!allowed) {
-                return { success: false, rateLimited: true, message: "You're editing messages too quickly. Please slow down and try again shortly." };
+                return { success: false, rateLimited: true, message: t('errors.editingTooFast') };
             }
         }
 
         const original = await MessageRepository.GetEditableMessage(id, requesterEmail);
         if (!original) {
-            return { success: false, message: "That message can't be edited." };
+            return { success: false, message: t('errors.cantEdit') };
         }
 
         // Nothing changed - don't mark it edited or spend a moderation call.
@@ -362,7 +400,7 @@ export const editMessage = async (id: string, text: string) => {
         if (members.length === 2) {
             const other = members.find(member => member._id.toString() !== userID);
             if (other && await AccountRepository.isBlockedEitherWay(userID, other._id.toString())) {
-                return { success: false, blocked: true, message: 'This message could not be edited.' };
+                return { success: false, blocked: true, message: t('errors.editBlocked') };
             }
         }
 
@@ -375,8 +413,8 @@ export const editMessage = async (id: string, text: string) => {
                 reason: banStatus.reason,
                 bannedUntil: banStatus.bannedUntil,
                 message: banStatus.bannedUntil
-                    ? `You are banned until ${banStatus.bannedUntil.toLocaleString()}`
-                    : 'You are permanently banned from sending messages'
+                    ? t('errors.bannedUntil', { date: banStatus.bannedUntil.toLocaleString(t.dateLocale, { hour12: false }) })
+                    : t('errors.bannedPermanently')
             }));
         }
 
@@ -389,6 +427,7 @@ export const editMessage = async (id: string, text: string) => {
                 moderation.categories || [],
                 moderation.severity || 'medium'
             );
+            const reason = moderationReason(t, moderation);
 
             return JSON.parse(JSON.stringify({
                 success: false,
@@ -396,21 +435,21 @@ export const editMessage = async (id: string, text: string) => {
                 punishment: punishment.action,
                 warningCount: punishment.warningCount,
                 bannedUntil: punishment.bannedUntil,
-                reason: moderation.reason,
-                message: punishment.message
+                reason,
+                message: punishmentMessage(t, punishment, reason)
             }));
         }
 
         const result = await MessageRepository.editMessage(original, newText);
         if (!result) {
-            return { success: false, message: "That message can't be edited." };
+            return { success: false, message: t('errors.cantEdit') };
         }
 
         revalidatePath('/chat');
         return { success: true, ...result };
     } catch (err) {
         console.error('Failed to edit message:', err);
-        return { success: false, message: 'Failed to edit message' };
+        return { success: false, message: t('errors.editFailed') };
     }
 }
 
@@ -419,18 +458,19 @@ export const editMessage = async (id: string, text: string) => {
 // else over the socket (see 'react to message' in socket/handlers.ts), and a
 // full route revalidation per tap would be wildly out of proportion.
 export const toggleMessageReaction = async (messageId: string, emoji: string) => {
+    const t = await getT();
     try {
         if (typeof messageId !== 'string' || !Types.ObjectId.isValid(messageId)) {
-            return { success: false, message: 'Invalid message' };
+            return { success: false, message: t('errors.invalidMessage') };
         }
         if (typeof emoji !== 'string' || !ALL_MESSAGE_REACTIONS.includes(emoji)) {
-            return { success: false, message: 'Unsupported reaction' };
+            return { success: false, message: t('errors.unsupportedReaction') };
         }
 
         await connectDB();
         const userID = await extractUserIDFromCoockie();
         if (typeof userID !== 'string') {
-            return { success: false, message: 'Unauthorized' };
+            return { success: false, message: t('errors.unauthorized') };
         }
 
         if (!(await isTestBypass())) {
@@ -439,13 +479,13 @@ export const toggleMessageReaction = async (messageId: string, emoji: string) =>
             // picker shouldn't be able to hammer the DB.
             const allowed = await RedisService.checkRateLimit('react-message', userID, 60, 60);
             if (!allowed) {
-                return { success: false, rateLimited: true, message: "You're reacting too quickly. Please slow down." };
+                return { success: false, rateLimited: true, message: t('errors.reactingTooFast') };
             }
         }
 
         const senderEmail = await AccountRepository.getEmailById(new Types.ObjectId(userID));
         if (!senderEmail) {
-            return { success: false, message: 'Unauthorized' };
+            return { success: false, message: t('errors.unauthorized') };
         }
 
         const result = await MessageRepository.ToggleReaction(
@@ -455,13 +495,13 @@ export const toggleMessageReaction = async (messageId: string, emoji: string) =>
             Types.ObjectId.createFromHexString(userID)
         );
         if (!result) {
-            return { success: false, message: "That message is no longer available." };
+            return { success: false, message: t('errors.messageGone') };
         }
 
         return JSON.parse(JSON.stringify({ success: true, ...result }));
     } catch (err) {
         console.error('Failed to toggle reaction:', err);
-        return { success: false, message: 'Failed to update reaction' };
+        return { success: false, message: t('errors.reactionFailed') };
     }
 }
 
@@ -483,7 +523,7 @@ export const searchMessages = async (searchTerm: string) => {
             // client can't hammer it on every keystroke.
             const allowedToSearch = await RedisService.checkRateLimit('search-messages', userID, 30, 60);
             if (!allowedToSearch) {
-                return { success: false, results: [], rateLimited: true, message: 'Searching too quickly - please slow down.' };
+                return { success: false, results: [], rateLimited: true, message: (await getT())('errors.searchingTooFast') };
             }
         }
 

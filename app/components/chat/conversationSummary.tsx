@@ -9,6 +9,7 @@ import MessageSearchResult from "@/types/messageSearchResult";
 import { AsShortName } from "../../utils/stringFormat";
 import { callRecordSummary } from "../../utils/callRecord";
 import Avatar from "../ui/avatar";
+import { useT } from "../../i18n/client";
 
 interface ConversationConversationSummaryProps {
     conversation: Conversation;
@@ -17,6 +18,7 @@ interface ConversationConversationSummaryProps {
 }
 
 const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: ConversationConversationSummaryProps) => {
+    const t = useT();
 
     const [otherMembers, setOtherMembers] = useState<ChatUser[]>([]);
     const [lastMessage, setLastMessage] = useState<Message | undefined>(
@@ -80,7 +82,7 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
         <li className="shadow-md hover:shadow-lg transition-shadow">
             <button
                 type="button"
-                className="w-full bg-white dark:bg-gray-800 p-3 flex items-center gap-4 text-left"
+                className="w-full bg-white dark:bg-gray-800 p-3 flex items-center gap-4 text-start"
                 onClick={() => switchRoom(otherMembers)}
             >
                 {/* dark:hover:bg-gray-700 (a flat, lighter gray) dropped the
@@ -89,7 +91,7 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                     instead - same pattern the navbar's own hover states use -
                     barely lightens the existing dark card, so the text color
                     keeps its normal-state contrast on hover too. */}
-                <div className="w-full text-left p-2 flex gap-3 items-center hover:bg-gray-50 dark:hover:bg-white/5">
+                <div className="w-full text-start p-2 flex gap-3 items-center hover:bg-gray-50 dark:hover:bg-white/5">
                 {otherMembers.length === 1 ? (
                     <Avatar avatarUrl={otherMembers[0].avatarUrl} nickname={otherMembers[0].nickname} email={otherMembers[0].email} size={48} />
                 ) : otherMembers.length > 0 ? (
@@ -116,7 +118,7 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                     </div>
                 ) : (
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-200 text-center text-[10px] leading-tight text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                        No one
+                        {t("chat.sidebar.noOne")}
                     </div>
                 )}
 
@@ -144,7 +146,7 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                     {lastMessage ?
                         <div className="grid grid-cols-2 place-content-between text-muted-foreground">
                             <span>{AsShortName(lastMessage.sender)}</span>
-                            <div className="justify-self-end wrap-break-word text-right">
+                            <div className="justify-self-end wrap-break-word text-end">
                                 {(() => {
                                     const date = new Date(lastMessage.date!);
                                     const now = new Date();
@@ -154,7 +156,7 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                                     const diffDays = (d2 - d1) / 86400000;
 
                                     if (diffDays === 0) {
-                                        return date.toLocaleTimeString([], {
+                                        return date.toLocaleTimeString(t.dateLocale, {
                                             hour: "2-digit",
                                             minute: "2-digit",
                                             hour12: false
@@ -162,14 +164,14 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                                     }
 
                                     if (diffDays === 1) {
-                                        return "Yesterday";
+                                        return t("dates.yesterday");
                                     }
 
                                     if (diffDays === 2) {
-                                        return date.toLocaleDateString([], { weekday: "long" });
+                                        return date.toLocaleDateString(t.dateLocale, { weekday: "long" });
                                     }
 
-                                    return date.toLocaleDateString([], {
+                                    return date.toLocaleDateString(t.dateLocale, {
                                         day: "2-digit",
                                         month: "2-digit",
                                         year: "2-digit"
@@ -177,32 +179,32 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                                 })()}
                             </div>
                             <div className="text-sm text-muted-foreground break-all col-span-2"><span dir="auto">{lastMessage.status?.includes("revoked")
-                                ? "Message deleted"
+                                ? t("chat.preview.deleted")
                                 : lastMessage.call
-                                    ? callRecordSummary(lastMessage.call, lastMessage.sender?.toLowerCase() === user?.email?.toLowerCase())
+                                    ? callRecordSummary(lastMessage.call, lastMessage.sender?.toLowerCase() === user?.email?.toLowerCase(), t)
                                 : (lastMessage.text
                                     || (lastMessage.location
-                                        ? "Shared a location"
+                                        ? t("chat.preview.location")
                                         : lastMessage.file?.pathname?.includes("voice-message")
-                                            ? "Voice message"
-                                            : "sent file " + lastMessage.file?.pathname))}
+                                            ? t("chat.preview.voice")
+                                            : t("chat.preview.file", { name: lastMessage.file?.pathname ?? "" })))}
                             </span></div>
                         </div>
                         :
                         <div className="text-muted-foreground text-sm italic">
-                            No messages yet.
+                            {t("chat.sidebar.noMessages")}
                         </div>
                     }
                     {searchMatch && (
                         <div className="text-sm text-green-700 dark:text-green-400 space-y-0.5">
                             {searchMatch.matches.map((match, index) => (
                                 <div key={index} className="break-all italic">
-                                    {AsShortName(match.sender)}: {match.text}
+                                    {AsShortName(match.sender)}: <span dir="auto">{match.text}</span>
                                 </div>
                             ))}
                             {searchMatch.moreCount > 0 && (
                                 <div className="not-italic text-muted-foreground">
-                                    +{searchMatch.moreCount} more match{searchMatch.moreCount === 1 ? '' : 'es'}
+                                    {t("chat.sidebar.moreMatches", { count: searchMatch.moreCount })}
                                 </div>
                             )}
                         </div>
