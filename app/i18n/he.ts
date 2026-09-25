@@ -839,6 +839,7 @@ const he: Messages = {
     profile: {
         loadFailed: "לא הצלחנו לטעון את הפרופיל שלכם.",
         userNotFound: "המשתמש לא נמצא.",
+        backToChat: "חזרה לצ'אט",
         noEmail: "לא הוסיף/ה אימייל",
         noPhone: "לא הוסיף/ה מספר טלפון",
         addAbout: "הוסיפו שורה קצרה על עצמכם",

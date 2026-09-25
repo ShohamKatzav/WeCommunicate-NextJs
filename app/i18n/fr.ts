@@ -837,6 +837,7 @@ const fr: Messages = {
     profile: {
         loadFailed: "Impossible de charger votre profil.",
         userNotFound: "Utilisateur introuvable.",
+        backToChat: "Retour à la discussion",
         noEmail: "N’a pas ajouté d’e-mail",
         noPhone: "N’a pas ajouté de numéro de téléphone",
         addAbout: "Ajoutez une petite phrase sur vous",

@@ -868,6 +868,7 @@ const ar: Messages = {
     profile: {
         loadFailed: "تعذّر تحميل ملفك الشخصي.",
         userNotFound: "المستخدم غير موجود.",
+        backToChat: "العودة إلى الدردشة",
         noEmail: "لم يضف بريدًا إلكترونيًا",
         noPhone: "لم يضف رقم هاتف",
         addAbout: "أضف سطرًا قصيرًا عن نفسك",

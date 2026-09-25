@@ -1,12 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
 import { useUser } from "../../hooks/useUser";
 import { getProfile } from "../../lib/profileActions";
 import ProfileCard from "../../components/profile/profileCard";
 import Loading from "../../components/ui/loading";
 import Profile from "@/types/profile";
 import { useT } from "../../i18n/client";
+import { armChatReturn } from "../../utils/chatReturn";
 
 export default function OtherUserProfilePage() {
     const params = useParams<{ idOrEmail: string }>();
@@ -60,16 +63,35 @@ export default function OtherUserProfilePage() {
         return <Loading />;
     }
 
+    // Back to /chat with the conversation that was open when this profile
+    // was opened from it, if any - see utils/chatReturn.ts. A plain link,
+    // so it also works as "Chat" for a profile reached some other way.
+    // The chevron points at the start edge, so it flips in RTL.
+    const backToChat = (
+        <Link
+            href="/chat"
+            onClick={() => { if (idOrEmail) armChatReturn(idOrEmail); }}
+            className="-ms-2 mb-4 flex w-fit items-center gap-1 rounded-md px-2 py-1 text-sm font-medium text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+            <ChevronLeft className="h-4 w-4 shrink-0 rtl:rotate-180" aria-hidden="true" />
+            {t("profile.backToChat")}
+        </Link>
+    );
+
     if (notFound || !profile) {
         return (
-            <div className="max-w-md mx-auto px-4 py-8 text-center text-muted-foreground">
-                {t("profile.userNotFound")}
+            <div className="max-w-md mx-auto px-4 py-8">
+                {backToChat}
+                <p className="text-center text-muted-foreground">
+                    {t("profile.userNotFound")}
+                </p>
             </div>
         );
     }
 
     return (
         <div className="max-w-md mx-auto px-4 py-8">
+            {backToChat}
             <ProfileCard profile={profile} />
         </div>
     );

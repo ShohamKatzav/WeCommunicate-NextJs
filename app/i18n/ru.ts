@@ -857,6 +857,7 @@ const ru: Messages = {
     profile: {
         loadFailed: "Не удалось загрузить ваш профиль.",
         userNotFound: "Пользователь не найден.",
+        backToChat: "Вернуться в чат",
         noEmail: "Email не указан",
         noPhone: "Номер телефона не указан",
         addAbout: "Добавьте пару слов о себе",
