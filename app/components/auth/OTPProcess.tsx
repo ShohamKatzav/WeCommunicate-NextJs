@@ -6,6 +6,8 @@ import { useUser } from '@/app/hooks/useUser';
 import { Eye, EyeOff, Mail, Shield, Lock, KeyRound } from 'lucide-react';
 import { requestOTP, verifyOTP, resetPassword, createAccount } from '@/app/lib/OTPActions'
 import { isPhone } from '@/app/lib/contact';
+import { useT } from '@/app/i18n/client';
+import type { Locale } from '@/app/i18n/config';
 
 interface OTPProcessProps {
     mode: 'forgot' | 'sign-up';
@@ -21,6 +23,7 @@ export const sanitizePhoneInput = (value: string) => {
 const OTPProcess = ({ mode }: OTPProcessProps) => {
     const router = useRouter();
     const { updateUser } = useUser();
+    const t = useT();
 
     const [step, setStep] = useState<'email' | 'otp' | 'password'>('email');
     const [email, setEmail] = useState("");
@@ -77,20 +80,20 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
         clearErrors();
 
         if (!contact.trim()) {
-            setEmailError(channel === 'sms' ? "Please enter your phone number" : "Please enter your email");
+            setEmailError(channel === 'sms' ? t("auth.otp.enterPhone") : t("auth.otp.enterEmail"));
             return;
         }
 
         if (channel === 'email' && !validateEmail(contact)) {
-            setEmailError("Please enter a valid email");
+            setEmailError(t("auth.otp.invalidEmail"));
             return;
         }
         if (mode === 'sign-up' && !nickname.trim()) {
-            setGeneralError('Please choose a nickname');
+            setGeneralError(t("auth.otp.chooseNickname"));
             return;
         }
         if (channel === 'sms' && !isPhone(contact)) {
-            setEmailError("Use an international phone number, e.g. +972 50 123 4567");
+            setEmailError(t("auth.otp.invalidPhone"));
             return;
         }
 
@@ -100,24 +103,24 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
             const response = await requestOTP(contact, mode, channel);
             if (response.status === 200) {
                 if (mode === 'forgot')
-                    setSuccessMessage(`If an account with this ${channel === 'sms' ? 'phone number' : 'email'} exists, an OTP was sent.\nPlease check your ${channel === 'sms' ? 'phone' : 'inbox'}.`);
+                    setSuccessMessage(channel === 'sms' ? t("auth.otp.forgotSentSms") : t("auth.otp.forgotSentEmail"));
                 else
-                    setSuccessMessage(`OTP sent to your ${channel === 'sms' ? 'phone' : 'email'}. Please check your ${channel === 'sms' ? 'messages' : 'inbox'}.`);
+                    setSuccessMessage(channel === 'sms' ? t("auth.otp.sentSms") : t("auth.otp.sentEmail"));
                 setStep('otp');
                 startResendTimer();
             }
             else if (response.status === 400) {
                 setGeneralError(response.message || (mode === 'sign-up' ? <>
-                    An account with this contact method already exists.{" "}
-                    <a href="/forgot-password" className="underline">Forgot password?</a>
-                </> : "Unable to send OTP. Please try again."));
+                    {t("auth.otp.alreadyExists")}{" "}
+                    <a href="/forgot-password" className="underline">{t("auth.otp.forgotPassword")}</a>
+                </> : t("auth.otp.unableToSend")));
             }
             else {
-                setGeneralError(response.message || "Failed to send OTP. Please try again.");
+                setGeneralError(response.message || t("auth.otp.failedToSend"));
             }
         } catch (err) {
             console.error('Send OTP error:', err);
-            setGeneralError("Unable to connect to the server. Please check your connection.");
+            setGeneralError(t("auth.cannotConnect"));
         } finally {
             setLoading(false);
         }
@@ -128,7 +131,7 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
         clearErrors();
 
         if (!/^\d{6}$/.test(otp)) {
-            setOtpError(otp ? "OTP must be 6 digits" : "Please enter the OTP");
+            setOtpError(otp ? t("auth.otp.codeMustBeSixDigits") : t("auth.otp.enterCode"));
             return;
         }
 
@@ -138,14 +141,14 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
             const response = await verifyOTP(contact, otp, channel);
 
             if (response.status >= 200 && response.status < 300) {
-                setSuccessMessage("OTP verified successfully!");
+                setSuccessMessage(t("auth.otp.verified"));
                 setStep('password');
             } else {
-                setGeneralError(response.message || "Invalid OTP. Please try again.");
+                setGeneralError(response.message || t("auth.otp.invalidCode"));
             }
         } catch (err) {
             console.error('Verify OTP error:', err);
-            setGeneralError("Unable to connect to the server. Please check your connection.");
+            setGeneralError(t("auth.cannotConnect"));
         } finally {
             setLoading(false);
         }
@@ -156,22 +159,22 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
         clearErrors();
 
         if (!newPassword) {
-            setPasswordError("Please enter a new password");
+            setPasswordError(t("auth.otp.enterNewPassword"));
             return;
         }
 
         if (newPassword.length < 8) {
-            setPasswordError("Password must be at least 8 characters");
+            setPasswordError(t("auth.otp.passwordTooShort"));
             return;
         }
 
         if (!confirmPassword) {
-            setConfirmPasswordError("Please confirm your password");
+            setConfirmPasswordError(t("auth.otp.confirmYourPassword"));
             return;
         }
 
         if (newPassword !== confirmPassword) {
-            setConfirmPasswordError("Passwords do not match");
+            setConfirmPasswordError(t("auth.otp.passwordsDontMatch"));
             return;
         }
 
@@ -190,28 +193,30 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                         nickname: string;
                         token: string;
                         isModerator: boolean;
+                        locale?: Locale;
                     };
                     await updateUser({
                         email: signupResponse.email,
                         nickname: signupResponse.nickname,
                         token: signupResponse.token,
                         isModerator: signupResponse.isModerator,
+                        locale: signupResponse.locale,
                     });
                 }
-                const confirmationMessage = mode === 'forgot' ? "Password reset successfully! Redirecting to login..." :
-                    "Account created successfully! Redirecting to chat..."
+                const confirmationMessage = mode === 'forgot' ? t("auth.otp.resetDone") :
+                    t("auth.otp.accountCreated")
                 setSuccessMessage(confirmationMessage);
                 setTimeout(() => {
                     router.push(mode === 'sign-up' ? '/chat' : '/login');
                 }, 2000);
             } else {
-                const failedMessage = mode === 'forgot' ? response.message || "Failed to reset password. Please try again." :
-                    response.message || "Failed to create your account. Please try again.";
+                const failedMessage = mode === 'forgot' ? response.message || t("auth.otp.resetFailed") :
+                    response.message || t("auth.otp.createFailed");
                 setGeneralError(failedMessage);
             }
         } catch (err) {
             console.error('Reset password error:', err);
-            setGeneralError("Unable to connect to the server. Please check your connection.");
+            setGeneralError(t("auth.cannotConnect"));
         } finally {
             setLoading(false);
         }
@@ -226,14 +231,14 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
         try {
             const response = await requestOTP(contact, mode, channel);
             if (response.status === 200) {
-                setSuccessMessage("OTP resent successfully!");
+                setSuccessMessage(t("auth.otp.resent"));
                 startResendTimer();
             } else {
-                setGeneralError(response.message || "Failed to resend OTP.");
+                setGeneralError(response.message || t("auth.otp.resendFailed"));
             }
         } catch (err) {
             console.error('Resend OTP error:', err);
-            setGeneralError("Unable to connect to the server.");
+            setGeneralError(t("auth.otp.cannotConnectShort"));
         } finally {
             setLoading(false);
         }
@@ -270,11 +275,11 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                     <div className="titleContainer">
                         <h1 className="mb-0 md:mb-0 text-3xl font-extrabold text-gray-900 dark:text-white md:text-4xl lg:text-5xl text-center">
                             <span className="text-transparent bg-clip-text bg-linear-to-r to-indigo-800 from-pink-700 dark:to-indigo-400 dark:from-pink-300">
-                                {step === 'email' && mode === 'forgot' ? 'Reset Your Password' :
-                                    step === 'email' && mode === 'sign-up' ? 'Create Your Account on WeCommunicate' :
-                                        step === 'otp' ? 'Verify OTP' :
-                                            step === 'password' && mode === 'forgot' ? 'Set New Password' :
-                                                'Set Your Password'}
+                                {step === 'email' && mode === 'forgot' ? t("auth.otp.titleReset") :
+                                    step === 'email' && mode === 'sign-up' ? t("auth.otp.titleSignUp") :
+                                        step === 'otp' ? t("auth.otp.titleVerify") :
+                                            step === 'password' && mode === 'forgot' ? t("auth.otp.titleNewPassword") :
+                                                t("auth.otp.titleSetPassword")}
                             </span>
                         </h1>
                         {(generalError || successMessage) && (
@@ -288,9 +293,9 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                             </div>
                         )}
                         <p className="text-center text-gray-600 dark:text-gray-400 mt-0 md:mt-1 md:text-xl text-wrap mb-2 md:mb-3">
-                            {step === 'email' ? `Enter your ${channel === 'sms' ? 'phone number' : 'email'} to receive a verification code` :
-                                step === 'otp' ? `Enter the 6-digit code sent to your ${channel === 'sms' ? 'phone' : 'email'}` :
-                                    'Create a new password for your account'}
+                            {step === 'email' ? (channel === 'sms' ? t("auth.otp.introSms") : t("auth.otp.introEmail")) :
+                                step === 'otp' ? (channel === 'sms' ? t("auth.otp.introOtpSms") : t("auth.otp.introOtpEmail")) :
+                                    t("auth.otp.introPassword")}
                         </p>
                     </div>
 
@@ -306,7 +311,7 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                                 <div
                                     className="mb-3 flex rounded-lg border border-gray-300 bg-gray-200 p-1 dark:border-gray-500 dark:bg-gray-800"
                                     role="group"
-                                    aria-label="Verification method"
+                                    aria-label={t("auth.otp.method")}
                                 >
                                     {(['email', 'sms'] as const).map(option => (
                                         <button
@@ -324,18 +329,22 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                                                     : 'border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
                                             }`}
                                         >
-                                            {option === 'email' ? 'Email' : 'SMS'}
+                                            {option === 'email' ? t("auth.otp.email") : t("auth.otp.sms")}
                                         </button>
                                     ))}
                                 </div>
-                                {mode === 'sign-up' && <input id="nickname" value={nickname} onChange={ev => setNickname(ev.target.value)} placeholder="Choose a nickname" className="inputBox mb-3 w-full" maxLength={40} required />}
-                                <label htmlFor="email" className="sr-only">Email or phone number</label>
+                                {mode === 'sign-up' && <input id="nickname" value={nickname} onChange={ev => setNickname(ev.target.value)} placeholder={t("auth.otp.nickname")} className="inputBox mb-3 w-full" maxLength={40} required />}
+                                <label htmlFor="email" className="sr-only">{t("auth.otp.contactLabel")}</label>
+                                {/* Left to right even in a right-to-left page, or the
+                                    digit groups of a phone number come out reversed.
+                                    Empty, the placeholder follows the page. */}
                                 <input
                                     key={channel}
                                     id="email"
                                     type={channel === 'email' ? 'email' : 'tel'}
+                                    dir={contact ? "ltr" : undefined}
                                     value={contact}
-                                    placeholder={channel === 'email' ? 'Enter your email' : 'Enter phone number, e.g. +972 50 123 4567'}
+                                    placeholder={channel === 'email' ? t("auth.otp.emailPlaceholder") : t("auth.otp.phonePlaceholder")}
                                     onChange={ev => {
                                         if (channel === 'sms') setPhone(sanitizePhoneInput(ev.target.value));
                                         else setEmail(ev.target.value);
@@ -355,7 +364,7 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
 
                                 <div className="hidden md:flex items-center justify-center gap-1.5 text-xs text-muted-foreground mt-2">
                                     <Shield size={14} />
-                                    <span>Secure & private</span>
+                                    <span>{t("auth.otp.secure")}</span>
                                 </div>
 
                                 <div className="hidden md:block mt-3">
@@ -372,12 +381,13 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                                     </div>
                                 </div>
 
-                                <label htmlFor="otp" className="sr-only">OTP Code</label>
+                                <label htmlFor="otp" className="sr-only">{t("auth.otp.codeLabel")}</label>
                                 <input
                                     id="otp"
                                     type="text"
+                                    dir="ltr"
                                     value={otp}
-                                    placeholder="Enter 6-digit code"
+                                    placeholder={t("auth.otp.codePlaceholder")}
                                     onChange={ev => setOtp(ev.target.value.replace(/\D/g, '').slice(0, 6))}
                                     className="inputBox w-full text-center text-2xl tracking-widest"
                                     maxLength={6}
@@ -400,7 +410,7 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                                         disabled={resendTimer > 0 || loading}
                                         className="text-sm text-blue-600 dark:text-blue-500 hover:underline disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
                                     >
-                                        {resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : 'Resend OTP'}
+                                        {resendTimer > 0 ? t("auth.otp.resendIn", { seconds: resendTimer }) : t("auth.otp.resend")}
                                     </button>
                                 </div>
 
@@ -419,15 +429,15 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                                 </div>
 
                                 <div className="md:col-start-2 md:col-span-3">
-                                    <label htmlFor="new-password" className="sr-only">New Password</label>
+                                    <label htmlFor="new-password" className="sr-only">{t("auth.otp.newPassword")}</label>
                                     <div className="relative">
                                         <input
                                             id="new-password"
                                             type={showNewPassword ? "text" : "password"}
                                             value={newPassword}
-                                            placeholder={mode === 'forgot' ? "Enter new password" : "Enter password"}
+                                            placeholder={mode === 'forgot' ? t("auth.otp.newPasswordPlaceholder") : t("auth.otp.passwordPlaceholder")}
                                             onChange={ev => setNewPassword(ev.target.value)}
-                                            className="inputBox w-full pr-10"
+                                            className="inputBox w-full pe-10"
                                             autoComplete="new-password"
                                             disabled={loading}
                                             aria-invalid={!!passwordError}
@@ -436,8 +446,8 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                                         <button
                                             type="button"
                                             onClick={() => setShowNewPassword(!showNewPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                            aria-label={showNewPassword ? "Hide password" : "Show password"}
+                                            className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                            aria-label={showNewPassword ? t("auth.hidePassword") : t("auth.showPassword")}
                                             tabIndex={-1}
                                             disabled={loading}
                                         >
@@ -452,15 +462,15 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                                 </div>
 
                                 <div className="md:col-start-2 md:col-span-3">
-                                    <label htmlFor="confirm-password" className="sr-only">Confirm Password</label>
+                                    <label htmlFor="confirm-password" className="sr-only">{t("auth.otp.confirmPassword")}</label>
                                     <div className="relative">
                                         <input
                                             id="confirm-password"
                                             type={showConfirmPassword ? "text" : "password"}
                                             value={confirmPassword}
-                                            placeholder={mode === 'forgot' ? "Confirm new password" : "Confirm password"}
+                                            placeholder={mode === 'forgot' ? t("auth.otp.confirmNewPlaceholder") : t("auth.otp.confirmPlaceholder")}
                                             onChange={ev => setConfirmPassword(ev.target.value)}
-                                            className="inputBox w-full pr-10"
+                                            className="inputBox w-full pe-10"
                                             autoComplete="new-password"
                                             disabled={loading}
                                             aria-invalid={!!confirmPasswordError}
@@ -469,8 +479,8 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                                         <button
                                             type="button"
                                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                            aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                                            className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                            aria-label={showConfirmPassword ? t("auth.hidePassword") : t("auth.showPassword")}
                                             tabIndex={-1}
                                             disabled={loading}
                                         >
@@ -498,23 +508,23 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                                 type="submit"
                                 disabled={loading}
                             >
-                                {loading ? 'Processing...' :
-                                    step === 'email' ? 'Send Code' :
-                                        step === 'otp' ? 'Verify Code' :
-                                            step === 'password' && mode === 'forgot' ? 'Reset Password' :
-                                                'Create Account'}
+                                {loading ? t("auth.otp.processing") :
+                                    step === 'email' ? t("auth.otp.sendCode") :
+                                        step === 'otp' ? t("auth.otp.verifyCode") :
+                                            step === 'password' && mode === 'forgot' ? t("auth.otp.resetPassword") :
+                                                t("auth.otp.createAccount")}
                             </button>
                         </div>
                         {mode === 'forgot' &&
                             <p className="text-muted-foreground justify-self-center mt-4">
-                                Remember your password? <a href="/login"
-                                    className="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Back to Login</a>
+                                {t("auth.otp.rememberPassword")} <a href="/login"
+                                    className="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">{t("auth.otp.backToLogin")}</a>
                             </p>
                         }
                         {mode === 'sign-up' &&
                             <p className="text-muted-foreground justify-self-center mt-4">
-                                Already have an account? <a href="/login"
-                                    className="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">Sign in</a>
+                                {t("auth.otp.haveAccount")} <a href="/login"
+                                    className="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">{t("auth.otp.signIn")}</a>
                             </p>
                         }
                     </div>

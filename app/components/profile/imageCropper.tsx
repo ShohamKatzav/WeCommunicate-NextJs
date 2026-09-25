@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useT } from "../../i18n/client";
 import { X } from "lucide-react";
 
 interface ImageCropperProps {
@@ -25,6 +26,7 @@ const clamp = (value: number, min: number, max: number) => Math.min(Math.max(val
 const viewportSize = () => (typeof window === "undefined" ? 256 : Math.min(256, window.innerWidth - 96));
 
 export default function ImageCropper({ file, onCropped, onSkip, onCancel, busy }: ImageCropperProps) {
+    const t = useT();
     const imageRef = useRef<HTMLImageElement | null>(null);
     const dragOrigin = useRef<{ x: number; y: number; offsetX: number; offsetY: number } | null>(null);
 
@@ -129,7 +131,7 @@ export default function ImageCropper({ file, onCropped, onSkip, onCancel, busy }
         canvas.height = outputSize;
         const context = canvas.getContext("2d");
         if (!context) {
-            toast.error("Couldn't crop that image. Try skipping the crop.");
+            toast.error(t("profile.crop.failed"));
             return;
         }
         // JPEG has no alpha, so a transparent PNG would otherwise come out
@@ -140,7 +142,7 @@ export default function ImageCropper({ file, onCropped, onSkip, onCancel, busy }
 
         canvas.toBlob(blob => {
             if (!blob) {
-                toast.error("Couldn't crop that image. Try skipping the crop.");
+                toast.error(t("profile.crop.failed"));
                 return;
             }
             const baseName = file.name.replace(/\.[^.]+$/, "") || "avatar";
@@ -152,13 +154,13 @@ export default function ImageCropper({ file, onCropped, onSkip, onCancel, busy }
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
             <div className="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-gray-800">
                 <div className="flex items-center justify-between border-b p-4 dark:border-gray-700">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Crop your photo</h2>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t("profile.crop.title")}</h2>
                     <button
                         type="button"
                         onClick={onCancel}
                         disabled={busy}
                         className="text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
-                        aria-label="Close"
+                        aria-label={t("profile.crop.close")}
                     >
                         <X className="h-5 w-5" />
                     </button>
@@ -178,7 +180,7 @@ export default function ImageCropper({ file, onCropped, onSkip, onCancel, busy }
                             <img
                                 ref={imageRef}
                                 src={objectUrl}
-                                alt="Crop preview"
+                                alt={t("profile.crop.preview")}
                                 onLoad={handleImageLoad}
                                 draggable={false}
                                 style={{
@@ -192,7 +194,7 @@ export default function ImageCropper({ file, onCropped, onSkip, onCancel, busy }
                     </div>
 
                     <label className="flex w-full items-center gap-3 text-sm text-muted-foreground">
-                        Zoom
+                        {t("profile.crop.zoom")}
                         <input
                             type="range"
                             min={1}
@@ -202,12 +204,12 @@ export default function ImageCropper({ file, onCropped, onSkip, onCancel, busy }
                             disabled={!natural || busy}
                             onChange={event => handleZoomChange(Number(event.target.value))}
                             className="flex-1"
-                            aria-label="Zoom"
+                            aria-label={t("profile.crop.zoom")}
                         />
                     </label>
 
                     <p className="text-center text-xs text-muted-foreground">
-                        Drag the photo to reposition it, or skip the crop to upload it as it is.
+                        {t("profile.crop.hint")}
                     </p>
                 </div>
 
@@ -218,7 +220,7 @@ export default function ImageCropper({ file, onCropped, onSkip, onCancel, busy }
                         disabled={busy}
                         className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                     >
-                        Skip crop
+                        {t("profile.crop.skip")}
                     </button>
                     <button
                         type="button"
@@ -226,7 +228,7 @@ export default function ImageCropper({ file, onCropped, onSkip, onCancel, busy }
                         disabled={!natural || busy}
                         className="flex-1 rounded-lg bg-primary px-4 py-2.5 font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                        Crop &amp; upload
+                        {t("profile.crop.upload")}
                     </button>
                 </div>
             </div>

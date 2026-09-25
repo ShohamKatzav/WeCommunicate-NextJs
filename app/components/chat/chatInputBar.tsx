@@ -11,6 +11,7 @@ import useIsMobile from "../../hooks/useIsMobile";
 import { MAX_MESSAGE_LENGTH } from "../../config/limits";
 import { AsShortName } from "../../utils/stringFormat";
 import { useUser } from "../../hooks/useUser";
+import { useI18n, useT } from "../../i18n/client";
 
 // The composer grows with the draft up to this many lines, then scrolls
 // inside itself, the way WhatsApp's does.
@@ -31,6 +32,7 @@ interface ComposerTextareaProps {
 // trailing emoji lands at the RTL end (the left) rather than the right edge
 // an LTR paragraph would put it on. An empty or English draft stays LTR.
 const ComposerTextarea = ({ value, onChange, onKeyDown, placeholder, disabled, className }: ComposerTextareaProps) => {
+    const { t, dir: pageDir } = useI18n();
     const ref = useRef<HTMLTextAreaElement>(null);
 
     // Runs on every value change, so the reset to '' after a send shrinks
@@ -51,7 +53,10 @@ const ComposerTextarea = ({ value, onChange, onKeyDown, placeholder, disabled, c
         <textarea
             ref={ref}
             rows={1}
-            dir="auto"
+            // Empty, dir="auto" has no strong character to go on and falls
+            // back to left to right - the page's own direction keeps the
+            // placeholder on the correct side in a right-to-left UI.
+            dir={value ? "auto" : pageDir}
             style={{ unicodeBidi: "plaintext" }}
             className={`block resize-none overflow-y-auto bg-gray-100 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 border border-transparent dark:border-gray-600 transition-[box-shadow,border-color] ${className}`}
             onKeyDown={onKeyDown}
@@ -60,7 +65,7 @@ const ComposerTextarea = ({ value, onChange, onKeyDown, placeholder, disabled, c
             onChange={onChange}
             disabled={disabled}
             maxLength={MAX_MESSAGE_LENGTH}
-            aria-label="Message input"
+            aria-label={t("chat.composer.messageInput")}
         />
     );
 };
@@ -77,12 +82,13 @@ interface MessageInputProps {
 const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, handleTyping, isBlocked }: MessageInputProps) => {
     const isMobile = useIsMobile();
     const { user } = useUser();
+    const t = useT();
     const [isRecordingVoice, setIsRecordingVoice] = useState(false);
     // The server rejects a blocked 1:1 send regardless (see
     // chatActions.saveMessage) - disabling here too avoids the confusing
     // "I hit send and it just vanished with a vague error" experience.
     const canSend = (message.text?.trim() || message.file) && participants.current && !isBlocked;
-    const placeholder = participants.current ? "Message..." : "Select a participant to start chatting";
+    const placeholder = participants.current ? t("chat.composer.placeholder") : t("chat.composer.selectParticipant");
 
     // Desktop only, like WhatsApp Web: Enter sends and Shift+Enter is a
     // newline. On mobile Enter is a newline and only the Send button sends.
@@ -118,23 +124,25 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
             <div className={`flex flex-col gap-2 ${isMobile ? 'px-3' : ''}`}>
                 {isBlocked && (
                     <div className="rounded-lg bg-gray-100 dark:bg-gray-700 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 text-center">
-                        {"You can't send messages to a blocked user. Unblock them from the users list to continue."}
+                        {t("chat.composer.blocked")}
                     </div>
                 )}
                 {message.replyTo && (
-                    <div className="flex items-center justify-between gap-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-l-4 border-green-500 px-3 py-2">
+                    <div className="flex items-center justify-between gap-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-s-4 border-green-500 px-3 py-2">
                         <div className="min-w-0">
                             <div className="text-sm font-medium text-success">
-                                Replying to {message.replyTo.sender === user?.email ? "yourself" : AsShortName(message.replyTo.sender)}
+                                {message.replyTo.sender === user?.email
+                                    ? t("chat.composer.replyingToYourself")
+                                    : t("chat.composer.replyingTo", { name: AsShortName(message.replyTo.sender) })}
                             </div>
                             <div className="text-sm text-muted-foreground truncate">
-                                <span dir="auto">{message.replyTo.snippet || "Attachment"}</span>
+                                <span dir="auto">{message.replyTo.snippet || (message.replyTo.hasLocation ? t("chat.bubble.sharedLocation") : t("common.attachment"))}</span>
                             </div>
                         </div>
                         <button
                             type="button"
                             onClick={cancelReply}
-                            aria-label="Cancel reply"
+                            aria-label={t("chat.composer.cancelReply")}
                             className="shrink-0 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
                         >
                             <X size={18} />
@@ -179,11 +187,11 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
                                     onClick={() => handleSendMessage()}
                                     disabled={!canSend}
                                     className="min-w-0 flex-1 whitespace-nowrap p-1.5 rounded-lg bg-green-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-green-800 active:scale-95 transition-all font-medium"
-                                    aria-label="Send message"
+                                    aria-label={t("chat.composer.sendMessage")}
                                 >
                                     <div className="flex items-center justify-center gap-2">
-                                        <Send size={18} />
-                                        <span>Send</span>
+                                        <Send size={18} className="rtl:-scale-x-100" />
+                                        <span>{t("chat.composer.send")}</span>
                                     </div>
                                 </button>
                             )}
@@ -213,9 +221,9 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
                                 onClick={() => handleSendMessage()}
                                 disabled={!canSend}
                                 className="p-2 rounded-full bg-green-700 text-white shrink-0 disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-green-800 active:scale-95 transition-all"
-                                aria-label="Send message"
+                                aria-label={t("chat.composer.sendMessage")}
                             >
-                                <Send size={30} />
+                                <Send size={30} className="rtl:-scale-x-100" />
                             </button>
                         )}
                     </div>

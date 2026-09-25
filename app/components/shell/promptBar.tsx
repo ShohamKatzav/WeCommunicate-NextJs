@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { X } from "lucide-react";
+import { useT } from "../../i18n/client";
 
 interface PromptAction {
     label: string;
@@ -36,6 +37,7 @@ export default function PromptBar({
     queuedCount,
     accentClassName,
 }: PromptBarProps) {
+    const t = useT();
     return (
         <div className={`pointer-events-auto w-full ${accentClassName}`}>
             <div className="mx-auto flex max-w-4xl items-center gap-3 px-3 py-2.5 sm:px-4">
@@ -43,7 +45,7 @@ export default function PromptBar({
                 <p className="min-w-0 flex-1 line-clamp-3 break-words text-sm font-medium leading-snug">{message}</p>
                 {queuedCount > 0 && (
                     <span className="hidden shrink-0 rounded-full bg-black/15 px-2 py-0.5 text-xs font-semibold sm:inline-block">
-                        +{queuedCount} more
+                        {t("prompts.more", { count: queuedCount })}
                     </span>
                 )}
                 {secondaryAction && (

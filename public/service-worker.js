@@ -8,7 +8,8 @@ importScripts('/indexdb-queue.js');
 // script) as well as on cache-shape changes - a client still running the
 // previous worker needs a cache name it doesn't recognise so `activate`'s
 // cleanup (below) actually clears its stale caches instead of reusing them.
-const CACHE_NAME = 'my-pwa-cache-v7';
+// v8: offline.html gained its translated strings (see its <head>).
+const CACHE_NAME = 'my-pwa-cache-v8';
 const STATIC_ASSET_CACHE = 'next-static-assets-v7';
 let isSyncing = false;
 

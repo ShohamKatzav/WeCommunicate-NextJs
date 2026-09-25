@@ -6,9 +6,11 @@ import { getMyProfile } from "../lib/profileActions";
 import ProfileCard from "../components/profile/profileCard";
 import Loading from "../components/ui/loading";
 import Profile from "@/types/profile";
+import { useT } from "../i18n/client";
 
 export default function ProfilePage() {
     const { user, loadingUser } = useUser();
+    const t = useT();
     const router = useRouter();
     const [profile, setProfile] = useState<Profile | null>(null);
     const [loading, setLoading] = useState(true);
@@ -45,7 +47,7 @@ export default function ProfilePage() {
     if (!profile) {
         return (
             <div className="max-w-md mx-auto px-4 py-8 text-center text-muted-foreground">
-                Couldn&apos;t load your profile.
+                {t("profile.loadFailed")}
             </div>
         );
     }

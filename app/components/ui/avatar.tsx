@@ -2,6 +2,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import { AsShortName } from "../../utils/stringFormat";
+import { useT } from "../../i18n/client";
 
 interface AvatarProps {
     avatarUrl?: string;
@@ -18,6 +19,7 @@ interface AvatarProps {
 // file is gone (the blob 404s) lands on that same circle after the image
 // fails, instead of a broken image or wrapped alt text.
 const Avatar = ({ avatarUrl, nickname, email, size = 40, className = "" }: AvatarProps) => {
+    const t = useT();
     const displayName = nickname || AsShortName(email);
     const initial = (displayName || "U").charAt(0).toUpperCase();
     // Remember which URL failed. A later picture (a different URL) is tried
@@ -39,7 +41,7 @@ const Avatar = ({ avatarUrl, nickname, email, size = 40, className = "" }: Avata
     return (
         <Image
             src={avatarUrl}
-            alt={displayName ? `${displayName}'s avatar` : "User avatar"}
+            alt={displayName ? t("profile.avatarAlt", { name: displayName }) : t("profile.avatarAltFallback")}
             width={size}
             height={size}
             // Tailwind's preflight sets `height: auto` on images, which

@@ -3,6 +3,7 @@ import { RefObject, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Copy, Pencil, Reply, Trash2 } from "lucide-react";
 import ReactionPicker from "./reactionPicker";
+import { useT } from "../../i18n/client";
 
 interface MessageActionsMenuProps {
   // The element the menu opens against: the bubble itself on mobile (it's
@@ -29,6 +30,7 @@ const EDGE_GAP = 8;
 // message list scrolls (and so clips anything that pokes out of it) and can
 // be shorter than the menu with the reaction grid expanded.
 const MessageActionsMenu = ({ anchorRef, align, menuRef, selectedReaction, onReact, onReply, onCopy, onEdit, onDelete, onDismiss }: MessageActionsMenuProps) => {
+  const t = useT();
   // The latest onDismiss, read by the per-frame check below without making
   // every parent re-render tear down and re-place the menu.
   const dismissRef = useRef(onDismiss);
@@ -55,7 +57,11 @@ const MessageActionsMenu = ({ anchorRef, align, menuRef, selectedReaction, onRea
       const maxLeft = window.innerWidth - width - EDGE_GAP;
       const maxTop = window.innerHeight - height - EDGE_GAP;
 
-      const preferredLeft = align === "start" ? anchor.left : anchor.right - width;
+      // "start" is the bubble's outer edge, which is the right one in a
+      // right-to-left page.
+      const rtl = getComputedStyle(menu).direction === "rtl";
+      const alignLeft = (align === "start") !== rtl;
+      const preferredLeft = alignLeft ? anchor.left : anchor.right - width;
       // Below the anchor when it fits, otherwise above it; a bubble taller
       // than the screen leaves neither, so then it's just kept on screen.
       const below = anchor.bottom + 4;
@@ -99,7 +105,7 @@ const MessageActionsMenu = ({ anchorRef, align, menuRef, selectedReaction, onRea
     <div
       ref={menuRef}
       role="group"
-      aria-label="Message actions"
+      aria-label={t("chat.bubble.actions")}
       data-testid="message-actions-menu"
       // Hidden until place() has measured and positioned it, so it never
       // flashes at the top-left corner first.
@@ -115,8 +121,8 @@ const MessageActionsMenu = ({ anchorRef, align, menuRef, selectedReaction, onRea
               onClick={onReply}
               className="flex w-full items-center gap-3 px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
             >
-              <Reply className="h-4 w-4 shrink-0" aria-hidden="true" />
-              Reply
+              <Reply className="h-4 w-4 shrink-0 rtl:-scale-x-100" aria-hidden="true" />
+              {t("chat.actions.reply")}
             </button>
           )}
           {onCopy && (
@@ -126,7 +132,7 @@ const MessageActionsMenu = ({ anchorRef, align, menuRef, selectedReaction, onRea
               className="flex w-full items-center gap-3 px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
             >
               <Copy className="h-4 w-4 shrink-0" aria-hidden="true" />
-              Copy
+              {t("chat.actions.copy")}
             </button>
           )}
           {onEdit && (
@@ -136,7 +142,7 @@ const MessageActionsMenu = ({ anchorRef, align, menuRef, selectedReaction, onRea
               className="flex w-full items-center gap-3 px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
             >
               <Pencil className="h-4 w-4 shrink-0" aria-hidden="true" />
-              Edit
+              {t("chat.actions.edit")}
             </button>
           )}
           {onDelete && (
@@ -146,7 +152,7 @@ const MessageActionsMenu = ({ anchorRef, align, menuRef, selectedReaction, onRea
               className="flex w-full items-center gap-3 px-3 py-2 text-sm text-red-600 transition-colors hover:bg-foreground/10 dark:text-red-400"
             >
               <Trash2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-              Delete
+              {t("chat.actions.delete")}
             </button>
           )}
         </div>

@@ -1,6 +1,9 @@
 "use client";
 import { MapPin } from "lucide-react";
 import { LocationAccess } from "../../hooks/useLocation";
+import { useT } from "../../i18n/client";
+
+const bold = (chunk: string) => <strong>{chunk}</strong>;
 
 interface LocationAccessInformationProps {
     information: LocationAccess;
@@ -14,7 +17,9 @@ interface LocationAccessInformationProps {
 
 const linkClass = "font-medium text-blue-600 underline dark:text-blue-400 hover:no-underline";
 
-const EnableButton = ({ onEnable, locating, label }: { onEnable: () => void; locating: boolean; label: string }) => (
+const EnableButton = ({ onEnable, locating, label }: { onEnable: () => void; locating: boolean; label: string }) => {
+    const t = useT();
+    return (
     <button
         type="button"
         onClick={onEnable}
@@ -24,17 +29,19 @@ const EnableButton = ({ onEnable, locating, label }: { onEnable: () => void; loc
         {locating
             ? <span className="block h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" />
             : <MapPin size={16} />}
-        {locating ? "Locating…" : label}
+        {locating ? t("locations.access.locating") : label}
     </button>
-);
+    );
+};
 
 const LocationAccessInformation = ({ information, hasFix, locating, error, onEnable }: LocationAccessInformationProps) => {
+    const t = useT();
     if (information === "checking") return null;
 
     if (information === "unsupported") {
         return (
             <p className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-                This browser can&apos;t share a location. You can still see your friends&apos; pins below.
+                {t("locations.access.unsupported")}
             </p>
         );
     }
@@ -45,8 +52,8 @@ const LocationAccessInformation = ({ information, hasFix, locating, error, onEna
         if (hasFix || !error || locating) return null;
         return (
             <div className="mb-4 flex flex-col gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300 sm:flex-row sm:items-center sm:justify-between">
-                <p>Couldn&apos;t get your location: {error}</p>
-                <EnableButton onEnable={onEnable} locating={locating} label="Try again" />
+                <p>{t("locations.access.couldntGet", { error })}</p>
+                <EnableButton onEnable={onEnable} locating={locating} label={t("locations.access.tryAgain")} />
             </div>
         );
     }
@@ -55,13 +62,13 @@ const LocationAccessInformation = ({ information, hasFix, locating, error, onEna
         return (
             <div className="mb-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-xs dark:border-gray-700 dark:bg-gray-900 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-1">
-                    <p className="font-semibold text-gray-900 dark:text-white">Share your location with friends</p>
+                    <p className="font-semibold text-gray-900 dark:text-white">{t("locations.access.promptTitle")}</p>
                     <p className="text-sm text-gray-600 dark:text-gray-300">
-                        Put yourself on the map and see how far away your friends are.
+                        {t("locations.access.promptBody")}
                     </p>
                     {error && <p className="text-sm text-amber-700 dark:text-amber-400">{error}</p>}
                 </div>
-                <EnableButton onEnable={onEnable} locating={locating} label="Enable my location" />
+                <EnableButton onEnable={onEnable} locating={locating} label={t("locations.access.enable")} />
             </div>
         );
     }
@@ -69,35 +76,29 @@ const LocationAccessInformation = ({ information, hasFix, locating, error, onEna
     return (
         <div className="mb-4 space-y-4 rounded-xl border border-red-200 bg-white p-4 shadow-xs dark:border-red-900 dark:bg-gray-900">
             <div className="space-y-1">
-                <p className="font-semibold text-gray-900 dark:text-white">Location access is blocked</p>
+                <p className="font-semibold text-gray-900 dark:text-white">{t("locations.access.blockedTitle")}</p>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Your friends&apos; pins still show below, but you won&apos;t appear on the map and distances can&apos;t be
-                    calculated until you allow location access for this site.
+                    {t("locations.access.blockedBody")}
                 </p>
             </div>
 
             <div className="space-y-2 text-sm text-gray-800 dark:text-gray-200">
-                <p className="font-semibold">iPhone / iPad (Safari)</p>
-                <ol className="list-decimal space-y-1 pl-5">
-                    <li>Tap <strong>aA</strong> in the address bar, then <strong>Website Settings</strong> → <strong>Location</strong> → <strong>Allow</strong>.</li>
-                    <li>
-                        If it&apos;s still blocked, open <strong>Settings</strong> → <strong>Privacy &amp; Security</strong> →{" "}
-                        <strong>Location Services</strong> and make sure it&apos;s on and <strong>Safari Websites</strong> is set
-                        to <strong>While Using the App</strong>.
-                    </li>
+                <p className="font-semibold">{t("locations.access.safari")}</p>
+                <ol className="list-decimal space-y-1 ps-5">
+                    <li>{t.rich("locations.access.safariStep1", { b: bold })}</li>
+                    <li>{t.rich("locations.access.safariStep2", { b: bold })}</li>
                 </ol>
                 <p className="text-gray-600 dark:text-gray-400">
-                    Safari won&apos;t ask again after you&apos;ve said no - change the setting above, then reload this page
-                    or tap Try again.
+                    {t("locations.access.safariNote")}
                 </p>
             </div>
 
             <div className="space-y-2 text-sm">
-                <p className="font-semibold text-gray-800 dark:text-gray-200">Other browsers</p>
+                <p className="font-semibold text-gray-800 dark:text-gray-200">{t("locations.access.otherBrowsers")}</p>
                 <ul className="space-y-1">
                     <li>
-                        <a href="https://support.google.com/chrome/answer/142065?hl=en" className={linkClass} target="_blank" rel="noopener noreferrer">
-                            Google Chrome – Location sharing guide
+                        <a href={`https://support.google.com/chrome/answer/142065?hl=${t.locale}`} className={linkClass} target="_blank" rel="noopener noreferrer">
+                            {t("locations.access.chromeGuide")}
                         </a>
                     </li>
                     <li>
@@ -107,13 +108,13 @@ const LocationAccessInformation = ({ information, hasFix, locating, error, onEna
                             target="_blank"
                             rel="noopener noreferrer"
                         >
-                            Microsoft Edge – Location &amp; privacy guide
+                            {t("locations.access.edgeGuide")}
                         </a>
                     </li>
                 </ul>
             </div>
 
-            <EnableButton onEnable={onEnable} locating={locating} label="Try again" />
+            <EnableButton onEnable={onEnable} locating={locating} label={t("locations.access.tryAgain")} />
         </div>
     );
 };

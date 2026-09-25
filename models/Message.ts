@@ -7,6 +7,7 @@ interface IReplyTo {
     sender: string;
     snippet: string;
     hasFile: boolean;
+    hasLocation?: boolean;
 }
 
 interface IMessageLocation {
@@ -104,7 +105,8 @@ const MessageSchema = new Schema<IMessage>({
             messageId: { type: Schema.Types.ObjectId, ref: 'Message', required: true },
             sender: { type: String, required: true },
             snippet: { type: String, required: false },
-            hasFile: { type: Boolean, required: false, default: false }
+            hasFile: { type: Boolean, required: false, default: false },
+            hasLocation: { type: Boolean, required: false, default: false }
         },
         required: false,
         _id: false

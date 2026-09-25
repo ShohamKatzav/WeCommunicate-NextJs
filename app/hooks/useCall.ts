@@ -30,6 +30,7 @@ export const useCall = ({ socket, userEmail, ...hooks }: UseCallProps) => {
             getCurrentConversationId: () => hooksRef.current.getCurrentConversationId(),
             openConversation: (conversationId, peerEmail) => hooksRef.current.openConversation(conversationId, peerEmail),
             onError: message => hooksRef.current.onError(message),
+            t: () => hooksRef.current.t(),
             onMissedCall: peer => hooksRef.current.onMissedCall(peer),
         });
         setController(instance);

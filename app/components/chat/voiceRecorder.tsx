@@ -1,6 +1,7 @@
 'use client';
 import { RefObject, useEffect } from 'react';
 import { Mic, Send, Trash2 } from 'lucide-react';
+import { useT } from '../../i18n/client';
 import ChatUser from '@/types/chatUser';
 import FileDTO from '@/types/FileDTO';
 import useIsMobile from '../../hooks/useIsMobile';
@@ -20,6 +21,7 @@ const formatDuration = (totalSeconds: number) => {
 };
 
 const VoiceRecorder = ({ participants, onRecorded, onStatusChange }: VoiceRecorderProps) => {
+    const t = useT();
     const isMobile = useIsMobile();
     const { status, elapsedSeconds, startRecording, stopAndSend, cancelRecording } = useVoiceRecorder({ onRecorded });
 
@@ -41,7 +43,7 @@ const VoiceRecorder = ({ participants, onRecorded, onStatusChange }: VoiceRecord
                 <button
                     type="button"
                     onClick={cancelRecording}
-                    aria-label="Cancel voice message"
+                    aria-label={t("chat.voice.cancel")}
                     className="p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900 shrink-0"
                 >
                     <Trash2 size={20} className="text-red-500" />
@@ -49,7 +51,7 @@ const VoiceRecorder = ({ participants, onRecorded, onStatusChange }: VoiceRecord
                 <button
                     type="button"
                     onClick={stopAndSend}
-                    aria-label="Send voice message"
+                    aria-label={t("chat.voice.send")}
                     className="p-2 rounded-full bg-green-700 text-white hover:bg-green-800 shrink-0"
                 >
                     <Send size={20} />
@@ -62,7 +64,7 @@ const VoiceRecorder = ({ participants, onRecorded, onStatusChange }: VoiceRecord
         return (
             <div className="flex items-center gap-2 flex-1 px-3 py-2 text-sm text-muted-foreground">
                 <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-r-transparent" />
-                Sending voice message...
+                {t("chat.voice.sending")}
             </div>
         );
     }
@@ -72,7 +74,7 @@ const VoiceRecorder = ({ participants, onRecorded, onStatusChange }: VoiceRecord
             type="button"
             onClick={startRecording}
             disabled={!participants.current}
-            aria-label="Record voice message"
+            aria-label={t("chat.voice.record")}
             className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
         >
             <Mic size={isMobile ? 25 : 30} />

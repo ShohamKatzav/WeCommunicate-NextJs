@@ -7,6 +7,7 @@ import Message from '@/types/message';
 import { useUser } from '../../hooks/useUser';
 import { deleteFile } from '@/app/lib/fileActions'
 import useIsMobile from '../../hooks/useIsMobile';
+import { useT } from '../../i18n/client';
 
 interface UploadFileProps {
     message: Message;
@@ -126,8 +127,8 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
 type DeleteFileResult = { error?: string };
 
-function fileLabel(pathname?: string) {
-    if (!pathname) return 'Attachment';
+function fileLabel(pathname: string | undefined, fallback: string) {
+    if (!pathname) return fallback;
     const base = pathname.split('/').pop() || pathname;
     try {
         return decodeURIComponent(base);
@@ -193,6 +194,7 @@ function useUploadFile() {
 
 export function UploadFileProvider({ message, setMessage, suspended = false, children }: UploadFileProps & { children: ReactNode }) {
     const { user } = useUser();
+    const t = useT();
     const inputFileRef = useRef<HTMLInputElement>(null);
     const [blob, setBlob] = useState<PutBlobResult | null>(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -283,12 +285,12 @@ export function UploadFileProvider({ message, setMessage, suspended = false, chi
             const result = await deleteFile(url) as DeleteFileResult;
             if (result?.error) {
                 console.error('Failed to delete file');
-                setError("Couldn't remove that file. Try again.");
+                setError(t('chat.upload.removeFailed'));
                 return;
             }
         } catch {
             console.error('Failed to delete file');
-            setError("Couldn't remove that file. Try again.");
+            setError(t('chat.upload.removeFailed'));
             return;
         }
 
@@ -299,7 +301,7 @@ export function UploadFileProvider({ message, setMessage, suspended = false, chi
         clearLocalFile();
         setError(null);
         setMessage(prev => ({ ...prev, file: undefined }));
-    }, [clearLocalFile, setMessage]);
+    }, [clearLocalFile, setMessage, t]);
 
     const onFileChange = useCallback(async () => {
         setError(null);
@@ -309,19 +311,19 @@ export function UploadFileProvider({ message, setMessage, suspended = false, chi
         if (input) input.value = '';
 
         if (!user?.token) {
-            setError('User not authenticated');
+            setError(t('chat.upload.notAuthenticated'));
             return;
         }
         if (!selected) {
-            setError('Please select a file');
+            setError(t('chat.upload.selectFile'));
             return;
         }
         if (!VALID_TYPES.includes(selected.type)) {
-            setError('Please select a supported image, audio, video, PDF, Word, or Excel file');
+            setError(t('chat.upload.unsupported'));
             return;
         }
         if (selected.size > MAX_FILE_BYTES) {
-            setError('File size must be less than 10MB');
+            setError(t('chat.upload.tooBig'));
             return;
         }
 
@@ -381,14 +383,16 @@ export function UploadFileProvider({ message, setMessage, suspended = false, chi
         } catch (err) {
             if (!mountedRef.current || generationRef.current !== generation) return;
             clearLocalFile();
-            setError(err instanceof Error ? err.message : 'Upload failed');
+            // The upload library's own message is English whatever the UI
+            // language; the detail is logged just below.
+            setError(t('chat.upload.failed'));
             console.error('upload error detail', err);
         } finally {
             if (mountedRef.current && generationRef.current === generation) {
                 setIsUploading(false);
             }
         }
-    }, [user?.token, user?.email, setMessage, clearLocalFile]);
+    }, [user?.token, user?.email, setMessage, clearLocalFile, t]);
 
     const released = message.file === null && !isUploading;
     const staged = released ? null : (blob ?? (message.file?.url ? message.file : null));
@@ -401,7 +405,7 @@ export function UploadFileProvider({ message, setMessage, suspended = false, chi
         isUploading,
         error,
         showChip,
-        fileName: localName || fileLabel(staged?.pathname),
+        fileName: localName || fileLabel(staged?.pathname, t('common.attachment')),
         contentType,
         previewSrc,
         canRemove: !isUploading && !!staged?.url,
@@ -409,7 +413,7 @@ export function UploadFileProvider({ message, setMessage, suspended = false, chi
         inputRef: inputFileRef,
         onFileChange: () => { void onFileChange(); },
         onRemove: () => { void onRemove(); },
-    }), [suspended, isUploading, error, showChip, localName, staged, contentType, previewSrc, onFileChange, onRemove]);
+    }), [suspended, isUploading, error, showChip, localName, staged, contentType, previewSrc, onFileChange, onRemove, t]);
 
     return (
         <UploadFileContext.Provider value={value}>
@@ -420,12 +424,13 @@ export function UploadFileProvider({ message, setMessage, suspended = false, chi
 
 export function UploadFileStatus() {
     const { suspended, isUploading, error, showChip, fileName, contentType, previewSrc, canRemove, onRemove } = useUploadFile();
+    const t = useT();
     if (suspended || (!showChip && !error)) return null;
 
     return (
         <>
             {showChip && (
-                <div className="flex w-full min-w-0 items-center gap-2 rounded-lg border-l-4 border-green-500 bg-gray-100 px-3 py-2 dark:bg-gray-700">
+                <div className="flex w-full min-w-0 items-center gap-2 rounded-lg border-s-4 border-green-500 bg-gray-100 px-3 py-2 dark:bg-gray-700">
                     <FilePreview key={previewSrc ?? contentType ?? 'file'} src={previewSrc} contentType={contentType} />
                     <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-medium text-foreground" title={fileName}>
@@ -434,7 +439,7 @@ export function UploadFileStatus() {
                         {isUploading && (
                             <div role="status" className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                                 <span className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden />
-                                Uploading…
+                                {t('chat.upload.uploading')}
                             </div>
                         )}
                     </div>
@@ -443,7 +448,7 @@ export function UploadFileStatus() {
                             type="button"
                             id="remove-file"
                             onClick={onRemove}
-                            aria-label="Remove file"
+                            aria-label={t('chat.upload.remove')}
                             className="shrink-0 rounded-full p-1 hover:bg-gray-200 dark:hover:bg-gray-600"
                         >
                             <X size={18} />
@@ -462,12 +467,13 @@ export function UploadFileStatus() {
 
 export function UploadFileButton() {
     const { suspended, isUploading, canReplace, inputRef, onFileChange } = useUploadFile();
+    const t = useT();
     const isMobile = useIsMobile();
     if (suspended) return null;
 
     return (
         <label
-            aria-label={!isUploading && canReplace ? 'Replace file' : 'Attach file'}
+            aria-label={!isUploading && canReplace ? t('chat.upload.replace') : t('chat.upload.attach')}
             aria-disabled={isUploading}
             tabIndex={isUploading ? -1 : 0}
             onKeyDown={(e) => {

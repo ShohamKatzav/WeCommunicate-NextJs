@@ -1,4 +1,5 @@
 import { RefObject, useState, useRef, useEffect } from "react";
+import { useT } from "../../i18n/client";
 import { HiOutlineEllipsisHorizontalCircle, HiOutlineUsers } from "react-icons/hi2";
 import { RiHistoryLine, RiLogoutBoxRLine } from "react-icons/ri";
 import { MdDeleteForever } from "react-icons/md";
@@ -34,6 +35,7 @@ const ChatDropdown = ({
     onDisappearingMessagesChange,
     setPendingClear
 }: ChatDropdownProps) => {
+    const t = useT();
 
     const dropdownRef = useRef<HTMLDivElement | null>(null);
     const [showDropdown, setShowDropdown] = useState(false);
@@ -103,9 +105,9 @@ const ChatDropdown = ({
                 setPendingClear(conversationId, clearedAt);
                 setChat([]);
                 updateConversationsBar(null, "Clean", conversationId);
-                toast.info("Offline right now - history is cleared on this device and will sync once you’re back online.");
+                toast.info(t("chat.menu.clearOffline"));
             } else {
-                toast.error("Failed to clear history");
+                toast.error(t("chat.menu.clearFailed"));
             }
         }
         finally {
@@ -122,7 +124,7 @@ const ChatDropdown = ({
         try {
             await deleteConversation(conversationId, "conversation");
         } catch (error: any) {
-            toast.info("You’re offline. I’ll delete this conversation once the connection is restored.");
+            toast.info(t("chat.menu.deleteOffline"));
         } finally {
             setShowDeleteModal(false);
             setIsDeleting(false);
@@ -140,7 +142,7 @@ const ChatDropdown = ({
                 id="dropdown-button"
                 type="button"
                 onClick={() => setShowDropdown(!showDropdown)}
-                aria-label="Conversation options"
+                aria-label={t("chat.menu.options")}
                 aria-expanded={showDropdown}
                 className="inline-flex h-11 w-11 items-center justify-center rounded-lg outline-none transition-colors hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-purple-500 md:h-10 md:w-10 dark:hover:bg-gray-700"
             >
@@ -152,31 +154,31 @@ const ChatDropdown = ({
             </button>
 
             {showDropdown && (
-                <div className="absolute right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 w-48">
+                <div className="absolute end-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 w-48">
 
                     <button
                         onClick={() => {
                             setShowParticipantsModal(true);
                             setShowDropdown(false);
                         }}
-                        className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="flex items-center gap-2 w-full text-start px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
-                        <HiOutlineUsers size={18} /> Conversation Details
+                        <HiOutlineUsers size={18} /> {t("chat.menu.details")}
                     </button>
                     <hr className="my-0 border-stone-200 dark:border-gray-700" />
                     <button
                         onClick={handleLeaveRoom}
-                        className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="flex items-center gap-2 w-full text-start px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
                         disabled={!participants.current}
                     >
-                        <RiLogoutBoxRLine size={18} /> Leave Room
+                        <RiLogoutBoxRLine size={18} className="rtl:-scale-x-100" /> {t("chat.menu.leave")}
                     </button>
                     <hr className="my-0 border-stone-200 dark:border-gray-700" />
                     <button
                         onClick={handleCleanHistory}
-                        className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="flex items-center gap-2 w-full text-start px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
-                        <RiHistoryLine size={18} /> Clear Room History
+                        <RiHistoryLine size={18} /> {t("chat.menu.clear")}
                     </button>
                     <hr className="my-0 border-stone-200 dark:border-gray-700" />
                     <button
@@ -189,23 +191,23 @@ const ChatDropdown = ({
                             const id = await ensureConversationId();
                             setIsOpeningDisappearingMessages(false);
                             if (!id) {
-                                toast.error("Couldn't open this setting. Please try again.");
+                                toast.error(t("chat.menu.settingFailed"));
                                 return;
                             }
                             setDisappearingMessagesConversationId(id);
                             setShowDisappearingMessagesModal(true);
                         }}
                         disabled={!participants.current?.length || isOpeningDisappearingMessages}
-                        className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 w-full text-start px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <Timer size={18} /> Disappearing Messages
+                        <Timer size={18} /> {t("chat.menu.disappearing")}
                     </button>
                     <hr className="my-0 border-stone-200 dark:border-gray-700" />
                     <button
                         onClick={() => setShowDeleteModal(true)}
-                        className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-destructive hover:bg-red-100 dark:hover:bg-gray-700"
+                        className="flex items-center gap-2 w-full text-start px-3 py-2 text-sm text-destructive hover:bg-red-100 dark:hover:bg-gray-700"
                     >
-                        <MdDeleteForever size={18} /> Delete Conversation
+                        <MdDeleteForever size={18} /> {t("chat.menu.delete")}
                     </button>
                 </div>
             )}

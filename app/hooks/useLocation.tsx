@@ -4,6 +4,8 @@ import Location from '@/types/location';
 import { useUser } from './useUser';
 import { useSocket } from './useSocket';
 import { SavedFix, shouldPersistFix } from '../utils/geolocation';
+import { useT } from '../i18n/client';
+import type { TFunction } from '../i18n/messages';
 
 // 'checking' - still finding out, render nothing permission-related yet.
 // 'prompt'   - not granted yet (or the browser won't say): needs a tap.
@@ -43,13 +45,14 @@ const writeGrantedHint = (granted: boolean) => {
   } catch { }
 };
 
-const errorText = (error: GeolocationPositionError) => {
-  if (error.message) return error.message;
+// By code, not the browser's own error.message: that one is English
+// whatever language the page is in.
+const errorText = (error: GeolocationPositionError, t: TFunction) => {
   switch (error.code) {
-    case error.PERMISSION_DENIED: return 'Location permission denied';
-    case error.POSITION_UNAVAILABLE: return 'Position unavailable';
-    case error.TIMEOUT: return 'Timed out getting your location';
-    default: return 'Error retrieving location';
+    case error.PERMISSION_DENIED: return t('locations.errors.denied');
+    case error.POSITION_UNAVAILABLE: return t('locations.errors.unavailable');
+    case error.TIMEOUT: return t('locations.errors.timeout');
+    default: return t('locations.errors.generic');
   }
 };
 
@@ -61,6 +64,7 @@ const noopSubscribe = () => () => { };
 
 const useLocation = () => {
   const { user } = useUser();
+  const t = useT();
   const { socket } = useSocket();
   const [position, setPosition] = useState<Location>({
     latitude: null,
@@ -143,7 +147,7 @@ const useLocation = () => {
     if (error.code === error.PERMISSION_DENIED) {
       stopWatch();
       writeGrantedHint(false);
-      setPosition(prev => ({ ...prev, loading: false, error: errorText(error) }));
+      setPosition(prev => ({ ...prev, loading: false, error: errorText(error, t) }));
       // Resuming from the stored hint happens outside a tap, and iOS answers
       // that with "denied" once its per-site grant has lapsed, without ever
       // having asked. That's not the user saying no - offer the button again.
@@ -153,9 +157,9 @@ const useLocation = () => {
     // Unavailable / timeout: a real, possibly transient failure - keep its
     // message, but it says nothing about permission, and a fix already in
     // hand stays on the map.
-    setPosition(prev => ({ ...prev, loading: false, error: errorText(error) }));
+    setPosition(prev => ({ ...prev, loading: false, error: errorText(error, t) }));
     setLocationAccessinfo(prev => prev === 'checking' ? 'prompt' : prev);
-  }, [stopWatch]);
+  }, [stopWatch, t]);
 
   // One watch for the life of the page. Restarting it isn't a user gesture,
   // drops fixes in between, and on iOS often errors instead of updating.

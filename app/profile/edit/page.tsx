@@ -16,12 +16,15 @@ import AvatarCameraCapture from "../../components/profile/avatarCameraCapture";
 import ImageCropper from "../../components/profile/imageCropper";
 import Loading from "../../components/ui/loading";
 import { ABOUT_MAX_LENGTH, DEFAULT_ACCENT_COLOR } from "../../config/limits";
+import { useI18n } from "../../i18n/client";
+import { isLocale, Locale, LOCALES, LOCALE_NAMES } from "../../i18n/config";
 
 const AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const AVATAR_MAX_SIZE = 10 * 1024 * 1024;
 
 export default function EditProfilePage() {
     const { user, loadingUser, updateUser } = useUser();
+    const { t, locale: activeLocale } = useI18n();
     const router = useRouter();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -29,6 +32,9 @@ export default function EditProfilePage() {
     const [nickname, setNickname] = useState("");
     const [about, setAbout] = useState("");
     const [accentColor, setAccentColor] = useState<string>(DEFAULT_ACCENT_COLOR);
+    // An account that never picked a language shows the one this page is
+    // already in, so saving without touching it doesn't switch anything.
+    const [locale, setLocale] = useState<Locale>(activeLocale);
     const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
     const [phone, setPhone] = useState<string | undefined>(undefined);
     const [email, setEmail] = useState<string | undefined>(undefined);
@@ -69,6 +75,7 @@ export default function EditProfilePage() {
                 setNickname(result.profile.nickname || "");
                 setAbout(result.profile.about || "");
                 setAccentColor(result.profile.accentColor || DEFAULT_ACCENT_COLOR);
+                if (isLocale(result.profile.locale)) setLocale(result.profile.locale);
                 setAvatarUrl(result.profile.avatarUrl);
                 setPhone(result.profile.phone);
                 const realEmail = isEmail(result.profile.email);
@@ -92,17 +99,17 @@ export default function EditProfilePage() {
                 file = await convertHeicToJpegIfNeeded(file);
             } catch (err) {
                 console.error("HEIC conversion failed:", err);
-                toast.error("Please choose a JPG, PNG, or WEBP image");
+                toast.error(t("profile.edit.avatarType"));
                 return null;
             }
         }
 
         if (!AVATAR_TYPES.includes(file.type)) {
-            toast.error("Please choose a JPG, PNG, or WEBP image");
+            toast.error(t("profile.edit.avatarType"));
             return null;
         }
         if (file.size > AVATAR_MAX_SIZE) {
-            toast.error("Image must be smaller than 10MB");
+            toast.error(t("profile.edit.avatarSize"));
             return null;
         }
 
@@ -138,13 +145,13 @@ export default function EditProfilePage() {
             if (result.success) {
                 setAvatarUrl(blob.url);
                 await updateUser({ ...user, avatarUrl: blob.url });
-                toast.success("Avatar updated");
+                toast.success(t("profile.edit.avatarUpdated"));
             } else {
-                toast.error(result.error || "Failed to update avatar");
+                toast.error(result.error || t("profile.edit.avatarUpdateFailed"));
             }
         } catch (err) {
             console.error("Avatar upload failed:", err);
-            toast.error("Failed to upload avatar");
+            toast.error(t("profile.edit.avatarUploadFailed"));
         } finally {
             setUploadingAvatar(false);
         }
@@ -164,9 +171,9 @@ export default function EditProfilePage() {
             if (result.success) {
                 setAvatarUrl(undefined);
                 await updateUser({ ...user, avatarUrl: undefined });
-                toast.success("Avatar removed");
+                toast.success(t("profile.edit.avatarRemoved"));
             } else {
-                toast.error(result.error || "Failed to remove avatar");
+                toast.error(result.error || t("profile.edit.avatarRemoveFailed"));
             }
         } finally {
             setUploadingAvatar(false);
@@ -185,16 +192,18 @@ export default function EditProfilePage() {
     const handleSave = async () => {
         setSaving(true);
         try {
-            const result = await updateMyProfile({ nickname, about, accentColor });
+            const result = await updateMyProfile({ nickname, about, accentColor, locale });
             if (result.success) {
-                await updateUser({ ...user, nickname: result.profile.nickname, accentColor: result.profile.accentColor });
-                toast.success("Profile updated");
+                await updateUser({ ...user, nickname: result.profile.nickname, accentColor: result.profile.accentColor, locale: result.profile.locale });
+                // From the server, in the language just saved - this
+                // handler's own t is still the one from before the switch.
+                toast.success(result.message);
                 router.push("/profile");
             } else {
-                toast.error(result.error || "Failed to update profile");
+                toast.error(result.error || t("profile.edit.updateFailed"));
             }
         } catch {
-            toast.info("You're offline - this couldn't be saved right now.");
+            toast.info(t("profile.edit.offline"));
         } finally {
             setSaving(false);
         }
@@ -216,15 +225,15 @@ export default function EditProfilePage() {
                 />
             )}
             <div className="bg-card text-card-foreground rounded-xl shadow-md p-6">
-                <h1 className="text-xl font-semibold mb-6 text-center">Edit profile</h1>
+                <h1 className="text-xl font-semibold mb-6 text-center">{t("profile.edit.title")}</h1>
 
                 <div className="flex flex-col items-center gap-3 mb-6">
                     <div className="relative">
                         <Avatar avatarUrl={avatarUrl} nickname={nickname} email={user?.email} size={96} />
                         <label
                             htmlFor="avatar-upload"
-                            className="absolute bottom-0 right-0 p-1.5 rounded-full bg-primary text-primary-foreground cursor-pointer hover:opacity-90"
-                            aria-label="Change avatar"
+                            className="absolute bottom-0 end-0 p-1.5 rounded-full bg-primary text-primary-foreground cursor-pointer hover:opacity-90"
+                            aria-label={t("profile.edit.changeAvatar")}
                         >
                             <ImageUp size={16} />
                         </label>
@@ -249,14 +258,14 @@ export default function EditProfilePage() {
                             disabled={uploadingAvatar}
                             className="flex items-center gap-1 text-xs text-destructive hover:underline disabled:opacity-50"
                         >
-                            <Trash2 size={14} /> Remove avatar
+                            <Trash2 size={14} /> {t("profile.edit.removeAvatar")}
                         </button>
                     )}
                 </div>
 
                 <div className="space-y-4">
                     <div>
-                        <label htmlFor="nickname" className="block text-sm font-medium mb-1">Nickname</label>
+                        <label htmlFor="nickname" className="block text-sm font-medium mb-1">{t("profile.edit.nickname")}</label>
                         <input
                             id="nickname"
                             type="text"
@@ -273,25 +282,43 @@ export default function EditProfilePage() {
                     <PhoneNumberEditor currentPhone={phone} canEdit={canEditPhone} onChanged={setPhone} />
 
                     <div>
-                        <label htmlFor="about" className="block text-sm font-medium mb-1">About me</label>
+                        <label htmlFor="about" className="block text-sm font-medium mb-1">{t("profile.edit.about")}</label>
                         <textarea
                             id="about"
                             value={about}
                             onChange={ev => setAbout(ev.target.value.slice(0, ABOUT_MAX_LENGTH))}
                             maxLength={ABOUT_MAX_LENGTH}
-                            placeholder="Usually online evenings"
+                            dir="auto"
+                            placeholder={t("profile.edit.aboutPlaceholder")}
                             disabled={saving}
                             rows={3}
                             className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                         />
-                        <div className="text-xs text-muted-foreground text-right mt-1">
+                        <div className="text-xs text-muted-foreground text-end mt-1">
                             {about.length}/{ABOUT_MAX_LENGTH}
                         </div>
                     </div>
 
                     <div>
-                        <span className="block text-sm font-medium mb-1">Accent color</span>
+                        <span className="block text-sm font-medium mb-1">{t("profile.edit.accentColor")}</span>
                         <AccentColorPicker value={accentColor} onChange={setAccentColor} />
+                    </div>
+
+                    <div>
+                        <label htmlFor="locale" className="block text-sm font-medium mb-1">{t("profile.edit.language")}</label>
+                        {/* Each language named in itself, so whoever is stuck
+                            in the wrong one can still find theirs. */}
+                        <select
+                            id="locale"
+                            value={locale}
+                            onChange={ev => { if (isLocale(ev.target.value)) setLocale(ev.target.value); }}
+                            disabled={saving}
+                            className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                            {LOCALES.map(code => (
+                                <option key={code} value={code} lang={code}>{LOCALE_NAMES[code]}</option>
+                            ))}
+                        </select>
                     </div>
                 </div>
 
@@ -302,7 +329,7 @@ export default function EditProfilePage() {
                         disabled={saving}
                         className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        Cancel
+                        {t("profile.edit.cancel")}
                     </button>
                     <button
                         type="button"
@@ -310,7 +337,7 @@ export default function EditProfilePage() {
                         disabled={saving || !nickname.trim()}
                         className="flex-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {saving ? "Saving..." : "Save"}
+                        {saving ? t("profile.edit.saving") : t("profile.edit.save")}
                     </button>
                 </div>
             </div>

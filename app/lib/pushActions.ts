@@ -9,6 +9,7 @@ import { IAccount } from '@/models/Account';
 import { AsShortName } from "@/app/utils/stringFormat"
 import { extractUsersEmailFromCoockie, getUserObJFromCoockie } from '@/app/lib/cookieActions';
 import { sendPushToEmails } from '@/services/PushService';
+import { translatorFor } from '@/app/i18n/forLocale';
 
 
 // The subscription is always tied to whoever is actually logged in - never to
@@ -98,16 +99,24 @@ export async function sendNotification(message: Message) {
         }
 
         const users = await AccountRepository.getUsersByID(message.participantID!) as IAccount[];
-        const notificationPayload = {
-            title: 'New Message from WeCommunicate',
-            body: message.text ? AsShortName(message.sender) + ": " + message.text :
-                message.location ? AsShortName(message.sender) + " has shared a location" :
-                    AsShortName(message.sender) + " has sent you a file",
-        };
-        const successCount = await sendPushToEmails(
-            users.flatMap(user => user.email ? [user.email] : []),
-            notificationPayload
-        );
+        // Each recipient reads it in their own account language, so one
+        // payload per language rather than one for everyone.
+        const emailsByLocale = new Map<string | undefined, string[]>();
+        for (const user of users) {
+            if (!user.email) continue;
+            emailsByLocale.set(user.locale, [...(emailsByLocale.get(user.locale) ?? []), user.email]);
+        }
+        const name = AsShortName(message.sender);
+        let successCount = 0;
+        for (const [locale, emails] of emailsByLocale) {
+            const t = translatorFor(locale);
+            successCount += await sendPushToEmails(emails, {
+                title: t('notifications.newMessageTitle'),
+                body: message.text ? t('notifications.message', { name, text: message.text }) :
+                    message.location ? t('notifications.location', { name }) :
+                        t('notifications.file', { name }),
+            });
+        }
         return { success: successCount > 0 };
     } catch (error) {
         console.error('Error sending push notification:', error)

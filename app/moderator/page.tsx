@@ -7,6 +7,8 @@ import { Shield, Ban, CheckCircle, UserX, UserCheck, ShieldOff, ShieldPlus } fro
 import { toast } from 'sonner';
 import Loading from '../components/ui/loading';
 import { useSocket } from '../hooks/useSocket';
+import { useT } from '../i18n/client';
+import type { TFunction } from '../i18n/messages';
 
 function sessionUserId(token?: string): string | null {
     if (!token) return null;
@@ -30,7 +32,7 @@ interface UserStatus {
     banReason: string;
 }
 
-function accountLabel(userItem: UserStatus): string {
+function accountLabel(userItem: UserStatus, t: TFunction): string {
     if (userItem.email) {
         return userItem.email.charAt(0).toUpperCase() + userItem.email.slice(1);
     }
@@ -38,16 +40,43 @@ function accountLabel(userItem: UserStatus): string {
     if (nickname) return nickname;
     const phone = userItem.phone?.trim();
     if (phone) return phone;
-    return "Unknown user";
+    return t("moderator.unknownUser");
 }
+
+// The moderation service's English prefix on a stored reason (see
+// ModerationService.moderateMessage) - stripped for display.
+const FLAGGED_PREFIX = "Content flagged for: ";
 
 export default function ModeratorPanel() {
     const { user, loadingUser } = useUser();
+    const t = useT();
     const { socket } = useSocket();
     const router = useRouter();
     const [users, setUsers] = useState<UserStatus[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+
+    const loadUsers = async () => {
+        const result = await getAllUsers();
+        if (result.success) {
+            const usersWithCleanReasons = result.users.map((user: UserStatus) => ({
+                ...user,
+                banReason: user.banReason?.split(FLAGGED_PREFIX)[1] || user.banReason
+            }));
+            setUsers(usersWithCleanReasons);
+        } else {
+            toast.error(result.message);
+        }
+    };
+
+    const fetchUsers = async () => {
+        setLoading(true);
+        await loadUsers();
+        setLoading(false);
+    };
+
+    // Same data, without the full-page spinner - for a live update.
+    const refreshUsers = () => loadUsers();
 
     useEffect(() => {
         if (!loadingUser && !user?.isModerator) {
@@ -63,8 +92,15 @@ export default function ModeratorPanel() {
 
     const handleUserBanned = (data: { userEmail: string, message: string }, isBannedUpdate: boolean) => {
         const { userEmail, message } = data;
-        const newBanReason = message?.split("Content flagged for: ")[1] || "Banned by moderator";
-        updateUserRowByEmail(userEmail, { isBanned: isBannedUpdate, banReason: newBanReason });
+        const parsedReason = message?.split(FLAGGED_PREFIX)[1];
+        // The banned user's own client words this message, in their language,
+        // so the English prefix is only there when that language is English.
+        // Otherwise read the reason stored on the account instead.
+        if (isBannedUpdate && message && !parsedReason) {
+            void refreshUsers();
+            return;
+        }
+        updateUserRowByEmail(userEmail, { isBanned: isBannedUpdate, banReason: parsedReason || t("moderator.bannedByModerator") });
     }
 
     const handleBanExpired = (userEmails: string[]) => {
@@ -92,21 +128,6 @@ export default function ModeratorPanel() {
             socket.off("update_ban_expire", onBanExpire);
         };
     }, [socket, user?.isModerator]);
-
-    const fetchUsers = async () => {
-        setLoading(true);
-        const result = await getAllUsers();
-        if (result.success) {
-            const usersWithCleanReasons = result.users.map((user: UserStatus) => ({
-                ...user,
-                banReason: user.banReason?.split("Content flagged for: ")[1] || user.banReason
-            }));
-            setUsers(usersWithCleanReasons);
-        } else {
-            toast.error(result.message);
-        }
-        setLoading(false);
-    };
 
     const handleBan = async (userId: string) => {
         const result = await banUser(userId);
@@ -138,6 +159,10 @@ export default function ModeratorPanel() {
         const result = await demoteFromModerator(userId);
         if (result.success) {
             toast.success(result.message);
+            // Their open tabs re-read the account and drop the Moderator link.
+            if (socket && result.userEmail) {
+                socket.emit('moderator status changed', { userEmail: result.userEmail });
+            }
             updateUserRow(userId, { isModerator: false });
         } else {
             toast.error(result.message);
@@ -148,6 +173,9 @@ export default function ModeratorPanel() {
         const result = await promoteToModerator(userId);
         if (result.success) {
             toast.success(result.message);
+            if (socket && result.userEmail) {
+                socket.emit('moderator status changed', { userEmail: result.userEmail });
+            }
             updateUserRow(userId, { isModerator: true });
         } else {
             toast.error(result.message);
@@ -196,18 +224,18 @@ export default function ModeratorPanel() {
                 <div className="flex items-center gap-3 mb-4">
                     <Shield className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                     <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-                        Moderator Panel
+                        {t("moderator.title")}
                     </h1>
                 </div>
                 <p className="text-gray-600 dark:text-gray-400">
-                    Manage user accounts and permissions
+                    {t("moderator.subtitle")}
                 </p>
             </div>
 
             <div className="mb-6">
                 <input
                     type="text"
-                    placeholder="Search users..."
+                    placeholder={t("moderator.search")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
@@ -221,20 +249,20 @@ export default function ModeratorPanel() {
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead className="bg-gray-50 dark:bg-gray-900">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                    User
+                                <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                    {t("moderator.user")}
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                    Status
+                                <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                    {t("moderator.status")}
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                    Ban Reason
+                                <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                    {t("moderator.banReason")}
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                    Role
+                                <th className="px-6 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                    {t("moderator.role")}
                                 </th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                    Actions
+                                <th className="px-6 py-3 text-end text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                    {t("moderator.actions")}
                                 </th>
                             </tr>
                         </thead>
@@ -242,18 +270,18 @@ export default function ModeratorPanel() {
                             {filteredUsers.map((userItem) => (
                                 <tr key={userItem._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                        {accountLabel(userItem)}
+                                        <bdi dir="auto">{accountLabel(userItem, t)}</bdi>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         {userItem.isBanned ? (
                                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                                                <Ban className="w-3 h-3 mr-1" />
-                                                Banned
+                                                <Ban className="w-3 h-3 me-1" />
+                                                {t("moderator.banned")}
                                             </span>
                                         ) : (
                                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                                <CheckCircle className="w-3 h-3 mr-1" />
-                                                Active
+                                                <CheckCircle className="w-3 h-3 me-1" />
+                                                {t("moderator.active")}
                                             </span>
                                         )}
                                     </td>
@@ -270,12 +298,12 @@ export default function ModeratorPanel() {
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         {userItem.isModerator && (
                                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                                <Shield className="w-3 h-3 mr-1" />
-                                                Moderator
+                                                <Shield className="w-3 h-3 me-1" />
+                                                {t("moderator.moderator")}
                                             </span>
                                         )}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <td className="px-6 py-4 whitespace-nowrap text-end text-sm font-medium">
                                         <div className="flex justify-end gap-2">
                                             {userItem.isBanned ? (
                                                 <button
@@ -288,8 +316,8 @@ export default function ModeratorPanel() {
                                                     // the 4.5:1 AA minimum for text.
                                                     className="inline-flex items-center px-3 py-1.5 bg-green-700 hover:bg-green-800 text-white dark:bg-green-400 dark:hover:bg-green-300 dark:text-green-950 rounded-lg transition-colors"
                                                 >
-                                                    <UserCheck className="w-4 h-4 mr-1" />
-                                                    Unban
+                                                    <UserCheck className="w-4 h-4 me-1" />
+                                                    {t("moderator.unban")}
                                                 </button>
                                             ) : !isSelf(userItem) && (
                                                 <button
@@ -299,8 +327,8 @@ export default function ModeratorPanel() {
                                                     // red-400/red-950 is 5.8:1 (computed).
                                                     className="inline-flex items-center px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white dark:bg-red-400 dark:hover:bg-red-300 dark:text-red-950 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
-                                                    <UserX className="w-4 h-4 mr-1" />
-                                                    Ban
+                                                    <UserX className="w-4 h-4 me-1" />
+                                                    {t("moderator.ban")}
                                                 </button>
                                             )}
 
@@ -311,8 +339,8 @@ export default function ModeratorPanel() {
                                                     // Same inversion as Unban above - amber-400/amber-950 is 9.0:1.
                                                     className="inline-flex items-center px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white dark:bg-amber-400 dark:hover:bg-amber-300 dark:text-amber-950 rounded-lg transition-colors"
                                                 >
-                                                    <ShieldOff className="w-4 h-4 mr-1" />
-                                                    Demote
+                                                    <ShieldOff className="w-4 h-4 me-1" />
+                                                    {t("moderator.demote")}
                                                 </button>
                                             ) : (
                                                 !userItem.isBanned && !isSelf(userItem) && (
@@ -322,8 +350,8 @@ export default function ModeratorPanel() {
                                                         // Same inversion as Unban above - indigo-400/indigo-950 is 5.4:1.
                                                         className="inline-flex items-center px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-400 dark:hover:bg-indigo-300 dark:text-indigo-950 rounded-lg transition-colors"
                                                     >
-                                                        <ShieldPlus className="w-4 h-4 mr-1" />
-                                                        Promote
+                                                        <ShieldPlus className="w-4 h-4 me-1" />
+                                                        {t("moderator.promote")}
                                                     </button>
                                                 )
                                             )}

@@ -5,6 +5,7 @@ import MessageBubble from "./messageBubble";
 import MoreMessagesLoader from "./moreMessagesLoader";
 import DayChip from "./dayChip";
 import { startsNewDay } from "../../utils/dayLabel";
+import { useT } from "../../i18n/client";
 import OfflineOutbox from "../offline/offlineOutbox";
 import ChatUser from "@/types/chatUser";
 import { HiOutlineChatBubbleLeftRight } from "react-icons/hi2";
@@ -33,6 +34,7 @@ const ChatWindow = ({ messages, participants, isMobile, onReply, conversationId,
     const previousListKey = useRef<string>("");
 
     const accentBySender = accentsForReceivedBubbles(participants.current);
+    const t = useT();
     // When the newest older-page message above this list was sent. A day
     // chip goes above this list's first message only when that one starts a
     // new day relative to it - otherwise the same day would get two chips.
@@ -99,8 +101,8 @@ const ChatWindow = ({ messages, participants, isMobile, onReply, conversationId,
                             {(!messages || messages?.length === 0) && (
                                 <div className="flex flex-col items-center gap-1 px-4 py-6 text-center">
                                     <HiOutlineChatBubbleLeftRight size={28} className="text-muted-foreground opacity-50" aria-hidden="true" />
-                                    <p className="text-sm font-medium">No messages yet</p>
-                                    <p className="text-xs text-muted-foreground">Say hi 👋 — your first message starts this conversation.</p>
+                                    <p className="text-sm font-medium">{t("chat.window.noMessages")}</p>
+                                    <p className="text-xs text-muted-foreground">{t("chat.window.sayHi")}</p>
                                 </div>
                             )}
                             <div ref={chatBox} className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto w-full p-2">
@@ -118,7 +120,7 @@ const ChatWindow = ({ messages, participants, isMobile, onReply, conversationId,
                                             {message._id === firstUnreadMessageId && (
                                                 <div ref={dividerRef} data-testid="unread-divider" className="flex items-center gap-2 my-3">
                                                     <div className="flex-1 h-px bg-red-300 dark:bg-red-700" />
-                                                    <span className="text-xs font-medium text-red-500 dark:text-red-400">Unread messages</span>
+                                                    <span className="text-xs font-medium text-red-500 dark:text-red-400">{t("chat.window.unread")}</span>
                                                     <div className="flex-1 h-px bg-red-300 dark:bg-red-700" />
                                                 </div>
                                             )}
@@ -138,19 +140,19 @@ const ChatWindow = ({ messages, participants, isMobile, onReply, conversationId,
                     </div>) :
                     (<div className="flex w-full max-w-sm flex-col items-center gap-2 px-4 text-center text-muted-foreground">
                         <HiOutlineChatBubbleLeftRight size={40} className="opacity-40" aria-hidden="true" />
-                        <h4 className="text-lg font-semibold text-foreground sm:text-xl">No conversation selected</h4>
+                        <h4 className="text-lg font-semibold text-foreground sm:text-xl">{t("chat.window.noConversation")}</h4>
                         {isMobile ?
                             // The inline icon marks the same button the header
                             // actually shows, so it has to sit in the flow of
                             // the sentence - wrap instead of overflowing it on
                             // a narrow screen.
                             <p className="flex flex-wrap items-center justify-center gap-1 text-sm">
-                                Select a chat, or start a new one with the
-                                <HiOutlineChatBubbleLeftRight className="inline shrink-0" aria-hidden="true" />
-                                button.
+                                {t.rich("chat.window.mobileHint", {
+                                    icon: () => <HiOutlineChatBubbleLeftRight className="inline shrink-0" aria-hidden="true" />,
+                                })}
                             </p>
                             : <p className="text-sm">
-                                Choose a chat from the left, or start a new one.
+                                {t("chat.window.desktopHint")}
                             </p>
                         }
                     </div>)

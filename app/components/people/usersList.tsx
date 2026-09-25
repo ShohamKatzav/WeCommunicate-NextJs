@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useMemo, useRef } from "react";
+import { useT } from "../../i18n/client";
 import { useUser } from "../../hooks/useUser";
 import { useNotification } from "../../hooks/useNotification";
 import ChatUser from "@/types/chatUser";
@@ -29,6 +30,7 @@ export default function UsersListClient({
     onToggleBlock,
     lastSeenByEmail,
 }: UsersListClientProps) {
+    const t = useT();
 
     const { user } = useUser();
     const { initializeRoomNotifications } = useNotification();
@@ -98,15 +100,15 @@ export default function UsersListClient({
 
     return (
         <div className={`
-                ${isMobileUsersSidebarOpen ? 'translate-x-0' : 'translate-x-full'}
-                xl:translate-x-0 fixed xl:relative right-0 z-20
-                w-80 xl:w-60 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700
+                ${isMobileUsersSidebarOpen ? 'translate-x-0' : 'max-xl:translate-x-full max-xl:rtl:-translate-x-full'}
+                xl:translate-x-0 fixed xl:relative end-0 z-20
+                w-80 xl:w-60 bg-white dark:bg-gray-800 border-e border-gray-200 dark:border-gray-700
                 transition-transform duration-300 ease-in-out h-full flex flex-col shadow-xl
             `}>
             <aside className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg transition-transform duration-300`}>
                 <div className="flex-1 overflow-y-auto touch-pan-y max-h-[calc(var(--app-inner-height,100vh)-20vh)] xl:max-h-none">
                     <div className="px-3 py-2 text-xs text-success font-semibold">
-                        Active now
+                        {t("people.activeNow")}
                     </div>
                     {onlineUsers.length > 0 ?
                         onlineUsers.sort((a, b) => (a.email ?? "").localeCompare(b.email ?? "")).map((chatUser: ChatUser) => (
@@ -122,12 +124,12 @@ export default function UsersListClient({
                         :
                         <div className="text-center text-muted-foreground py-8">
                             <Users size={32} className="mx-auto pb-2 opacity-50" />
-                            <p className="text-sm">No active users</p>
+                            <p className="text-sm">{t("people.noActive")}</p>
                         </div>
                     }
 
                     <div className="px-3 py-2 text-xs text-muted-foreground font-semibold mt-3">
-                        Others
+                        {t("people.others")}
                     </div>
                     {offlineUsers.length > 0 ?
                         offlineUsers.sort((a, b) => (a.email ?? "").localeCompare(b.email ?? "")).map((chatUser: ChatUser) => (
@@ -144,7 +146,7 @@ export default function UsersListClient({
                         :
                         <div className="text-center text-muted-foreground py-8">
                             <Users size={32} className="mx-auto pb-2 opacity-50" />
-                            <p className="text-sm">No inactive users</p>
+                            <p className="text-sm">{t("people.noInactive")}</p>
                         </div>
                     }
                 </div>

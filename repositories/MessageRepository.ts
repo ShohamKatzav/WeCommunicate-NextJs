@@ -73,16 +73,18 @@ export default class MessageRepository {
                     status: { $ne: 'revoked' }
                 }).select('sender text file location').populate('file', 'pathname').lean();
 
+                // A file or a pin is quoted with an empty snippet and a flag
+                // rather than English words stored in the database - each
+                // reader's UI names it in their own language.
                 if (repliedMessage) {
                     replyToSnapshot = {
                         messageId: repliedMessage._id,
                         sender: repliedMessage.sender,
                         snippet: repliedMessage.text
                             ? repliedMessage.text.slice(0, REPLY_SNIPPET_LENGTH)
-                            : (repliedMessage.file
-                                ? `sent file ${(repliedMessage.file as any).pathname}`
-                                : (repliedMessage.location ? 'Shared a location' : '')),
-                        hasFile: !!repliedMessage.file
+                            : '',
+                        hasFile: !!repliedMessage.file,
+                        hasLocation: !!repliedMessage.location
                     };
                 }
             }

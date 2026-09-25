@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { useT } from '../i18n/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useUser } from '../hooks/useUser';
@@ -46,6 +47,7 @@ const NO_TYPERS: Record<string, boolean> = {};
 const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlockedUserIds, iceServers }: ChatClientProps) => {
     const { socket, loadingSocket } = useSocket();
     const { user, loadingUser } = useUser();
+    const t = useT();
     const router = useRouter();
     const isMobile = useIsMobile();
 
@@ -162,7 +164,8 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
         getCurrentConversationId: () => currentConversationId.current,
         openConversation: openCallConversation,
         onError: message => toast.error(message),
-        onMissedCall: peer => toast(`Missed call from ${peer.nickname || AsShortName(peer.email)}`),
+        t: () => t,
+        onMissedCall: peer => toast(t("calls.missedFrom", { name: peer.nickname || AsShortName(peer.email) })),
     });
 
     // Switching to another conversation (or leaving this one) hangs up.
@@ -190,7 +193,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
         // sends a first message.
         const conversationId = await ensureConversationId();
         if (!conversationId) {
-            toast.error("Couldn't start the call. Please try again.");
+            toast.error(t("calls.startFailed"));
             return;
         }
         callController?.startCall(
@@ -253,7 +256,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
             window.history.replaceState(null, '', '/chat');
 
             if (!result.success) {
-                toast.error("That shared content couldn't be found - it may have expired.");
+                toast.error(t("chat.shareNotFound"));
                 return;
             }
             setPendingSharedContent({ text: result.text, file: result.file });
@@ -286,10 +289,9 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
             replyTo: {
                 messageId: message._id!,
                 sender: message.sender!,
-                snippet: message.text
-                    || (message.file ? `sent file ${message.file.pathname}` : '')
-                    || (message.location ? 'Shared a location' : ''),
-                hasFile: !!message.file
+                snippet: message.text || '',
+                hasFile: !!message.file,
+                hasLocation: !!message.location
             }
         }));
     };
@@ -313,7 +315,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
             setBlockedUserIds(prev =>
                 shouldBlock ? prev.filter(id => id !== targetUserId) : [...prev, targetUserId]
             );
-            toast.error(result.error || `Failed to ${shouldBlock ? 'block' : 'unblock'} user`);
+            toast.error(result.error || (shouldBlock ? t("chat.blockFailed") : t("chat.unblockFailed")));
             return;
         }
         // Presence is only ever recomputed server-side on connect/disconnect
@@ -468,7 +470,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
                 isOpen={isChatCreationModalOpen}
                 onClose={handleCloseModal}
                 onParticipantsSelected={handleParticipantsPicked}
-                title={pendingSharedContent ? 'Share to...' : undefined}
+                title={pendingSharedContent ? t("chat.create.shareTo") : undefined}
                 participants={participants}
                 conversationId={currentConversationId}
                 setChat={setChat}

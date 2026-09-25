@@ -1,6 +1,7 @@
 "use client"
 import { useCallback, useEffect, useRef, useState, PointerEvent } from "react";
 import { Pause, Play } from "lucide-react";
+import { useT } from "../../i18n/client";
 
 interface AudioPlayerProps {
   src: string;
@@ -15,6 +16,7 @@ const formatTime = (seconds: number) => {
 };
 
 const AudioPlayer = ({ src, type }: AudioPlayerProps) => {
+  const t = useT();
   const audioRef = useRef<HTMLAudioElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
@@ -135,14 +137,17 @@ const AudioPlayer = ({ src, type }: AudioPlayerProps) => {
     // Native <audio controls> on Android/Huawei collapses the seek track to a
     // lone knob, and a <video> tag would reserve a poster frame we don't want
     // for a voice note. Custom compact bar: play + track + time, no video box.
+    // Always left to right, like most players' seek bars in a right-to-left
+    // UI - and the drag/seek math below measures from the bar's left edge.
     <div
+      dir="ltr"
       className="flex items-center gap-2.5 w-full min-w-[200px] max-w-[280px] py-1"
       onClick={event => event.stopPropagation()}
     >
       <button
         type="button"
         onClick={togglePlayback}
-        aria-label={playing ? "Pause voice message" : "Play voice message"}
+        aria-label={playing ? t("chat.voice.pause") : t("chat.voice.play")}
         className="shrink-0 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-gray-800 hover:bg-white"
       >
         {playing ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" className="ml-0.5" />}
@@ -152,11 +157,11 @@ const AudioPlayer = ({ src, type }: AudioPlayerProps) => {
         <div
           ref={barRef}
           role="slider"
-          aria-label="Voice message progress"
+          aria-label={t("chat.voice.progress")}
           aria-valuemin={0}
           aria-valuemax={knownDuration ? Math.round(duration) : 0}
           aria-valuenow={Math.round(current)}
-          aria-valuetext={`${formatTime(current)} of ${formatTime(duration)}`}
+          aria-valuetext={t("chat.voice.progressValue", { current: formatTime(current), total: formatTime(duration) })}
           tabIndex={0}
           onPointerDown={onBarPointerDown}
           onPointerMove={onBarPointerMove}

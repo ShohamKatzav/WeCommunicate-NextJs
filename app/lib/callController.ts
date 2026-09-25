@@ -1,6 +1,7 @@
 import { Socket } from 'socket.io-client';
 import type { IceServerConfig } from './iceServers';
 import { describeMediaError } from './mediaDeviceError';
+import type { TFunction } from '../i18n/messages';
 import { closeIncomingCallNotifications, getOwnPushEndpoint, refreshOwnPushEndpoint, takePendingAnswer } from './callNotifications';
 
 // Client side of 1:1 calls. Media is a single RTCPeerConnection between the
@@ -53,6 +54,9 @@ export interface CallControllerHooks {
     // somewhere else (another conversation, or the chat list).
     openConversation: (conversationId: string, peerEmail: string) => Promise<void>;
     onError: (message: string) => void;
+    // The current translator. Read on each use rather than once, so a status
+    // set mid-call is worded in whatever language the page is in by then.
+    t: () => TFunction;
     // An incoming call that stopped ringing before it was answered - a
     // passing notice, not a screen over whatever the user was doing.
     onMissedCall: (peer: CallPeer) => void;
@@ -145,19 +149,22 @@ const IDLE_SNAPSHOT: CallSnapshot = {
 
 export const IDLE_CALL_SNAPSHOT = IDLE_SNAPSHOT;
 
-const END_MESSAGES: Record<string, string> = {
-    'no-answer': 'No answer',
-    offline: 'Unavailable',
-    unavailable: 'Unavailable',
-    busy: 'Busy on another call',
-    declined: 'Call declined',
-    cancelled: 'Missed call',
-    missed: 'Missed call',
-    disconnected: 'Connection lost',
-    hangup: 'Call ended',
-    ended: 'Call ended',
-    replaced: 'Call ended',
-};
+// Why a call ended, by the reason the server (or this side) gives.
+const END_MESSAGES = {
+    'no-answer': 'calls.end.noAnswer',
+    offline: 'calls.end.unavailable',
+    unavailable: 'calls.end.unavailable',
+    busy: 'calls.end.busy',
+    declined: 'calls.end.declined',
+    cancelled: 'calls.end.missed',
+    missed: 'calls.end.missed',
+    disconnected: 'calls.end.disconnected',
+    hangup: 'calls.end.ended',
+    ended: 'calls.end.ended',
+    replaced: 'calls.end.ended',
+} as const;
+type EndReason = keyof typeof END_MESSAGES;
+const isEndReason = (reason: string | undefined): reason is EndReason => !!reason && reason in END_MESSAGES;
 
 async function getMedia(audio: boolean, video: boolean): Promise<MediaStream> {
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -241,7 +248,7 @@ export class CallController {
     async startCall(peer: CallPeer, conversationId: string, video: boolean) {
         if (this.destroyed || this.starting || !conversationId) return;
         if (!this.socket.connected) {
-            this.hooks.onError("You're offline - calls need a connection.");
+            this.hooks.onError(this.hooks.t()('calls.offline'));
             return;
         }
         // One call at a time: a new one hangs up whatever was going on.
@@ -253,7 +260,7 @@ export class CallController {
         try {
             stream = await getMedia(true, video);
         } catch (error) {
-            this.hooks.onError(await describeMediaError(error, { audio: true, video }));
+            this.hooks.onError(await describeMediaError(error, { audio: true, video }, this.hooks.t()));
             return;
         } finally {
             this.starting = false;
@@ -290,7 +297,7 @@ export class CallController {
 
         this.socket.emit('call invite', { callId: session.callId, conversationId, video });
         this.startRing();
-        this.setSessionTimer(session, () => this.finish('ended', END_MESSAGES['no-answer'], 'call cancel'), RING_TIMEOUT_MS);
+        this.setSessionTimer(session, () => this.finish('ended', this.endMessage('no-answer'), 'call cancel'), RING_TIMEOUT_MS);
     }
 
     async accept(options?: { video?: boolean }) {
@@ -307,7 +314,7 @@ export class CallController {
         try {
             stream = await getMedia(true, withVideo);
         } catch (error) {
-            this.hooks.onError(await describeMediaError(error, { audio: true, video: withVideo }));
+            this.hooks.onError(await describeMediaError(error, { audio: true, video: withVideo }, this.hooks.t()));
             // Never leave a half-open call - the caller hears a decline.
             if (this.session === session) this.finish('idle', null, 'call decline');
             return;
@@ -372,7 +379,7 @@ export class CallController {
                 this.finish('idle', null, 'call cancel');
                 break;
             default:
-                this.finish('ended', END_MESSAGES.hangup, 'call hangup');
+                this.finish('ended', this.endMessage('hangup'), 'call hangup');
         }
     }
 
@@ -407,7 +414,7 @@ export class CallController {
         try {
             stream = await getMedia(false, true);
         } catch (error) {
-            this.hooks.onError(await describeMediaError(error, { audio: false, video: true }));
+            this.hooks.onError(await describeMediaError(error, { audio: false, video: true }, this.hooks.t()));
             return;
         }
         if (this.session !== session || !session.localStream) {
@@ -442,7 +449,7 @@ export class CallController {
             }
             await this.useVideoTrack(session, stream.getVideoTracks()[0]);
         } catch (error) {
-            this.hooks.onError(await describeMediaError(error, { audio: false, video: true }));
+            this.hooks.onError(await describeMediaError(error, { audio: false, video: true }, this.hooks.t()));
             if (this.session === session) this.turnCameraOff(session);
         }
     }
@@ -518,7 +525,7 @@ export class CallController {
             conversationId: data.conversationId,
             video: session.video,
         });
-        this.setSessionTimer(session, () => this.finish('ended', END_MESSAGES.missed, null), RING_TIMEOUT_MS);
+        this.setSessionTimer(session, () => this.finish('ended', this.endMessage('missed'), null), RING_TIMEOUT_MS);
         const pending = takePendingAnswer(data.callId);
         if (pending) {
             void this.accept(pending.voiceOnly ? { video: false } : undefined);
@@ -542,7 +549,7 @@ export class CallController {
 
     private onDecline = (data: CallIds) => {
         if (!this.isCurrent(data)) return;
-        this.finish('ended', END_MESSAGES.declined, null);
+        this.finish('ended', this.endMessage('declined'), null);
     };
 
     private onCancel = (data: EndPayload) => {
@@ -553,7 +560,7 @@ export class CallController {
             this.finish('idle', null, null);
             return;
         }
-        this.finish('ended', END_MESSAGES[data.reason || 'missed'] || END_MESSAGES.missed, null);
+        this.finish('ended', this.endMessage(isEndReason(data.reason) ? data.reason : 'missed'), null);
     };
 
     private onHangup = (data: EndPayload) => {
@@ -562,17 +569,17 @@ export class CallController {
             this.finish('failed', this.failureMessage(), null);
             return;
         }
-        this.finish('ended', END_MESSAGES[data.reason || 'hangup'] || END_MESSAGES.hangup, null);
+        this.finish('ended', this.endMessage(isEndReason(data.reason) ? data.reason : 'hangup'), null);
     };
 
     private onBusy = (data: CallIds) => {
         if (!this.isCurrent(data)) return;
-        this.finish('ended', END_MESSAGES.busy, null);
+        this.finish('ended', this.endMessage('busy'), null);
     };
 
     private onUnavailable = (data: EndPayload) => {
         if (!this.isCurrent(data)) return;
-        this.finish('ended', END_MESSAGES[data.reason || 'unavailable'] || END_MESSAGES.unavailable, null);
+        this.finish('ended', this.endMessage(isEndReason(data.reason) ? data.reason : 'unavailable'), null);
     };
 
     private onSignal = (data: SignalPayload) => {
@@ -591,7 +598,7 @@ export class CallController {
         // fresh socket means the server has let go of this call.
         const session = this.session;
         if (session && !this.socket.recovered && ACTIVE_STATUSES.includes(this.snapshot.status)) {
-            this.finish('ended', END_MESSAGES.disconnected, null);
+            this.finish('ended', this.endMessage('disconnected'), null);
         }
         this.socket.emit('call sync');
     };
@@ -839,9 +846,14 @@ export class CallController {
     }
 
     private failureMessage() {
+        const t = this.hooks.t();
         return this.snapshot.connectedAt !== null
-            ? "The connection dropped and couldn't be restored."
-            : "Couldn't connect the call. This network may be blocking direct calls.";
+            ? t('calls.dropped')
+            : t('calls.cantConnect');
+    }
+
+    private endMessage(reason: EndReason) {
+        return this.hooks.t()(END_MESSAGES[reason]);
     }
 
     private failConnect(session: Session) {

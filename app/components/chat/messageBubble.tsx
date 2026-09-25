@@ -22,6 +22,7 @@ import { clearActiveMessage, setActiveMessage, useIsActiveMessage } from './acti
 import { AsShortName } from "../../utils/stringFormat";
 import { linkifyText } from "../../utils/linkify";
 import { DEFAULT_ACCENT_COLOR, MAX_MESSAGE_LENGTH, REPLY_SNIPPET_LENGTH, WARNINGS_BEFORE_BAN } from "../../config/limits";
+import { useI18n } from "../../i18n/client";
 
 interface MessageBubbleProps {
   message: Message;
@@ -75,14 +76,15 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
   // activeMessageStore.ts).
   const showMenu = useIsActiveMessage(message._id);
 
+  const { t, dir } = useI18n();
   const isOwnMessage = message.sender === user?.email;
-  const sender = isOwnMessage ? "You" : AsShortName(message.sender);
+  const sender = isOwnMessage ? t("common.you") : AsShortName(message.sender);
   // Just the send time on the bubble - the day is in the chip above the
   // first message of each day (see dayChip.tsx). The full stamp stays on
   // hover / long-press.
   const sentAt = new Date(message.date!);
-  const timeToDisplay = sentAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
-  const fullSentAt = sentAt.toLocaleString();
+  const timeToDisplay = sentAt.toLocaleTimeString(t.dateLocale, { hour: "2-digit", minute: "2-digit", hour12: false });
+  const fullSentAt = sentAt.toLocaleString(t.dateLocale, { hour12: false });
   // toISOString throws on an invalid date, where the strings above only say "Invalid Date".
   const sentAtIso = Number.isNaN(sentAt.getTime()) ? undefined : sentAt.toISOString();
   // green-500/gray-500 (the previous values) were too light for the white
@@ -94,9 +96,11 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
   // stay fixed across both site themes (like the navbar/footer) rather than
   // following light/dark, the same way most chat apps don't reflow message
   // colours when you flip the app's theme.
+  // Corners are logical, so the tail side follows the bubble when a
+  // right-to-left page mirrors the list.
   const messageStyle = `max-w-[80%] md:max-w-[60%] px-3.5 py-2 md:px-4 md:py-3 overflow-hidden
-  ${isOwnMessage ? "rounded-br-3xl" : "bg-gray-600 rounded-bl-3xl"
-    } rounded-tl-3xl rounded-tr-xl text-white wrap-break-word mb-3 md:mb-6
+  ${isOwnMessage ? "rounded-es-3xl" : "bg-gray-600 rounded-ee-3xl"
+    } rounded-ss-3xl rounded-se-xl text-white wrap-break-word mb-3 md:mb-6
     ${deleted ? "gap-1 flex text-lg md:text-2xl" : "gap-6"}`;
   // Own bubbles use the viewer's chosen accent color (types/user.ts,
   // profileActions.ts) instead of a hardcoded class, falling back to the
@@ -111,12 +115,13 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
   const bubbleAccentStyle = isOwnMessage
     ? { backgroundColor: user?.accentColor || DEFAULT_ACCENT_COLOR }
     : (senderAccentColor ? { backgroundColor: senderAccentColor } : undefined);
-  // Own messages sit on the left and received ones on the right - which is also
-  // the side each bubble's squared-off corner points at. The side has to be set
+  // Own messages sit at the end of the line and received ones at the start -
+  // right and left in English, mirrored in Hebrew and Arabic, like WhatsApp -
+  // which is also the side each bubble's squared-off corner points at. The side has to be set
   // on this row, because the bubble itself only ever carried justify-self and
   // col-start, and neither does anything unless the parent is a grid: every
   // bubble was landing on the left regardless of sender.
-  const messageRowStyle = `flex items-center ${isOwnMessage ? "justify-start" : "justify-end"}`;
+  const messageRowStyle = `flex items-center ${isOwnMessage ? "justify-end" : "justify-start"}`;
 
 
   useEffect(() => {
@@ -229,7 +234,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
       const result = await toggleMessageReaction(message._id, emoji);
       if (!result.success) {
         setReactions(previous);
-        toast.error(result.message || "Couldn't save that reaction.");
+        toast.error(result.message || t("chat.bubble.reactionFailed"));
         return;
       }
       setReactions(result.reactions);
@@ -240,7 +245,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
       // moved on), so an offline tap is undone rather than left showing as
       // if it had been saved.
       setReactions(previous);
-      toast.info("Couldn't save that reaction while you're offline.");
+      toast.info(t("chat.bubble.reactionOffline"));
     }
   };
 
@@ -252,7 +257,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
         // A definite rejection from the server (e.g. not the actual sender,
         // or the message no longer exists) - don't pretend it was deleted
         // locally or broadcast a delete for it to everyone else.
-        toast.error(result.message || "Couldn't delete that message.");
+        toast.error(result.message || t("chat.bubble.deleteFailed"));
         return;
       }
       socket?.emit("delete message", message);
@@ -261,7 +266,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
     catch {
       // A genuine network failure - the service worker queues this for
       // retry, so optimistically show it as deleted.
-      toast.info("Could not complete the operation now. The message will be deleted when the connection is restored.");
+      toast.info(t("chat.bubble.deleteQueued"));
       setDeleted(true);
     }
   }
@@ -285,7 +290,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
     if (!message._id || savingEdit) return;
     const newText = draft.trim();
     if (!newText) {
-      toast.warning("A message can't be empty.");
+      toast.warning(t("chat.bubble.emptyMessage"));
       return;
     }
     if (newText === text) {
@@ -299,15 +304,15 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
       if (!result.success) {
         if (result.punishment?.includes("ban")) {
           const banMessage = result.bannedUntil
-            ? `You've been temporarily banned until ${new Date(result.bannedUntil).toLocaleString()}. Reason: ${result.reason}`
-            : `You've been permanently banned. Reason: ${result.reason}`;
+            ? t("chat.send.bannedTemp", { date: new Date(result.bannedUntil).toLocaleString(t.dateLocale, { hour12: false }), reason: result.reason ?? "" })
+            : t("chat.send.bannedPermanent", { reason: result.reason ?? "" });
           socket?.emit('ban user', { userEmail: user?.email, message: banMessage });
         } else if (result.punishment === 'warning') {
-          toast.warning(`Warning ${result.warningCount}/${WARNINGS_BEFORE_BAN}: ${result.reason}`, { duration: 7000 });
+          toast.warning(t("moderation.warning", { count: result.warningCount ?? 0, max: WARNINGS_BEFORE_BAN, reason: result.reason ?? "" }), { duration: 7000 });
         } else if (result.banned) {
-          toast.error(result.message || 'Your account is banned from sending messages.', { duration: 10000 });
+          toast.error(result.message || t("chat.send.banned"), { duration: 10000 });
         } else {
-          toast.error(result.message || "Couldn't edit that message.");
+          toast.error(result.message || t("chat.bubble.editFailed"));
         }
         return;
       }
@@ -319,7 +324,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
     } catch {
       // Edits aren't part of the offline outbox - the service worker turns
       // the call away while offline, so nothing was saved.
-      toast.info("Couldn't edit that message while you're offline.");
+      toast.info(t("chat.bubble.editOffline"));
     } finally {
       setSavingEdit(false);
     }
@@ -350,9 +355,10 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
   // the row is a full-width block (it has to be, to justify-start/end the
   // bubble to the correct side - see messageRowStyle), so it reaches far
   // past the button into empty space. Gate on cursor X too: the button
-  // trails own bubbles (left-aligned, empty space to the right) and leads
-  // received ones (right-aligned, empty space to the left), so tracking
-  // stops at the button's outer edge either way.
+  // leads own bubbles (at the end of the line, empty space before them) and
+  // trails received ones (at the start, empty space after), so tracking
+  // stops at the button's outer edge either way. Which screen side that
+  // empty space is on flips with the page direction.
   const handleRowMouseMove = (e: React.MouseEvent) => {
     if (isMobile) return;
     const edges = (triggerRef.current ?? messageRef.current)?.getBoundingClientRect();
@@ -361,7 +367,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
     // row on screen.
     const row = e.currentTarget.getBoundingClientRect();
     const inside = e.clientY >= row.top && e.clientY < row.bottom &&
-      (!edges || (isOwnMessage ? e.clientX <= edges.right : e.clientX >= edges.left));
+      (!edges || ((isOwnMessage !== (dir === "rtl")) ? e.clientX >= edges.left : e.clientX <= edges.right));
     pointerInside.current = inside;
     // Crossing that edge into the empty part of the row counts as leaving,
     // same as onMouseLeave below: it's still inside the full-width row, so
@@ -396,7 +402,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
     try {
       await navigator.clipboard.writeText(text);
     } catch {
-      toast.error("Couldn't copy that message.");
+      toast.error(t("chat.bubble.copyFailed"));
       return;
     }
     closeActions();
@@ -434,8 +440,8 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
   }
 
   if (deleted) {
-    const deletedMessageText = isOwnMessage ? 'You deleted this message' :
-      'This message was deleted';
+    const deletedMessageText = isOwnMessage ? t("chat.bubble.deletedByYou") :
+      t("chat.bubble.deleted");
     return (
       <div className={messageRowStyle}>
         <div
@@ -454,8 +460,8 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
 
   // Desktop's way into the actions menu: one button beside the bubble,
   // shown on hover, instead of a row of react/reply/delete icons. It sits
-  // on the side facing the middle of the chat - after own bubbles (which
-  // are on the left), before received ones (on the right). Mobile opens the
+  // on the side facing the middle of the chat - before own bubbles (at the
+  // end of the line), after received ones (at the start). Mobile opens the
   // same menu by tapping the bubble. opacity rather than hidden/invisible
   // keeps the button focusable and its space reserved, so revealing it
   // never shifts the bubble.
@@ -464,7 +470,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
       type="button"
       ref={triggerRef}
       onClick={toggleMenu}
-      aria-label="Message actions"
+      aria-label={t("chat.bubble.actions")}
       aria-haspopup="true"
       aria-expanded={showMenu}
       data-testid="message-actions-trigger"
@@ -481,7 +487,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
       onMouseMove={handleRowMouseMove}
       onMouseLeave={handleRowMouseLeave}
     >
-      {!isOwnMessage && actionsTrigger}
+      {isOwnMessage && actionsTrigger}
       <div onClick={handleBubbleClick}
         className={`${messageStyle} ${showMenu && isMobile ? "ring-2 ring-sky-400/80" : ""}`}
         style={bubbleAccentStyle}
@@ -491,11 +497,11 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
         <div className="text-sm md:text-lg text-white mb-1">{sender}</div>
 
         {message.replyTo && (
-          <div className="border-l-2 border-white/80 bg-black/15 rounded-r-md pl-2 pr-2 py-1 mb-1.5 text-sm md:text-base text-white/95 wrap-break-word">
+          <div className="border-s-2 border-white/80 bg-black/15 rounded-e-md ps-2 pe-2 py-1 mb-1.5 text-sm md:text-base text-white/95 wrap-break-word">
             <div className="font-medium">
-              {message.replyTo.sender === user?.email ? "You" : AsShortName(message.replyTo.sender)}
+              {message.replyTo.sender === user?.email ? t("common.you") : AsShortName(message.replyTo.sender)}
             </div>
-            <div className="line-clamp-2 opacity-90"><span dir="auto">{replySnippet || "Attachment"}</span></div>
+            <div className="line-clamp-2 opacity-90"><span dir="auto">{replySnippet || (message.replyTo.hasLocation ? t("chat.bubble.sharedLocation") : t("common.attachment"))}</span></div>
           </div>
         )}
 
@@ -513,7 +519,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
               rows={3}
               maxLength={MAX_MESSAGE_LENGTH}
               disabled={savingEdit}
-              aria-label="Edit message"
+              aria-label={t("chat.bubble.editLabel")}
               data-testid="edit-message-input"
               className="w-full resize-none rounded-lg border border-white/40 bg-black/25 p-2 text-base text-white placeholder:text-white/70 focus:outline-none focus:ring-2 focus:ring-white/80 md:text-lg"
             />
@@ -524,7 +530,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
                 disabled={savingEdit}
                 className="rounded-md px-3 py-1 text-white hover:bg-white/15 disabled:opacity-60"
               >
-                Cancel
+                {t("chat.bubble.cancel")}
               </button>
               <button
                 type="button"
@@ -533,7 +539,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
                 data-testid="edit-message-save"
                 className="rounded-md bg-white/25 px-3 py-1 font-medium text-white hover:bg-white/35 disabled:opacity-60"
               >
-                {savingEdit ? "Saving..." : "Save"}
+                {savingEdit ? t("chat.bubble.saving") : t("chat.bubble.save")}
               </button>
             </div>
           </div>
@@ -563,7 +569,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
                 src={message.file.url}
                 width={isMobile ? 90 : 150}
                 height={isMobile ? 90 : 150}
-                alt="Sent image"
+                alt={t("chat.bubble.sentImage")}
                 className="cursor-pointer"
               />
             )}
@@ -587,7 +593,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
                 className="cursor-pointer"
               >
                 <source src={message.file.url} type={message.file.contentType} />
-                Your browser does not support the video tag.
+                {t("chat.bubble.noVideo")}
               </video>
             )}
 
@@ -597,9 +603,9 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
             !message.file?.pathname?.includes("voice-message") &&
             message.file?.downloadUrl && (
               <div className="text-lg md:text-2xl">
-                <div>Has sent a document</div>
+                <div>{t("chat.bubble.document")}</div>
                 <Link href={message.file.url} target="_blank" className="underline">
-                  View Document
+                  {t("chat.bubble.viewDocument")}
                 </Link>{" "}
                 &nbsp;
                 <Link
@@ -607,7 +613,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
                   target="_blank"
                   className="underline"
                 >
-                  Download Link
+                  {t("chat.bubble.download")}
                 </Link>
               </div>
             )}
@@ -630,9 +636,9 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
                     handleReact(group.emoji);
                   }}
                   title={group.senders
-                    .map(sender => sender?.toLowerCase() === user?.email?.toLowerCase() ? "You" : AsShortName(sender))
+                    .map(sender => sender?.toLowerCase() === user?.email?.toLowerCase() ? t("common.you") : AsShortName(sender))
                     .join(", ")}
-                  aria-label={`${group.senders.length} reacted with ${group.emoji}`}
+                  aria-label={t("chat.bubble.reactedWith", { count: group.senders.length, emoji: group.emoji })}
                   data-testid="reaction-chip"
                   className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-sm leading-none transition-colors ${includesMine ? "bg-white/35 ring-1 ring-white/70" : "bg-black/25 hover:bg-black/35"
                     }`}
@@ -645,13 +651,13 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
           </div>
         )}
 
-        <div className="text-xs md:text-sm mt-1 text-right flex items-center justify-end gap-1 text-white">
+        <div className="text-xs md:text-sm mt-1 text-end flex items-center justify-end gap-1 text-white">
           {/* Edited is a flag, not a second clock: the time after it is
               still when the message was sent, so a dot keeps the two from
               reading as "edited at 15:40". */}
           {edited && (
             <>
-              <span className="italic" data-testid="edited-label">Edited</span>
+              <span className="italic" data-testid="edited-label">{t("chat.bubble.edited")}</span>
               <span aria-hidden="true">·</span>
             </>
           )}
@@ -661,17 +667,17 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
           }
           {isOwnMessage && !isPending && (
             isRead
-              ? <CheckCheck size={18} strokeWidth={2.75} className="shrink-0 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.55)]" aria-label="Read" />
-              : <Check size={18} strokeWidth={2.5} className="shrink-0 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.45)]" aria-label="Sent" />
+              ? <CheckCheck size={18} strokeWidth={2.75} className="shrink-0 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.55)]" aria-label={t("chat.bubble.read")} />
+              : <Check size={18} strokeWidth={2.5} className="shrink-0 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.45)]" aria-label={t("chat.bubble.sent")} />
           )}
         </div>
       </div>
-      {isOwnMessage && actionsTrigger}
+      {!isOwnMessage && actionsTrigger}
 
       {showMenu && (
         <MessageActionsMenu
           anchorRef={isMobile ? messageRef : triggerRef}
-          align={isOwnMessage ? "start" : "end"}
+          align={isOwnMessage ? "end" : "start"}
           menuRef={menuRef}
           selectedReaction={myReaction?.emoji}
           onReact={isPending ? undefined : handleReact}

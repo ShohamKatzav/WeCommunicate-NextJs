@@ -5,6 +5,7 @@ import { useUser } from "../hooks/useUser";
 import SocketContext from "./socketContext";
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { useT } from '../i18n/client';
 
 type SocketProviderProps = {
     children: ReactNode;
@@ -12,7 +13,12 @@ type SocketProviderProps = {
 
 export const SocketProvider = ({ children }: SocketProviderProps) => {
     const baseAddress = process.env.NEXT_PUBLIC_BASE_ADDRESS as string;
-    const { user, loadingUser, updateUser } = useUser();
+    const { user, loadingUser, updateUser, refreshUser } = useUser();
+    // Read from a ref by the socket handlers below, so a language switch
+    // doesn't tear down and reconnect the socket just to reword a toast.
+    const t = useT();
+    const tRef = useRef(t);
+    useEffect(() => { tRef.current = t; });
     const [socket, setSocket] = useState<Socket | null>(null);
     const [loadingSocket, setLoadingSocket] = useState(true);
     const router = useRouter();
@@ -51,9 +57,16 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
                     router.push('/login');
                     setLoadingSocket(false);
                     toast.error(
-                        data.message || "Your account has been banned",
+                        data.message || tRef.current("moderation.accountBanned"),
                         { duration: 10000 }
                     );
+                });
+                // A moderator just promoted or demoted this user. Only a hint:
+                // the flag itself comes from re-reading the account, so the
+                // Moderator links (navbar, footer) appear or go, and a demoted
+                // user on /moderator is sent on to /chat by that page.
+                newSocket.on('moderator status changed', () => {
+                    refreshUser();
                 });
                 // The server pushes an incoming call unless one of the user's
                 // tabs is on screen - a phone keeps a backgrounded or locked

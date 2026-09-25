@@ -9,6 +9,7 @@ import { saveMessage, revalidateChatRoute } from '@/app/lib/chatActions';
 import { toast } from "sonner";
 import { PendingClears } from './usePendingCleanHistory';
 import { WARNINGS_BEFORE_BAN } from '../config/limits';
+import { useT } from '../i18n/client';
 
 interface UseMessageHandlingProps {
     socket: Socket | null;
@@ -42,6 +43,7 @@ export const useMessageHandling = ({
     updateConversationsBar,
     pendingClearsRef
 }: UseMessageHandlingProps) => {
+    const t = useT();
 
     const handleIncomingMessage = useCallback((data: Message) => {
         if (data.sender?.toUpperCase() === userEmail?.toUpperCase()) return;
@@ -195,17 +197,17 @@ export const useMessageHandling = ({
                         // Already banned before this message was even evaluated -
                         // this response shape has no `punishment` field, only
                         // `banned`/`message`/`bannedUntil`/`reason`.
-                        toast.error(result.message || 'Your account is banned from sending messages.', { duration: 10000 });
+                        toast.error(result.message || t('chat.send.banned'), { duration: 10000 });
                         return;
                     }
 
                     if (result.rateLimited) {
-                        toast.warning(result.message || "You're sending messages too quickly. Please slow down.");
+                        toast.warning(result.message || t('chat.send.tooFast'));
                         return;
                     }
 
                     if (result.tooLong) {
-                        toast.warning(result.message || 'That message is too long to send.');
+                        toast.warning(result.message || t('chat.send.tooLong'));
                         return;
                     }
 
@@ -216,7 +218,7 @@ export const useMessageHandling = ({
                         // check). Without this, the temp message above was
                         // already removed from chat with no toast at all,
                         // so it would just silently vanish.
-                        toast.error(result.message || "Couldn't send that message.");
+                        toast.error(result.message || t('chat.send.failed'));
                         return;
                     }
 
@@ -224,14 +226,14 @@ export const useMessageHandling = ({
                     let message = '';
                     if (result.punishment?.includes("ban")) {
                         if (result.bannedUntil) {
-                            message = `You've been temporarily banned until ${new Date(result.bannedUntil).toLocaleString()}. Reason: ${result.reason}`;
+                            message = t('chat.send.bannedTemp', { date: new Date(result.bannedUntil).toLocaleString(t.dateLocale, { hour12: false }), reason: result.reason ?? '' });
                         } else {
-                            message = `You've been permanently banned. Reason: ${result.reason}`;
+                            message = t('chat.send.bannedPermanent', { reason: result.reason ?? '' });
                         }
                         socket.emit('ban user', { userEmail: messageToSend.sender, message: message });
                     } else if (result.punishment === 'warning') {
                         toast.warning(
-                            `Warning ${result.warningCount}/${WARNINGS_BEFORE_BAN}: ${result.reason}`,
+                            t('moderation.warning', { count: result.warningCount ?? 0, max: WARNINGS_BEFORE_BAN, reason: result.reason ?? '' }),
                             { duration: 7000 }
                         );
                     }
@@ -249,15 +251,15 @@ export const useMessageHandling = ({
                     || error?.message?.includes('Failed to fetch');
 
                 if (isOffline) {
-                    toast.info("Offline right now - I’ll send this message when you’re back online.");
+                    toast.info(t('chat.send.offlineQueued'));
                 } else {
                     console.error('Failed to send message:', error);
                     setChat(chatRef.current.filter(m => m._id !== tempId));
-                    toast.error("Something went wrong sending that message. Please try again.");
+                    toast.error(t('chat.send.error'));
                 }
             }
         }
-    }, [socket, loadingSocket, participants, messageToSend, chatRef, setChat, setMessageToSend, handleServerSavedMessageResponse]);
+    }, [socket, loadingSocket, participants, messageToSend, chatRef, setChat, setMessageToSend, handleServerSavedMessageResponse, t]);
 
 
     return {

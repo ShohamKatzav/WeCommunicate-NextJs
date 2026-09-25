@@ -2,6 +2,7 @@
 import { useEffect, useMemo } from 'react';
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
 import { X, ExternalLink, MapPin } from 'lucide-react';
+import { useT } from '../../i18n/client';
 import MessageLocation from '@/types/messageLocation';
 
 interface FullscreenLocationViewerProps {
@@ -16,6 +17,7 @@ const containerStyle = { width: '100%', height: '100%' };
 // full-screen view rather than a preview. Opening Google Maps itself stays a
 // secondary, explicit action here rather than what a tap on the bubble does.
 const FullscreenLocationViewer = ({ location, onClose }: FullscreenLocationViewerProps) => {
+    const t = useT();
     const { isLoaded } = useJsApiLoader({
         id: 'google-map-script',
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!
@@ -54,7 +56,7 @@ const FullscreenLocationViewer = ({ location, onClose }: FullscreenLocationViewe
                     type="button"
                     onClick={onClose}
                     className="rounded-full bg-white/15 p-2 ring-2 ring-white/80 transition-colors hover:bg-white/25"
-                    aria-label="Close fullscreen"
+                    aria-label={t("chat.fullscreen.close")}
                 >
                     <X size={32} color="red" />
                 </button>
@@ -86,10 +88,10 @@ const FullscreenLocationViewer = ({ location, onClose }: FullscreenLocationViewe
                     className="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-gray-900 shadow-lg transition-colors hover:bg-gray-100"
                 >
                     <ExternalLink size={16} aria-hidden="true" />
-                    Open in Google Maps
+                    {t("chat.fullscreen.openInMaps")}
                 </a>
                 <div className="text-sm text-white/70 md:hidden">
-                    Tap outside to close
+                    {t("chat.fullscreen.tapToClose")}
                 </div>
             </div>
         </div>

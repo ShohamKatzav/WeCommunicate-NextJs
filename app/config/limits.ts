@@ -78,9 +78,9 @@ export const ALL_MESSAGE_REACTIONS: readonly string[] = [...MESSAGE_REACTIONS, .
 // Shared between the picker UI and the server action's own validation (only
 // these exact values are accepted, not an arbitrary client-supplied number).
 export const DISAPPEARING_MESSAGES_OPTIONS = [
-    { label: 'Off', seconds: 0 },
-    { label: '24 hours', seconds: 24 * 60 * 60 },
-    { label: '7 days', seconds: 7 * 24 * 60 * 60 },
+    { labelKey: 'chat.disappearing.off', seconds: 0 },
+    { labelKey: 'chat.disappearing.day', seconds: 24 * 60 * 60 },
+    { labelKey: 'chat.disappearing.week', seconds: 7 * 24 * 60 * 60 },
 ] as const;
 
 // Typing indicator timing, shared by the sender (useChatRoom.tsx) and the
