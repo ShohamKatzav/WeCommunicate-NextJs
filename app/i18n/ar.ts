@@ -5,6 +5,9 @@ import type { Messages } from "./messages";
 // singular imperative (أدخل، اضغط) - the usual register for Arabic UI copy.
 // Plurals carry all six Arabic forms: zero, one, two, few (3-10),
 // many (11-99) and other.
+// \u2066...\u2069 around a phone number isolate it left to right: in
+// right-to-left text a bare "+972 50 123 4567" splits at its spaces and the
+// digit groups come out in reverse order.
 const ar: Messages = {
     meta: {
         description: "WeCommunicate تطبيق للدردشة",
@@ -314,7 +317,7 @@ const ar: Messages = {
             nickname: "اختر اسمًا مستعارًا",
             contactLabel: "البريد الإلكتروني أو رقم الهاتف",
             emailPlaceholder: "أدخل بريدك الإلكتروني",
-            phonePlaceholder: "أدخل رقم الهاتف، مثلًا +972 50 123 4567",
+            phonePlaceholder: "أدخل رقم الهاتف، مثلًا \u2066+972 50 123 4567\u2069",
             secure: "آمن وخاص",
             codeLabel: "رمز التحقق",
             codePlaceholder: "أدخل الرمز المكوّن من 6 أرقام",
@@ -330,7 +333,7 @@ const ar: Messages = {
             enterEmail: "أدخل بريدك الإلكتروني",
             invalidEmail: "أدخل بريدًا إلكترونيًا صحيحًا",
             chooseNickname: "اختر اسمًا مستعارًا",
-            invalidPhone: "استخدم رقم هاتف دوليًا، مثلًا +972 50 123 4567",
+            invalidPhone: "استخدم رقم هاتف دوليًا، مثلًا \u2066+972 50 123 4567\u2069",
             forgotSentEmail: "إذا كان هناك حساب بهذا البريد الإلكتروني، فقد أُرسل إليه رمز تحقق.\nتحقق من صندوق الوارد.",
             forgotSentSms: "إذا كان هناك حساب بهذا الرقم، فقد أُرسل إليه رمز تحقق.\nتحقق من هاتفك.",
             sentEmail: "أُرسل رمز التحقق إلى بريدك الإلكتروني. تحقق من صندوق الوارد.",
@@ -379,7 +382,7 @@ const ar: Messages = {
         bannedWithReason: "تم حظر حسابك. السبب: {reason}",
         policyViolation: "مخالفة للسياسة",
         invalidPassword: "كلمة المرور غير صحيحة",
-        invalidPhone: "استخدم رقم هاتف دوليًا، مثلًا +972 50 123 4567",
+        invalidPhone: "استخدم رقم هاتف دوليًا، مثلًا \u2066+972 50 123 4567\u2069",
         invalidEmail: "أدخل عنوان بريد إلكتروني صحيحًا",
         waitBeforeResend: "انتظر قليلًا قبل طلب رمز آخر.",
         cannotSendCode: "تعذّر إرسال الرمز. تحقق من رصيد الرسائل وإعدادات المرسل في Brevo.",
@@ -917,7 +920,7 @@ const ar: Messages = {
             resendIn: "إعادة الإرسال بعد {seconds} ث",
             resend: "إعادة إرسال الرمز",
             cancel: "إلغاء",
-            invalidPhone: "استخدم رقم هاتف دوليًا، مثلًا +972 50 123 4567",
+            invalidPhone: "استخدم رقم هاتف دوليًا، مثلًا \u2066+972 50 123 4567\u2069",
             invalidEmail: "أدخل عنوان بريد إلكتروني صحيحًا",
             enterSixDigits: "أدخل الرمز المكوّن من 6 أرقام",
             phoneCodeSent: "أُرسل رمز التحقق إلى البريد الإلكتروني للحساب",
