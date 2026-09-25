@@ -193,6 +193,62 @@ export default class RedisService {
         return count <= limit;
     }
 
+    // Everything this service keeps for one account, for account deletion
+    // (services/AccountDeletionService.ts): unread counts, OTP codes and their
+    // attempt/cooldown counters for each of the account's contacts, and the
+    // rate-limit counters keyed by its email, phone or id (see each
+    // checkRateLimit caller). Returns the unconsumed share-target payloads it
+    // removed, so the caller can delete a file one was holding. Presence
+    // (user_sockets:, online_users) is left to clearPresence, which the socket
+    // server calls once it has signed the account's open tabs out.
+    static async deleteAccountKeys({ email, phone, userId, otpContacts }: {
+        email: string;
+        phone?: string;
+        userId: string;
+        otpContacts: string[];
+    }): Promise<{ file?: { url?: string } }[]> {
+        const keys = [this.notificationKey(email)];
+        for (const contact of otpContacts) {
+            keys.push(this.otpKey(contact), this.otpAttemptsKey(contact), this.otpCooldownKey(contact));
+        }
+        const rateLimited: [string, string | undefined][] = [
+            ['login', email], ['login', phone],
+            ['send-message', userId], ['edit-message', userId], ['react-message', userId], ['search-messages', userId],
+            ['call-push', email], ['call-record', email],
+        ];
+        for (const [scope, identifier] of rateLimited) {
+            if (identifier) keys.push(`ratelimit:${scope}:${this.normalizeEmail(identifier)}`);
+        }
+        await this.redis().del(...keys);
+
+        // Share-target tokens are random, so the only way to find this
+        // account's is to look inside them. They live five minutes, so there
+        // are only ever a handful.
+        const removed: { file?: { url?: string } }[] = [];
+        let cursor: string | number = 0;
+        do {
+            const [next, found]: [string | number, string[]] = await this.redis().scan(cursor, { match: this.shareTargetKey('*'), count: 100 });
+            cursor = next;
+            for (const key of found) {
+                const payload = await this.redis().get<{ userID?: string; file?: { url?: string } }>(key);
+                if (payload?.userID === userId) {
+                    await this.redis().del(key);
+                    removed.push(payload);
+                }
+            }
+        } while (String(cursor) !== '0');
+        return removed;
+    }
+
+    // Drops an account from presence entirely, whichever sockets it had.
+    static async clearPresence(email: string) {
+        if (!email) return;
+        const pipeline = this.redis().pipeline();
+        pipeline.del(this.socketKey(email));
+        pipeline.zrem(this.PRESENCE_KEY, this.normalizeEmail(email));
+        await pipeline.exec();
+    }
+
     private static shareTargetKey(token: string) {
         return `share-target:${token}`;
     }

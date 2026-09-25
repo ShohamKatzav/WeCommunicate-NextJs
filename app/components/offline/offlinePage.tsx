@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { useT } from "../../i18n/client";
+import { pageTitleSizeClassName } from "../shell/pageTitle";
 
 const bold = (chunk: string) => <strong>{chunk}</strong>;
 
@@ -84,7 +85,7 @@ export default function OfflinePage({ forceOffline }: { forceOffline?: boolean }
             </div>
 
             {/* Status Text - Reduced size for better mobile fit */}
-            <h1 className="mt-6 text-4xl sm:text-5xl font-extrabold">
+            <h1 className={`mt-6 ${pageTitleSizeClassName}`}>
                 {isOnline ? t("offline.backOnline") : t("offline.offline")}
             </h1>
 

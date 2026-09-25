@@ -1,6 +1,7 @@
 "use client"
 import Image from "next/image";
 import { useState } from "react";
+import { UserX } from "lucide-react";
 import { AsShortName } from "../../utils/stringFormat";
 import { useT } from "../../i18n/client";
 
@@ -10,6 +11,11 @@ interface AvatarProps {
     email?: string;
     size?: number;
     className?: string;
+    // Told when the stored picture fails to load (its file is gone), for a
+    // caller that shows controls for the picture - see profile/edit.
+    onLoadError?: (url: string) => void;
+    // A deleted account: no picture or initial left, just a neutral mark.
+    deleted?: boolean;
 }
 
 // Single source of truth for "picture, or initials-in-a-gradient-circle" -
@@ -18,13 +24,25 @@ interface AvatarProps {
 // picture still takes the initials path immediately. A stored URL whose
 // file is gone (the blob 404s) lands on that same circle after the image
 // fails, instead of a broken image or wrapped alt text.
-const Avatar = ({ avatarUrl, nickname, email, size = 40, className = "" }: AvatarProps) => {
+const Avatar = ({ avatarUrl, nickname, email, size = 40, className = "", onLoadError, deleted = false }: AvatarProps) => {
     const t = useT();
     const displayName = nickname || AsShortName(email);
     const initial = (displayName || "U").charAt(0).toUpperCase();
     // Remember which URL failed. A later picture (a different URL) is tried
     // again; the no-picture case never reaches the image at all.
     const [failedUrl, setFailedUrl] = useState<string | null>(null);
+
+    if (deleted) {
+        return (
+            <div
+                style={{ width: size, height: size }}
+                className={`rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-200 shrink-0 ${className}`}
+                aria-hidden="true"
+            >
+                <UserX style={{ width: Math.round(size * 0.5), height: Math.round(size * 0.5) }} />
+            </div>
+        );
+    }
 
     if (!avatarUrl || failedUrl === avatarUrl) {
         return (
@@ -49,7 +67,10 @@ const Avatar = ({ avatarUrl, nickname, email, size = 40, className = "" }: Avata
             // alt text down a 28px-wide column and stretches the row.
             style={{ width: size, height: size }}
             className={`rounded-full object-cover shrink-0 ${className}`}
-            onError={() => setFailedUrl(avatarUrl)}
+            onError={() => {
+                setFailedUrl(avatarUrl);
+                onLoadError?.(avatarUrl);
+            }}
         />
     );
 };

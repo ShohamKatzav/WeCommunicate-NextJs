@@ -8,6 +8,7 @@ import { requestOTP, verifyOTP, resetPassword, createAccount } from '@/app/lib/O
 import { isPhone } from '@/app/lib/contact';
 import { useI18n } from '@/app/i18n/client';
 import type { Locale } from '@/app/i18n/config';
+import { pageTitleClassName } from '@/app/components/shell/pageTitle';
 
 interface OTPProcessProps {
     mode: 'forgot' | 'sign-up';
@@ -270,10 +271,10 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
 
     return (
         <form onSubmit={handleSubmit}>
-            <div className="mainContainer px-3 pb-[calc(4rem+var(--bottom-prompt-height))] md:p-4 md:pb-[calc(2rem+var(--bottom-prompt-height))] grid md:grid-cols-3">
+            <div className="mainContainer grid px-3 pb-[calc(4rem+var(--bottom-prompt-height))] md:grid-cols-3 md:px-4 md:pb-[calc(2rem+var(--bottom-prompt-height))]">
                 <div className='md:col-start-2 flex flex-col gap-3 md:gap-4'>
                     <div className="titleContainer">
-                        <h1 className="mb-0 md:mb-0 text-3xl font-extrabold text-gray-900 dark:text-white md:text-4xl lg:text-5xl text-center">
+                        <h1 className={pageTitleClassName}>
                             <span className="text-transparent bg-clip-text bg-linear-to-r to-indigo-800 from-pink-700 dark:to-indigo-400 dark:from-pink-300">
                                 {step === 'email' && mode === 'forgot' ? t("auth.otp.titleReset") :
                                     step === 'email' && mode === 'sign-up' ? t("auth.otp.titleSignUp") :
@@ -528,6 +529,17 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                             <p className="text-muted-foreground justify-self-center mt-4">
                                 {t("auth.otp.haveAccount")} <a href="/login"
                                     className="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">{t("auth.otp.signIn")}</a>
+                            </p>
+                        }
+                        {/* Under the create-account button on every sign-up step,
+                            so it's there before an email or phone number is given
+                            as much as when the account is created. */}
+                        {mode === 'sign-up' &&
+                            <p className="text-sm text-muted-foreground justify-self-center text-center mt-2 px-4">
+                                {t.rich("auth.otp.privacyNote", {
+                                    link: chunk => <a href="/privacy"
+                                        className="font-medium text-blue-600 underline dark:text-blue-500 hover:no-underline">{chunk}</a>
+                                })}
                             </p>
                         }
                     </div>

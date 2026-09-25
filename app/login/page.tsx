@@ -7,6 +7,7 @@ import Loading from '../components/ui/loading';
 import { isExist, authenticateUser } from '@/app/lib/accountActions'
 import { Eye, EyeOff } from 'lucide-react';
 import { useT } from '../i18n/client';
+import { pageTitleClassName } from '../components/shell/pageTitle';
 
 const Login = () => {
   const router = useRouter();
@@ -136,7 +137,7 @@ const Login = () => {
     <form onSubmit={onButtonClick}>
       <div className="mainContainer px-4 pb-[calc(4rem+var(--bottom-prompt-height))] md:pb-[calc(2rem+var(--bottom-prompt-height))]">
         <div className="titleContainer">
-          <h1 className="mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-3xl lg:text-6xl text-center">
+          <h1 className={`${pageTitleClassName} mb-4`}>
             <span className="text-transparent bg-clip-text bg-linear-to-r to-indigo-800 from-pink-700 dark:to-indigo-400 dark:from-pink-300">
               {t("auth.login.title")}
             </span>

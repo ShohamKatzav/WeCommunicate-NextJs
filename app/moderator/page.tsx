@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useUser } from '../hooks/useUser';
 import { useRouter } from 'next/navigation';
 import { getAllUsers, banUser, unbanUser, promoteToModerator, demoteFromModerator } from '../lib/moderatorActions';
@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import Loading from '../components/ui/loading';
 import { useSocket } from '../hooks/useSocket';
 import { useT } from '../i18n/client';
+import { pageTitleClassName } from '../components/shell/pageTitle';
 import type { TFunction } from '../i18n/messages';
 
 function sessionUserId(token?: string): string | null {
@@ -47,6 +48,9 @@ function accountLabel(userItem: UserStatus, t: TFunction): string {
 // ModerationService.moderateMessage) - stripped for display.
 const FLAGGED_PREFIX = "Content flagged for: ";
 
+// Long enough to scan a page, short enough that the actions stay on screen.
+const USERS_PER_PAGE = 10;
+
 export default function ModeratorPanel() {
     const { user, loadingUser } = useUser();
     const t = useT();
@@ -55,6 +59,8 @@ export default function ModeratorPanel() {
     const [users, setUsers] = useState<UserStatus[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [page, setPage] = useState(1);
+    const tableRef = useRef<HTMLDivElement>(null);
 
     const loadUsers = async () => {
         const result = await getAllUsers();
@@ -194,6 +200,17 @@ export default function ModeratorPanel() {
         return haystack.includes(query);
     });
 
+    const pageCount = Math.max(1, Math.ceil(filteredUsers.length / USERS_PER_PAGE));
+    const currentPage = Math.min(page, pageCount);
+    const pageStart = (currentPage - 1) * USERS_PER_PAGE;
+    const pageUsers = filteredUsers.slice(pageStart, pageStart + USERS_PER_PAGE);
+
+    const showPage = (next: number) => {
+        setPage(next);
+        // The bar is fixed, so a plain scroll would tuck the new rows under it.
+        tableRef.current?.scrollIntoView({ block: "start" });
+    };
+
     const updateUserRow = (userId: string, patch: Partial<UserStatus>) => {
         setUsers(prev =>
             prev.map(u => u._id === userId ? { ...u, ...patch } : u)
@@ -219,11 +236,9 @@ export default function ModeratorPanel() {
     }
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {/* Same title treatment as the locations, about and contact pages, in
-                a colour of its own. */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 sm:pb-28">
             <div className="mb-8 text-center">
-                <h1 className="mb-4 text-2xl font-extrabold text-balance wrap-break-word text-gray-900 dark:text-white sm:text-4xl lg:text-5xl">
+                <h1 className={`${pageTitleClassName} mb-4`}>
                     <span className="text-transparent bg-clip-text bg-linear-to-r from-amber-700 to-rose-700 dark:from-amber-300 dark:to-rose-400">{t("moderator.title")}</span>
                 </h1>
                 <p className="mx-auto max-w-2xl text-muted-foreground">
@@ -236,14 +251,17 @@ export default function ModeratorPanel() {
                     type="text"
                     placeholder={t("moderator.search")}
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setPage(1);
+                    }}
                     className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
                              bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                              focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700 overflow-hidden">
+            <div ref={tableRef} className="scroll-mt-[calc(var(--content-top-offset)+0.75rem)] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead className="bg-gray-50 dark:bg-gray-900">
@@ -266,7 +284,13 @@ export default function ModeratorPanel() {
                             </tr>
                         </thead>
                         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                            {filteredUsers.map((userItem) => (
+                            {pageUsers.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} className="px-6 py-8 text-center text-sm text-muted-foreground">
+                                        {t("moderator.empty")}
+                                    </td>
+                                </tr>
+                            ) : pageUsers.map((userItem) => (
                                 <tr key={userItem._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                                         <bdi dir="auto">{accountLabel(userItem, t)}</bdi>
@@ -361,6 +385,35 @@ export default function ModeratorPanel() {
                         </tbody>
                     </table>
                 </div>
+                {pageCount > 1 && (
+                    <div className="flex flex-col gap-3 border-t border-gray-200 px-4 py-3 dark:border-gray-700 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm text-muted-foreground">
+                            {t("moderator.range", {
+                                start: pageStart + 1,
+                                end: pageStart + pageUsers.length,
+                                total: filteredUsers.length,
+                            })}
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => showPage(currentPage - 1)}
+                                disabled={currentPage <= 1}
+                                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-700"
+                            >
+                                {t("moderator.previous")}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => showPage(currentPage + 1)}
+                                disabled={currentPage >= pageCount}
+                                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-700"
+                            >
+                                {t("moderator.next")}
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

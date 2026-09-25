@@ -4,7 +4,7 @@ import { env } from '@/app/config/env';
 import Brevo from '@getbrevo/brevo';
 import { createUser, isExist } from './accountActions';
 import { updateAccountPassword } from './accountHelpers';
-import { isEmail, isPhone, normalizePhone, type VerificationChannel } from './contact';
+import { isEmail, isPhone, normalizePhone, otpContactKey, type VerificationChannel } from './contact';
 import RedisService from '@/services/RedisService';
 import { isTestBypass } from './testBypass';
 import { cookies } from 'next/headers';
@@ -12,7 +12,7 @@ import { getT } from '@/app/i18n/server';
 
 const emailApi = new Brevo.TransactionalEmailsApi();
 emailApi.setApiKey(Brevo.TransactionalEmailsApiApiKeys.apiKey, env.BREVO_API_KEY!);
-const key = (contact: string, channel: VerificationChannel) => `${channel}:${channel === 'sms' ? normalizePhone(contact) : contact.trim().toLowerCase()}`;
+const key = otpContactKey;
 // Cryptographically secure - Math.random() is guessable and unsuitable for a
 // security-sensitive code.
 const newCode = () => randomInt(100000, 1000000).toString();
@@ -30,7 +30,7 @@ async function sendCode(contact: string, channel: VerificationChannel, otp: stri
   const message = new Brevo.SendSmtpEmail(); message.to = [{ email: contact }]; message.sender = { name: 'WeCommunicate', email: env.SMTP_USER }; message.subject = t('email.otpSubject'); message.htmlContent = `<div dir="${t.locale === 'he' || t.locale === 'ar' ? 'rtl' : 'ltr'}">${t('email.otpBody', { code: otp })}</div>`;
   await emailApi.sendTransacEmail(message);
 }
-export async function requestOTP(contact: string, mode: 'sign-up' | 'forgot' | 'change-phone' | 'change-email', channel: VerificationChannel = 'email') {
+export async function requestOTP(contact: string, mode: 'sign-up' | 'forgot' | 'change-phone' | 'change-email' | 'delete-account', channel: VerificationChannel = 'email') {
   const t = await getT();
   if (!(channel === 'sms' ? isPhone(contact) : isEmail(contact))) return { message: channel === 'sms' ? t('errors.invalidPhone') : t('errors.invalidEmail'), status: 400 };
   // 'change-phone' always targets a contact already on the caller's own
@@ -42,7 +42,9 @@ export async function requestOTP(contact: string, mode: 'sign-up' | 'forgot' | '
   // below. 'change-email' is the email-change flow's second step, sending to
   // the *new* address the caller doesn't own yet - it must refuse an address
   // already claimed by another account, like sign-up, but "wrong meaning" is
-  // avoided by not reusing 'sign-up' itself.
+  // avoided by not reusing 'sign-up' itself. 'delete-account' is like
+  // 'change-phone': the contact is always the caller's own, loaded from their
+  // session account by accountDeletionActions.ts.
   const exists = await isExist(contact); if ((mode === 'sign-up' || mode === 'change-email') && exists.accountExists) return { message: channel === 'sms' ? t('errors.accountExistsPhone') : t('errors.accountExistsEmail'), status: 400 }; if (mode === 'forgot' && !exists.accountExists) return { status: 200 };
 
   const otpKey = key(contact, channel);

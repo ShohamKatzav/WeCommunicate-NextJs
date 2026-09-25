@@ -77,9 +77,16 @@ interface MessageInputProps {
     handleSendMessage: (overrideFile?: FileDTO, overrideLocation?: MessageLocation) => Promise<void>;
     handleTyping: () => void;
     isBlocked: boolean;
+    // The other person in this 1:1 deleted their account (see
+    // chatActions.saveMessage, which refuses the send too).
+    recipientDeleted?: boolean;
 }
 
-const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, handleTyping, isBlocked }: MessageInputProps) => {
+const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, handleTyping, isBlocked: blockedByUser, recipientDeleted = false }: MessageInputProps) => {
+    // Either way there's no one to send to; only the notice differs. A
+    // deleted account also locks the rest - typing, attaching, recording -
+    // since nothing written here could ever be sent.
+    const isBlocked = blockedByUser || recipientDeleted;
     const isMobile = useIsMobile();
     const { user } = useUser();
     const t = useT();
@@ -124,7 +131,7 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
             <div className={`flex flex-col gap-2 ${isMobile ? 'px-3' : ''}`}>
                 {isBlocked && (
                     <div className="rounded-lg bg-gray-100 dark:bg-gray-700 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 text-center">
-                        {t("chat.composer.blocked")}
+                        {recipientDeleted ? t("chat.composer.recipientDeleted") : t("chat.composer.blocked")}
                     </div>
                 )}
                 {message.replyTo && (
@@ -173,15 +180,15 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
                                 placeholder={placeholder}
                                 value={message.text}
                                 onChange={handleChange}
-                                disabled={!participants.current}
+                                disabled={!participants.current || recipientDeleted}
                             />
                         )}
                         <div className="flex items-center gap-2">
-                            <UploadFileButton />
+                            <UploadFileButton disabled={recipientDeleted} />
                             {!isRecordingVoice && (
                                 <ShareLocationButton participants={participants} onShare={handleLocationShared} disabled={isBlocked} />
                             )}
-                            <VoiceRecorder participants={participants} onRecorded={handleVoiceRecorded} onStatusChange={setIsRecordingVoice} />
+                            <VoiceRecorder participants={participants} onRecorded={handleVoiceRecorded} onStatusChange={setIsRecordingVoice} disabled={recipientDeleted} />
                             {!isRecordingVoice && (
                                 <button
                                     onClick={() => handleSendMessage()}
@@ -201,7 +208,7 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
                     // items-end keeps the buttons on the bottom line as the
                     // field grows, like WhatsApp Web.
                     <div className="flex items-end gap-3">
-                        <UploadFileButton />
+                        <UploadFileButton disabled={recipientDeleted} />
                         {!isRecordingVoice && (
                             <ShareLocationButton participants={participants} onShare={handleLocationShared} disabled={isBlocked} />
                         )}
@@ -212,10 +219,10 @@ const ChatInputBar = ({ message, setMessage, participants, handleSendMessage, ha
                                 placeholder={placeholder}
                                 value={message.text}
                                 onChange={handleChange}
-                                disabled={!participants.current}
+                                disabled={!participants.current || recipientDeleted}
                             />
                         )}
-                        <VoiceRecorder participants={participants} onRecorded={handleVoiceRecorded} onStatusChange={setIsRecordingVoice} />
+                        <VoiceRecorder participants={participants} onRecorded={handleVoiceRecorded} onStatusChange={setIsRecordingVoice} disabled={recipientDeleted} />
                         {!isRecordingVoice && (
                             <button
                                 onClick={() => handleSendMessage()}

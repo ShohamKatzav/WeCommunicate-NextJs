@@ -10,6 +10,7 @@ import { useUser } from '../hooks/useUser';
 import LocationsTable, { FriendDistanceRow } from '../components/locations/locationsTable';
 import { getDistanceKm } from '../utils/geolocation';
 import { useT } from '../i18n/client';
+import { pageTitleClassName } from '../components/shell/pageTitle';
 
 
 const center = {
@@ -158,8 +159,8 @@ function Locations() {
   // Friends' pins and the distance table don't depend on this device's GPS,
   // so the page always renders - location access only decides the banner.
   return (
-    <section className="mx-auto w-full max-w-6xl px-3 pb-8 pt-2 sm:px-4">
-      <h1 className="mb-4 text-center text-2xl font-extrabold text-gray-900 dark:text-white sm:text-4xl lg:text-5xl">
+    <section className="mx-auto w-full max-w-6xl px-3 pb-8 sm:px-4">
+      <h1 className={`${pageTitleClassName} mb-8 md:mb-12`}>
         <span className="text-transparent bg-clip-text bg-linear-to-r to-blue-900 from-teal-700 dark:to-blue-400 dark:from-teal-300">{t('locations.title')}</span>
       </h1>
 

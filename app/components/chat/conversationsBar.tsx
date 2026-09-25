@@ -54,7 +54,7 @@ const ConversationsBar =
                     </div>
 
 
-                    <div className="px-4 divide-y overflow-auto" style={{ maxHeight: 'calc(100vh - 270px)' }}>
+                    <div className="px-4 divide-y overflow-x-hidden overflow-y-auto" style={{ maxHeight: 'calc(100vh - 270px)' }}>
                         <button
                             type="button"
                             onClick={() => handleOpenModal('group')}
@@ -67,7 +67,9 @@ const ConversationsBar =
                         </button>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto">
+                    {/* overflow-x-hidden: overflow-y alone makes x scrollable
+                        too. A backstop - the rows themselves fit. */}
+                    <div className="flex-1 overflow-x-hidden overflow-y-auto">
                         <ConversationsList
                             getLastMessages={getLastMessages}
                             query={query}

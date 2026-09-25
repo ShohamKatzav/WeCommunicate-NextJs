@@ -27,6 +27,14 @@ export default async function authMiddleware(socket, next) {
     }
 
     const banStatus = await ModerationService.isUserBanned(decoded._id);
+    // A token outlives a deleted account (it's only checked for a signature),
+    // so a device that was offline at the time still holds one. Same answer
+    // as a bad token: the client signs out (socketProvider.tsx).
+    if (banStatus.accountExists === false) {
+        socket.emit("unauthorized");
+        socket.disconnect(true);
+        return next(new Error("Account no longer exists"));
+    }
     if (banStatus.isBanned) {
         socket.emit("banned", {
             reason: banStatus.reason,

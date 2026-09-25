@@ -30,6 +30,7 @@ const NEVER_CACHE = [
     '/locations',
     '/login',
     '/moderator',
+    '/privacy',
     '/share-target',
     '/sign-up',
 ];
@@ -559,5 +560,15 @@ self.addEventListener('message', async event => {
                 port.postMessage({ success: false, error: error.message });
             }
         }
+    }
+
+    // Account deletion (useLogOut): what's still queued on this device was
+    // written by an account that no longer exists, so it goes rather than
+    // being retried forever against a session that will never work again.
+    if (event.data?.type === 'CLEAR_QUEUE') {
+        const port = event.ports[0];
+        const cleared = await clearQueue();
+        await notifyQueueChanged();
+        if (port) port.postMessage({ success: cleared });
     }
 });

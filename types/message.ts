@@ -18,4 +18,5 @@ export default interface Message {
     conversationID?: string | undefined;
     replyTo?: ReplyTo | undefined;
     call?: MessageCall | undefined | null;
+    system?: 'account-deleted' | undefined;
 }

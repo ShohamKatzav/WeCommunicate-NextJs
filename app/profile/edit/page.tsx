@@ -14,6 +14,7 @@ import PhoneNumberEditor from "../../components/profile/phoneNumberEditor";
 import EmailAddressEditor from "../../components/profile/emailAddressEditor";
 import AvatarCameraCapture from "../../components/profile/avatarCameraCapture";
 import ImageCropper from "../../components/profile/imageCropper";
+import DeleteAccountSection from "../../components/profile/deleteAccountSection";
 import Loading from "../../components/ui/loading";
 import { ABOUT_MAX_LENGTH, DEFAULT_ACCENT_COLOR } from "../../config/limits";
 import { useI18n } from "../../i18n/client";
@@ -21,6 +22,8 @@ import { isLocale, Locale, LOCALES, LOCALE_NAMES } from "../../i18n/config";
 
 const AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const AVATAR_MAX_SIZE = 10 * 1024 * 1024;
+const labelClassName = "mb-0.5 block text-sm font-medium sm:mb-1";
+const fieldClassName = "w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-transparent focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-white sm:px-4 sm:py-2";
 
 export default function EditProfilePage() {
     const { user, loadingUser, updateUser } = useUser();
@@ -36,6 +39,10 @@ export default function EditProfilePage() {
     // already in, so saving without touching it doesn't switch anything.
     const [locale, setLocale] = useState<Locale>(activeLocale);
     const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
+    // A stored picture whose file is gone shows as initials (see Avatar), so
+    // there's nothing to remove - only a picture that actually loads gets
+    // the Remove button. Kept per URL, so a new upload is judged afresh.
+    const [brokenAvatarUrl, setBrokenAvatarUrl] = useState<string | null>(null);
     const [phone, setPhone] = useState<string | undefined>(undefined);
     const [email, setEmail] = useState<string | undefined>(undefined);
     // False for a phone sign-up account whose `email` is really the
@@ -214,7 +221,10 @@ export default function EditProfilePage() {
     }
 
     return (
-        <div className="max-w-md mx-auto px-4 py-8">
+        // Tight on a phone: the navbar already clears the top, and this card
+        // has to finish inside the first screen. sm: restores a little air
+        // once the window is tall enough that the extra padding is free.
+        <div className="mx-auto max-w-md px-3 pt-2 pb-4 sm:px-4 sm:py-8">
             {fileToCrop && (
                 <ImageCropper
                     file={fileToCrop}
@@ -224,18 +234,16 @@ export default function EditProfilePage() {
                     onCancel={() => setFileToCrop(null)}
                 />
             )}
-            <div className="bg-card text-card-foreground rounded-xl shadow-md p-6">
-                <h1 className="text-xl font-semibold mb-6 text-center">{t("profile.edit.title")}</h1>
-
-                <div className="flex flex-col items-center gap-3 mb-6">
-                    <div className="relative">
-                        <Avatar avatarUrl={avatarUrl} nickname={nickname} email={user?.email} size={96} />
+            <div className="rounded-xl bg-card p-3.5 text-card-foreground shadow-md sm:p-6">
+                <div className="mb-3 flex items-center gap-3 sm:mb-5">
+                    <div className="relative shrink-0">
+                        <Avatar avatarUrl={avatarUrl} nickname={nickname} email={user?.email} size={64} onLoadError={setBrokenAvatarUrl} />
                         <label
                             htmlFor="avatar-upload"
-                            className="absolute bottom-0 end-0 p-1.5 rounded-full bg-primary text-primary-foreground cursor-pointer hover:opacity-90"
+                            className="absolute bottom-0 end-0 cursor-pointer rounded-full bg-primary p-1 text-primary-foreground hover:opacity-90"
                             aria-label={t("profile.edit.changeAvatar")}
                         >
-                            <ImageUp size={16} />
+                            <ImageUp size={14} />
                         </label>
                         <input
                             id="avatar-upload"
@@ -251,30 +259,54 @@ export default function EditProfilePage() {
                             disabled={uploadingAvatar}
                         />
                     </div>
-                    {avatarUrl && (
-                        <button
-                            type="button"
-                            onClick={handleRemoveAvatar}
-                            disabled={uploadingAvatar}
-                            className="flex items-center gap-1 text-xs text-destructive hover:underline disabled:opacity-50"
-                        >
-                            <Trash2 size={14} /> {t("profile.edit.removeAvatar")}
-                        </button>
-                    )}
+                    <div className="min-w-0">
+                        <h1 className="text-lg font-semibold leading-tight">{t("profile.edit.title")}</h1>
+                        {avatarUrl && avatarUrl !== brokenAvatarUrl && (
+                            <button
+                                type="button"
+                                onClick={handleRemoveAvatar}
+                                disabled={uploadingAvatar}
+                                className="mt-1 flex items-center gap-1 text-xs text-destructive hover:underline disabled:opacity-50"
+                            >
+                                <Trash2 size={14} /> {t("profile.edit.removeAvatar")}
+                            </button>
+                        )}
+                    </div>
                 </div>
 
-                <div className="space-y-4">
-                    <div>
-                        <label htmlFor="nickname" className="block text-sm font-medium mb-1">{t("profile.edit.nickname")}</label>
-                        <input
-                            id="nickname"
-                            type="text"
-                            value={nickname}
-                            onChange={ev => setNickname(ev.target.value)}
-                            maxLength={40}
-                            disabled={saving}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
+                <div className="space-y-2.5 sm:space-y-4">
+                    {/* Nickname and language are both short controls that
+                        Save writes together, so they share a row instead of
+                        each costing a full line of the phone screen. */}
+                    <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
+                        <div className="min-w-0">
+                            <label htmlFor="nickname" className={labelClassName}>{t("profile.edit.nickname")}</label>
+                            <input
+                                id="nickname"
+                                type="text"
+                                value={nickname}
+                                onChange={ev => setNickname(ev.target.value)}
+                                maxLength={40}
+                                disabled={saving}
+                                className={fieldClassName}
+                            />
+                        </div>
+                        <div className="min-w-0">
+                            <label htmlFor="locale" className={labelClassName}>{t("profile.edit.language")}</label>
+                            {/* Each language named in itself, so whoever is stuck
+                                in the wrong one can still find theirs. */}
+                            <select
+                                id="locale"
+                                value={locale}
+                                onChange={ev => { if (isLocale(ev.target.value)) setLocale(ev.target.value); }}
+                                disabled={saving}
+                                className={fieldClassName}
+                            >
+                                {LOCALES.map(code => (
+                                    <option key={code} value={code} lang={code}>{LOCALE_NAMES[code]}</option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
 
                     <EmailAddressEditor currentEmail={email} hasRealEmail={hasRealEmail} hasPhone={!!phone} onChanged={handleEmailChanged} />
@@ -282,7 +314,10 @@ export default function EditProfilePage() {
                     <PhoneNumberEditor currentPhone={phone} canEdit={canEditPhone} onChanged={setPhone} />
 
                     <div>
-                        <label htmlFor="about" className="block text-sm font-medium mb-1">{t("profile.edit.about")}</label>
+                        <div className="mb-0.5 flex items-baseline justify-between gap-2 sm:mb-1">
+                            <label htmlFor="about" className="text-sm font-medium">{t("profile.edit.about")}</label>
+                            <span className="text-xs text-muted-foreground">{about.length}/{ABOUT_MAX_LENGTH}</span>
+                        </div>
                         <textarea
                             id="about"
                             value={about}
@@ -294,43 +329,23 @@ export default function EditProfilePage() {
                             dir={about ? "auto" : pageDir}
                             placeholder={t("profile.edit.aboutPlaceholder")}
                             disabled={saving}
-                            rows={3}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                            rows={2}
+                            className={`${fieldClassName} resize-none`}
                         />
-                        <div className="text-xs text-muted-foreground text-end mt-1">
-                            {about.length}/{ABOUT_MAX_LENGTH}
-                        </div>
                     </div>
 
                     <div>
-                        <span className="block text-sm font-medium mb-1">{t("profile.edit.accentColor")}</span>
+                        <span className={labelClassName}>{t("profile.edit.accentColor")}</span>
                         <AccentColorPicker value={accentColor} onChange={setAccentColor} />
-                    </div>
-
-                    <div>
-                        <label htmlFor="locale" className="block text-sm font-medium mb-1">{t("profile.edit.language")}</label>
-                        {/* Each language named in itself, so whoever is stuck
-                            in the wrong one can still find theirs. */}
-                        <select
-                            id="locale"
-                            value={locale}
-                            onChange={ev => { if (isLocale(ev.target.value)) setLocale(ev.target.value); }}
-                            disabled={saving}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                            {LOCALES.map(code => (
-                                <option key={code} value={code} lang={code}>{LOCALE_NAMES[code]}</option>
-                            ))}
-                        </select>
                     </div>
                 </div>
 
-                <div className="flex gap-3 mt-6">
+                <div className="mt-3 flex gap-2.5 sm:mt-6 sm:gap-3">
                     <button
                         type="button"
                         onClick={() => router.push("/profile")}
                         disabled={saving}
-                        className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                     >
                         {t("profile.edit.cancel")}
                     </button>
@@ -338,11 +353,14 @@ export default function EditProfilePage() {
                         type="button"
                         onClick={handleSave}
                         disabled={saving || !nickname.trim()}
-                        className="flex-1 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {saving ? t("profile.edit.saving") : t("profile.edit.save")}
                     </button>
                 </div>
+
+                {/* Separate from Save, and from the avatar's Remove above. */}
+                <DeleteAccountSection />
             </div>
         </div>
     );

@@ -2,10 +2,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { LogOut, Menu, X } from "lucide-react";
 import { useUser } from "../../hooks/useUser";
-import { useSocket } from "../../hooks/useSocket";
+import { useLogOut } from "../../hooks/useLogOut";
 import { AsShortName } from "../../utils/stringFormat";
 import ThemeToggle from "../ui/themeToggle";
 import Avatar from "../ui/avatar";
@@ -42,9 +42,8 @@ function LogOutButton({
 
 const Navbar = () => {
   const [nav, setNav] = useState(false);
-  const { user, updateUser } = useUser();
-  const { socket } = useSocket();
-  const router = useRouter();
+  const { user } = useUser();
+  const logOut = useLogOut();
   const pathname = usePathname();
   const t = useT();
 
@@ -57,40 +56,7 @@ const Navbar = () => {
     }
   };
 
-  const handleLogOut = async () => {
-    try {
-      if (socket?.connected) {
-        socket.disconnect();
-      }
-      await updateUser(null);
-
-      // Clear service worker cache
-      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        try {
-          const messageChannel = new MessageChannel();
-          const timeout = setTimeout(() => {
-            messageChannel.port1.close();
-          }, 1000);
-
-          messageChannel.port1.onmessage = () => {
-            clearTimeout(timeout);
-            messageChannel.port1.close();
-          };
-
-          navigator.serviceWorker.controller.postMessage(
-            { type: 'CLEAR_CACHE' },
-            [messageChannel.port2]
-          );
-        } catch (error) {
-          console.error('Service worker clear cache error:', error);
-        }
-      }
-      router.push('/login');
-    } catch (error) {
-      console.error('Logout error:', error);
-      router.push('/login');
-    }
-  };
+  const handleLogOut = () => logOut({ destination: '/login' });
 
   // Login stays a text link: it navigates to a page, and a door icon
   // next to nothing else reads as log out. Log out is an action, rendered
@@ -102,6 +68,9 @@ const Navbar = () => {
     { id: 4, text: t("nav.moderator"), link: "/moderator", auth: true, moderatorOnly: true, action: () => { } },
     { id: 5, text: t("nav.about"), link: "/about", auth: null, action: () => { } },
     { id: 6, text: t("nav.contact"), link: "/contact", auth: null, action: () => { } },
+    // Phone menu only: from md up the footer is on every page, chat included,
+    // and carries this link; on a phone the chat hides the footer.
+    { id: 7, text: t("nav.privacy"), link: "/privacy", auth: null, mobileOnly: true, action: () => { } },
   ];
 
   const isUserConnected = () => {
@@ -185,7 +154,7 @@ const Navbar = () => {
 
           <ul className="hidden items-center md:flex">
             {links.map((item) => (
-              shouldDisplayLink(item) &&
+              shouldDisplayLink(item) && !item.mobileOnly &&
               <li key={item.id}>
                 <Link
                   onClick={(e) => handleLinkClick(e, item.link, item.action)}

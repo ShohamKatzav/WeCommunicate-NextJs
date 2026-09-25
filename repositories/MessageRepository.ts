@@ -5,6 +5,7 @@ import ConversationRepository from "./ConversationRepository";
 import CleanHistoryRepository from "./CleanHistoryRepository";
 import { Schema, Types } from 'mongoose';
 import MessageDTO from '@/types/messageDTO';
+import BlobService from '@/services/BlobService';
 import MessageSearchResult from '@/types/messageSearchResult';
 import { MAX_SEARCH_MATCHES_SCANNED, MAX_SEARCH_RESULTS, MAX_MATCHES_PER_CONVERSATION, REPLY_SNIPPET_LENGTH } from '@/app/config/limits';
 
@@ -311,6 +312,20 @@ export default class MessageRepository {
             if (!messageToDelete) return null;
 
             if (messageToDelete.sender?.toLowerCase() !== requesterEmail.toLowerCase()) return null;
+
+            // The file itself too, not just the message's link to it: once
+            // unlinked, nothing ties a blob back to its sender, so it could
+            // never be removed later - not even when the account is deleted.
+            // Best-effort: the message is still revoked if storage fails.
+            if (messageToDelete.file) {
+                try {
+                    const file = await FileModel.findById(messageToDelete.file).select('url').lean<{ url?: string } | null>();
+                    await BlobService.deleteBlobs([file?.url]);
+                    await FileModel.deleteOne({ _id: messageToDelete.file });
+                } catch (err) {
+                    console.error("Failed to delete a deleted message's file:", err);
+                }
+            }
 
             // Actually strip the content, not just mark it revoked - the
             // client only hides revoked messages in its UI, so leaving text

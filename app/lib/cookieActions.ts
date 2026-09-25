@@ -103,7 +103,13 @@ export const getCurrentUser = async (): Promise<User> => {
     const decoded = jwt.verify(user.token, env.JWT_SECRET_KEY) as DecodedToken;
     await connectDB();
     const profile = await AccountRepository.getSessionProfileById(decoded._id);
-    if (!profile) return user;
+    // The account was deleted (see accountDeletionActions.ts) but this device
+    // still had its cookie - the token itself stays valid until it expires.
+    // Drop it rather than keep showing someone who no longer exists.
+    if (!profile) {
+      (await cookies()).delete('user');
+      return {};
+    }
     const isModerator = profile.isModerator === true;
     // Only when it changed: setting a cookie from a server action re-renders
     // the page, which every load shouldn't pay for.

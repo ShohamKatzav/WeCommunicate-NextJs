@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { MessageSquare, Mic, Timer, WifiOff, ShieldOff, Search } from "lucide-react";
 import { getT } from "./i18n/server";
+import { pageTitleClassName } from "./components/shell/pageTitle";
 
 // Logged-in visitors never reach this page - proxy.ts treats "/" as a public
 // login route and redirects them straight to /chat - so this only ever has to
@@ -19,8 +20,8 @@ const Home = async () => {
     return (
         <div className="px-4 sm:px-6 lg:px-8">
             {/* Hero */}
-            <section className="max-w-4xl mx-auto text-center pt-6 pb-12">
-                <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+            <section className="max-w-4xl mx-auto pb-12 text-center">
+                <h1 className={pageTitleClassName}>
                     <span className="text-transparent bg-clip-text bg-linear-to-r to-indigo-800 from-pink-700 dark:to-indigo-400 dark:from-pink-300">
                         We Communicate
                     </span>

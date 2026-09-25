@@ -68,7 +68,7 @@ const ConversationsList =
 
                 {
                     initialConversations?.length > 0 && (
-                        <div className="divide-y divide-gray-200 dark:divide-gray-700 overflow-auto" style={{ maxHeight: 'calc(100vh - 270px)' }}>
+                        <div className="divide-y divide-gray-200 overflow-x-hidden overflow-y-auto dark:divide-gray-700" style={{ maxHeight: 'calc(100vh - 270px)' }}>
                             {initialConversations.map((conversation: any) => {
                                 const membersEmailsIncludeQuery = conversation.members?.some((m: any) => m.email?.toUpperCase().includes(query.toUpperCase()) || m.nickname?.toUpperCase().includes(query.toUpperCase()));
                                 // The visible last-message line (see ConversationSummary)

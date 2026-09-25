@@ -77,7 +77,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
 
     const { pendingClears, pendingClearsRef, setPendingClear, clearPendingClear } = usePendingCleanHistory(user?.email);
 
-    const { conversationsForBar, updateConversationsBar } = useConversationsManager({
+    const { conversationsForBar, updateConversationsBar, setConversationsForBar } = useConversationsManager({
         initialConversations: initialConversationsWithMessages,
         pendingClears,
         pendingClearsRef,
@@ -280,6 +280,32 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
         if (room) getLastMessages(room.participants);
     }, [loadingUser, loadingSocket, getLastMessages]);
 
+    // Someone in one of this user's conversations deleted their account
+    // (notifyAccountDeleted in socket/handlers.ts): swap them for "Deleted
+    // account" in the list and in the open chat, and show the notice the
+    // server left - the same thing a reload would show.
+    useEffect(() => {
+        if (!socket) return;
+        const onMemberAccountDeleted = (data: { conversationID?: string; deletedMemberId?: string; message?: Message }) => {
+            const { conversationID, deletedMemberId, message } = data ?? {};
+            if (!conversationID || !deletedMemberId || !message?._id) return;
+            const placeholder = { _id: deletedMemberId, deleted: true } as ChatUser;
+            const swap = (members: ChatUser[]) => [...members.filter(m => m._id !== deletedMemberId), placeholder];
+
+            setConversationsForBar(prev => prev.map(c => c._id === conversationID ? { ...c, members: swap(c.members) } : c));
+            if (participants.current?.some(p => p._id === deletedMemberId)) {
+                participants.current = swap(participants.current);
+            }
+            if (conversationID === currentConversationId.current && !chatRef.current.some(m => m._id === message._id)) {
+                setChat([...chatRef.current, message].sort((a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime()));
+                socket.emit('message read', { conversationId: conversationID });
+            }
+            updateConversationsBar(message);
+        };
+        socket.on('member account deleted', onMemberAccountDeleted);
+        return () => { socket.off('member account deleted', onMemberAccountDeleted); };
+    }, [socket, setConversationsForBar, participants, currentConversationId, chatRef, setChat, updateConversationsBar]);
+
     // Clean up conversations with empty messages
     useEffect(() => {
         const messages = initialConversationsWithMessages.find(
@@ -393,6 +419,10 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
     // last seen is shown at all.
     const isCurrentChatBlocked = participants.current?.length === 1
         && blockedUserIds.includes(participants.current[0]._id);
+    // A 1:1 whose other person deleted their account stays readable, but
+    // there's no one left to send to.
+    const isCurrentChatRecipientDeleted = participants.current?.length === 1
+        && !!participants.current[0].deleted;
 
     return (
         <div className="viewport-between-bars flex overflow-hidden bg-linear-to-br bg-white dark:from-gray-900 dark:to-gray-800">
@@ -445,6 +475,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
                             handleSendMessage={handleSendMessage}
                             handleTyping={handleTyping}
                             isBlocked={isCurrentChatBlocked}
+                            recipientDeleted={isCurrentChatRecipientDeleted}
                         />
                     </div>
                 )}

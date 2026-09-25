@@ -8,7 +8,9 @@ import Message from "@/types/message";
 import MessageSearchResult from "@/types/messageSearchResult";
 import { AsShortName } from "../../utils/stringFormat";
 import { callRecordSummary } from "../../utils/callRecord";
+import { memberName } from "../../utils/memberName";
 import Avatar from "../ui/avatar";
+import FitName from "../ui/fitName";
 import { useT } from "../../i18n/client";
 
 interface ConversationConversationSummaryProps {
@@ -82,7 +84,7 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
         <li className="shadow-md hover:shadow-lg transition-shadow">
             <button
                 type="button"
-                className="w-full bg-white dark:bg-gray-800 p-3 flex items-center gap-4 text-start"
+                className="flex w-full min-w-0 items-center gap-4 bg-white p-3 text-start dark:bg-gray-800"
                 onClick={() => switchRoom(otherMembers)}
             >
                 {/* dark:hover:bg-gray-700 (a flat, lighter gray) dropped the
@@ -91,9 +93,9 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                     instead - same pattern the navbar's own hover states use -
                     barely lightens the existing dark card, so the text color
                     keeps its normal-state contrast on hover too. */}
-                <div className="w-full text-start p-2 flex gap-3 items-center hover:bg-gray-50 dark:hover:bg-white/5">
+                <div className="flex w-full min-w-0 items-center gap-3 p-2 text-start hover:bg-gray-50 dark:hover:bg-white/5">
                 {otherMembers.length === 1 ? (
-                    <Avatar avatarUrl={otherMembers[0].avatarUrl} nickname={otherMembers[0].nickname} email={otherMembers[0].email} size={48} />
+                    <Avatar avatarUrl={otherMembers[0].avatarUrl} nickname={otherMembers[0].nickname} email={otherMembers[0].email} deleted={otherMembers[0].deleted} size={48} className="shrink-0" />
                 ) : otherMembers.length > 0 ? (
                     // A group row shows who's actually in it, the same way the
                     // 1:1 row above does - it used to be a single circle of
@@ -106,6 +108,7 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                                 avatarUrl={member.avatarUrl}
                                 nickname={member.nickname}
                                 email={member.email}
+                                deleted={member.deleted}
                                 size={36}
                                 className="ring-2 ring-white dark:ring-gray-800"
                             />
@@ -123,30 +126,31 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                 )}
 
 
-                <div className="flex-1">
-                    <div className="grid grid-cols-8 justify-between items-center">
-                        <div className="col-span-7">
-                            {(otherMembers.map((member, index) => (
-                                index < otherMembers.length - 1 ?
-                                    <span key={index} className="font-medium">{member.nickname || AsShortName(member.email)}, </span> :
-                                    <span key={index} className="font-medium">{member.nickname || AsShortName(member.email)}</span>
-                            )))
-                            }
-                        </div>
-                        <div className="col-span-1 justify-self-end">
-                            {newMessageNotification[conversation._id!] > 0 && (
-                                <div
-                                    id={`notificationCount-${conversation._id}`}
-                                    className="w-5 h-5 flex items-center justify-center text-white bg-red-600 rounded-full">
-                                    {newMessageNotification[conversation._id!]}
-                                </div>
-                            )}
-                        </div>
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-start gap-2">
+                        {/* The names as they are, fitted to the column - wrapped at
+                            natural points, then shrunk, and only cut short as a
+                            last resort (see FitName). A group's names are one
+                            comma-joined line. */}
+                        <FitName
+                            text={otherMembers.map(member => memberName(member, t)).join(", ")}
+                            fullText={otherMembers.map(member => member.nickname?.trim() || member.email || memberName(member, t)).join(", ")}
+                            className="min-w-0 flex-1 font-medium"
+                        />
+                        {newMessageNotification[conversation._id!] > 0 && (
+                            <div
+                                id={`notificationCount-${conversation._id}`}
+                                className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-red-600 px-1 text-xs text-white">
+                                {newMessageNotification[conversation._id!]}
+                            </div>
+                        )}
                     </div>
                     {lastMessage ?
-                        <div className="grid grid-cols-2 place-content-between text-muted-foreground">
-                            <span>{AsShortName(lastMessage.sender)}</span>
-                            <div className="justify-self-end wrap-break-word text-end">
+                        <div className="text-muted-foreground">
+                            <div className="flex items-baseline gap-2">
+                            {/* A notice from the app has no sender to name. */}
+                            <span className="min-w-0 flex-1 truncate">{lastMessage.system ? "" : AsShortName(lastMessage.sender)}</span>
+                            <div className="shrink-0 text-end">
                                 {(() => {
                                     const date = new Date(lastMessage.date!);
                                     const now = new Date();
@@ -178,7 +182,10 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                                     });
                                 })()}
                             </div>
-                            <div className="text-sm text-muted-foreground break-all col-span-2"><span dir="auto">{lastMessage.status?.includes("revoked")
+                            </div>
+                            <div className="text-sm text-muted-foreground wrap-break-word line-clamp-2"><span dir="auto">{lastMessage.system === "account-deleted"
+                                ? t("chat.preview.accountDeleted")
+                                : lastMessage.status?.includes("revoked")
                                 ? t("chat.preview.deleted")
                                 : lastMessage.call
                                     ? callRecordSummary(lastMessage.call, lastMessage.sender?.toLowerCase() === user?.email?.toLowerCase(), t)

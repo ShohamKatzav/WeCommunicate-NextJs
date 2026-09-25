@@ -1,6 +1,9 @@
 export default interface ChatUser {
     _id: string;
     socketId: number;
+    // A member whose account was deleted - only an id, shown as "Deleted
+    // account" (see ConversationRepository.withDeletedMembers).
+    deleted?: boolean;
     email?: string | undefined;
     nickname?: string | undefined;
     unreadCount: number;
