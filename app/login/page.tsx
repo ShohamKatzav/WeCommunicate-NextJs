@@ -75,8 +75,14 @@ const Login = () => {
       // Authenticate user
       const authResponse = await authenticateUser(email, password);
       if (await authResponse.success) {
-        await updateUser({ email: authResponse.email, nickname: authResponse.nickname, token: authResponse.token, isModerator: authResponse.isModerator, avatarUrl: authResponse.avatarUrl, accentColor: authResponse.accentColor });
-        router.replace("/chat");
+        const saved = await updateUser({ email: authResponse.email, nickname: authResponse.nickname, token: authResponse.token, isModerator: authResponse.isModerator, avatarUrl: authResponse.avatarUrl, accentColor: authResponse.accentColor });
+        if (!saved) {
+          setGeneralError("Unable to connect to the server. Please check your connection.");
+          return false;
+        }
+        // No router.replace here: the effect above navigates to /chat as
+        // soon as the user is set, which updateUser only does once the
+        // cookie is written. A second replace would just discard that one.
         return true;
       } else if (authResponse.status === 401) {
         setGeneralError("Wrong email or password. Please try again.");
