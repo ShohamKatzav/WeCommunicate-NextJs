@@ -54,11 +54,21 @@ export const ACCENT_COLORS = [
 ] as const;
 export const DEFAULT_ACCENT_COLOR = ACCENT_COLORS[0];
 
-// The only reactions a message can carry - a short fixed row, not a full
-// emoji keyboard. Shared between the picker and the server action's own
+// The reactions a message can carry - the quick row the picker opens with,
+// plus a longer curated set behind its "+" button, rather than a full emoji
+// keyboard. Shared between the picker and the server action's own
 // validation, so a client can't store arbitrary text (or a 400-character
 // "emoji") on someone else's message.
 export const MESSAGE_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'] as const;
+export const MORE_MESSAGE_REACTIONS = [
+    '😀', '😁', '😅', '🤣', '😊', '😇', '🙂', '😉',
+    '😍', '🥰', '😘', '😋', '😜', '🤪', '🤗', '🤔',
+    '🤭', '🤫', '😐', '🙄', '😏', '😬', '😴', '😎',
+    '🤓', '🥳', '🥺', '😭', '😤', '😡', '🤯', '😱',
+    '🤢', '💀', '👎', '👏', '🙌', '💪', '🤝', '👌',
+    '✌️', '🤞', '👀', '🔥', '💯', '🎉', '✨', '💔',
+] as const;
+export const ALL_MESSAGE_REACTIONS: readonly string[] = [...MESSAGE_REACTIONS, ...MORE_MESSAGE_REACTIONS];
 
 // Selectable disappearing-messages durations, in seconds - 0 means off.
 // Shared between the picker UI and the server action's own validation (only
