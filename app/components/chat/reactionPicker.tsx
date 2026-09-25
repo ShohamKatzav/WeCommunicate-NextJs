@@ -25,7 +25,7 @@ const ReactionPicker = ({ selected, onPick }: ReactionPickerProps) => {
       onClick={() => onPick(emoji)}
       aria-label={`React with ${emoji}`}
       aria-pressed={selected === emoji}
-      className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full text-xl leading-none hover:bg-gray-100 dark:hover:bg-gray-600 ${selected === emoji ? "bg-gray-200 dark:bg-gray-600" : ""
+      className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full text-xl leading-none hover:bg-foreground/10 ${selected === emoji ? "bg-foreground/15" : ""
         }`}
     >
       {emoji}
@@ -41,14 +41,14 @@ const ReactionPicker = ({ selected, onPick }: ReactionPickerProps) => {
           onClick={() => setExpanded(prev => !prev)}
           aria-label={expanded ? "Fewer reactions" : "More reactions"}
           aria-expanded={expanded}
-          className={`flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 ${expanded ? "bg-gray-200 dark:bg-gray-600" : ""
+          className={`flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/10 hover:text-foreground ${expanded ? "bg-foreground/15" : ""
             }`}
         >
           <Plus size={20} className={`transition-transform ${expanded ? "rotate-45" : ""}`} />
         </button>
       </div>
       {expanded && (
-        <div className="grid max-h-48 grid-cols-7 justify-items-center gap-0.5 overflow-y-auto border-t border-gray-200 pt-1 dark:border-gray-600">
+        <div className="grid max-h-48 grid-cols-7 justify-items-center gap-0.5 overflow-y-auto border-t border-border pt-1">
           {MORE_MESSAGE_REACTIONS.map(emojiButton)}
         </div>
       )}

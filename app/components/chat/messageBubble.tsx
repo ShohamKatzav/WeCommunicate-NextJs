@@ -3,23 +3,21 @@ import Message from "@/types/message";
 import MessageReaction from "@/types/messageReaction";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useRef, useState } from "react";
 import { deleteMessage, toggleMessageReaction } from '@/app/lib/chatActions'
 import { useUser } from "@/app/hooks/useUser";
 import { useSocket } from "@/app/hooks/useSocket";
 import useIsMobile from '@/app/hooks/useIsMobile';
-import { TiDeleteOutline } from "react-icons/ti";
 import { IoBan } from "react-icons/io5";
 import { TbClockQuestion } from "react-icons/tb";
-import { Check, CheckCheck, Reply, SmilePlus, Trash2 } from "lucide-react";
+import { Check, CheckCheck, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import FullscreenMediaViewer from './fullscreenMediaViewer';
 import AudioPlayer from './audioPlayer';
 import LocationBubble from './locationBubble';
 import FullscreenLocationViewer from './fullscreenLocationViewer';
 import CallRecordRow from './callRecordRow';
-import ReactionPicker from './reactionPicker';
+import MessageActionsMenu from './messageActionsMenu';
 import { clearActiveMessage, setActiveMessage, useIsActiveMessage } from './activeMessageStore';
 import { AsShortName } from "../../utils/stringFormat";
 import { linkifyText } from "../../utils/linkify";
@@ -37,19 +35,18 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
   const { socket } = useSocket();
   const isMobile = useIsMobile();
 
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const messageRef = useRef<HTMLDivElement | null>(null);
-  const deleteButtonRef = useRef<HTMLButtonElement | null>(null);
-  const mobileMenuRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const [hover, setHover] = useState(false);
-  // Set once an action has been used from the desktop hover strip, so the
-  // strip stays hidden while the cursor is still resting on the row instead
+  // Set once an action has been used from the desktop actions menu, so its
+  // button stays hidden while the cursor is still resting on the row instead
   // of reappearing on the very next mousemove - it comes back after the
-  // cursor leaves and returns.
+  // cursor leaves the message, in any direction, and returns.
   const hoverSuppressed = useRef(false);
-  const reactButtonRef = useRef<HTMLButtonElement | null>(null);
-  const pickerRef = useRef<HTMLDivElement | null>(null);
-  const [pickerPosition, setPickerPosition] = useState<React.CSSProperties | null>(null);
+  // Whether the cursor was last seen on this message's hover area (see
+  // handleRowMouseMove), for deciding whether an action suppresses hover.
+  const pointerInside = useRef(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [deleted, setDeleted] = useState(
     message.status?.includes("revoked") ?? false
@@ -59,12 +56,9 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
   // are rendered from MoreMessagesLoader's separate list, which the chat
   // state a parent-owned handler updates never reaches.
   const [reactions, setReactions] = useState<MessageReaction[]>(message.reactions || []);
-  // Only one message at a time has its actions open (see
-  // activeMessageStore.ts): on mobile that's the action menu under the
-  // tapped bubble, on desktop the reaction picker.
-  const isActive = useIsActiveMessage(message._id);
-  const showMobileMenu = isActive && isMobile;
-  const showReactionPicker = isActive && !isMobile;
+  // Only one message at a time has its actions menu open (see
+  // activeMessageStore.ts).
+  const showMenu = useIsActiveMessage(message._id);
 
   const isOwnMessage = message.sender === user?.email;
   const sender = isOwnMessage ? "You" : AsShortName(message.sender);
@@ -122,18 +116,24 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
   }, [socket, message._id]);
 
   useEffect(() => {
-    if (!isActive || !message._id) return;
+    if (!showMenu || !message._id) return;
     const id = message._id;
 
-    // click rather than pointerdown: closing this menu shifts the list
-    // (it's bottom-anchored), so closing it on pointerdown moved a tapped
-    // bubble out from under the finger before its click landed, and the tap
-    // opened nothing. On click, a tapped bubble has already made itself the
-    // active one by the time this runs, which makes the clear a no-op.
+    // Any click outside the menu closes it - including the empty part of
+    // this message's row, which spans the chat's full width (exempting the
+    // row left a dead strip beside the bubble). Clicks on the bubble
+    // (mobile) or the actions button (desktop) toggle the menu in their own
+    // handlers, which run before this document listener; so does another
+    // bubble's, which makes that one active and the clear below a no-op.
+    // That's also why this is click rather than pointerdown: tapping a
+    // different bubble moves the menu there in one tap.
+    // React can attach this listener while the click that opened the menu
+    // is still on its way up to the document, so that click is skipped by
+    // its timestamp rather than closing the menu it just opened.
+    const listeningSince = performance.now();
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      // The desktop picker is portaled to <body>, outside this container.
-      if (containerRef.current?.contains(target) || pickerRef.current?.contains(target)) return;
+      if (event.timeStamp < listeningSince) return;
+      if (menuRef.current?.contains(event.target as Node)) return;
       clearActiveMessage(id);
     };
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -146,7 +146,7 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
       document.removeEventListener("click", handleClickOutside);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isActive, message._id]);
+  }, [showMenu, message._id]);
 
   // A bubble that unmounts (deleted, scrolled out of the loaded pages, or
   // in a conversation the user just left) mustn't stay registered as the
@@ -157,41 +157,15 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
     return () => clearActiveMessage(id);
   }, [message._id]);
 
-  // The menu sits in the flow under the bubble, so for a message near the
-  // bottom of the list it can open below the visible area.
-  useEffect(() => {
-    if (showMobileMenu) mobileMenuRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [showMobileMenu]);
-
-  // The desktop picker is fixed-position (see below), so it has to follow its
-  // button when the chat scrolls or the window resizes while it's open.
-  useLayoutEffect(() => {
-    if (!showReactionPicker) return;
-    const place = () => {
-      const rect = reactButtonRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      // Whichever side of the button has more room - the expanded picker is
-      // tall enough to run off the screen on the smaller one.
-      const upward = rect.top > window.innerHeight - rect.bottom;
-      setPickerPosition({
-        ...(upward ? { bottom: window.innerHeight - rect.top + 4 } : { top: rect.bottom + 4 }),
-        ...(isOwnMessage ? { left: rect.left } : { right: window.innerWidth - rect.right }),
-      });
-    };
-    place();
-    window.addEventListener("scroll", place, true);
-    window.addEventListener("resize", place);
-    return () => {
-      window.removeEventListener("scroll", place, true);
-      window.removeEventListener("resize", place);
-    };
-  }, [showReactionPicker, isOwnMessage]);
-
   // Any action taken closes the actions it was taken from.
   const closeActions = () => {
     if (message._id) clearActiveMessage(message._id);
     if (!isMobile) {
-      hoverSuppressed.current = true;
+      // Only while the cursor is actually on the message (a reaction chip,
+      // or the menu's top row where it overlaps). An action picked lower in
+      // the menu leaves the cursor below the message, and nothing would
+      // ever clear the suppression before the cursor came back to it.
+      if (pointerInside.current) hoverSuppressed.current = true;
       setHover(false);
     }
   };
@@ -265,30 +239,36 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
     setIsFullscreen(true);
   };
 
-  // Desktop hover hitbox for reply/delete: tracked on the row (bubble +
-  // buttons together, see below) rather than the bubble alone, so crossing
-  // from the bubble onto a button doesn't cross a gap that clears hover
-  // first. But the row is a full-width block (it has to be, to justify-
-  // start/end the bubble+buttons to the correct side - see messageRowStyle),
-  // so it reaches far past the buttons into empty space. Gate on cursor X
-  // too: own messages (buttons trail the bubble on the right) stop tracking
-  // past the delete button's right edge; received messages (button trails
-  // the bubble on the right, but the row itself is right-aligned so the
-  // empty space is on the left) start tracking at the bubble's own left
-  // edge.
+  // Desktop hover hitbox for the actions button: tracked on the row (bubble
+  // + button together) rather than the bubble alone, so crossing from the
+  // bubble onto the button doesn't cross a gap that clears hover first. But
+  // the row is a full-width block (it has to be, to justify-start/end the
+  // bubble to the correct side - see messageRowStyle), so it reaches far
+  // past the button into empty space. Gate on cursor X too: the button
+  // trails own bubbles (left-aligned, empty space to the right) and leads
+  // received ones (right-aligned, empty space to the left), so tracking
+  // stops at the button's outer edge either way.
   const handleRowMouseMove = (e: React.MouseEvent) => {
-    if (isMobile || hoverSuppressed.current) return;
-    if (isOwnMessage) {
-      const rightEdge = deleteButtonRef.current?.getBoundingClientRect().right;
-      setHover(rightEdge == null || e.clientX <= rightEdge);
-    } else {
-      const leftEdge = messageRef.current?.getBoundingClientRect().left;
-      setHover(leftEdge == null || e.clientX >= leftEdge);
-    }
+    if (isMobile) return;
+    const edges = (triggerRef.current ?? messageRef.current)?.getBoundingClientRect();
+    // The height check is for the actions menu: it's portaled, but React
+    // still delivers its mouse moves here, even though it sits below the
+    // row on screen.
+    const row = e.currentTarget.getBoundingClientRect();
+    const inside = e.clientY >= row.top && e.clientY < row.bottom &&
+      (!edges || (isOwnMessage ? e.clientX <= edges.right : e.clientX >= edges.left));
+    pointerInside.current = inside;
+    // Crossing that edge into the empty part of the row counts as leaving,
+    // same as onMouseLeave below: it's still inside the full-width row, so
+    // mouseleave never fires, and the button would otherwise stay hidden
+    // after an action until the cursor left through the top or bottom.
+    if (!inside) hoverSuppressed.current = false;
+    setHover(inside && !hoverSuppressed.current);
   };
 
   const handleRowMouseLeave = () => {
     if (isMobile) return;
+    pointerInside.current = false;
     hoverSuppressed.current = false;
     setHover(false);
   };
@@ -300,18 +280,21 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
     onReply?.(message);
   };
 
-  const toggleReactionPicker = () => {
+  // A message still waiting to send can't be reacted to or replied to yet,
+  // but your own can still be deleted (the service worker queues that).
+  const hasActions = !isPending || isOwnMessage;
+
+  const toggleMenu = () => {
     if (!message._id) return;
-    if (showReactionPicker) clearActiveMessage(message._id);
-    else setActiveMessage(message._id);
+    setActiveMessage(showMenu ? null : message._id);
   };
 
   const handleBubbleClick = (event: React.MouseEvent) => {
-    if (!isMobile || isPending || !message._id) return;
+    if (!isMobile || !hasActions) return;
     // Links, media controls and reaction chips inside the bubble do their
     // own thing on tap - don't also toggle the menu over them.
     if ((event.target as HTMLElement).closest("a, button, audio, video, input")) return;
-    setActiveMessage(isActive ? null : message._id);
+    toggleMenu();
   };
 
   if (message.call) {
@@ -343,15 +326,38 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
 
   const isRead = message.status === 'read';
 
+  // Desktop's way into the actions menu: one button beside the bubble,
+  // shown on hover, instead of a row of react/reply/delete icons. It sits
+  // on the side facing the middle of the chat - after own bubbles (which
+  // are on the left), before received ones (on the right). Mobile opens the
+  // same menu by tapping the bubble. opacity rather than hidden/invisible
+  // keeps the button focusable and its space reserved, so revealing it
+  // never shifts the bubble.
+  const actionsTrigger = !isMobile && hasActions && (
+    <button
+      type="button"
+      ref={triggerRef}
+      onClick={toggleMenu}
+      aria-label="Message actions"
+      aria-haspopup="true"
+      aria-expanded={showMenu}
+      data-testid="message-actions-trigger"
+      className={`mx-1 mb-3 md:mb-6 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-opacity hover:bg-foreground/10 hover:text-foreground focus-visible:opacity-100 ${hover || showMenu ? "opacity-100" : "opacity-0"
+        } ${showMenu ? "bg-foreground/10 text-foreground" : ""}`}
+    >
+      <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
+    </button>
+  );
+
   return (
-    <div ref={containerRef} className={`flex flex-col ${isOwnMessage ? "items-start" : "items-end"}`}>
     <div
-      className={`${messageRowStyle} w-full`}
+      className={messageRowStyle}
       onMouseMove={handleRowMouseMove}
       onMouseLeave={handleRowMouseLeave}
     >
+      {!isOwnMessage && actionsTrigger}
       <div onClick={handleBubbleClick}
-        className={`${messageStyle} ${showMobileMenu ? "ring-2 ring-sky-400/80" : ""}`}
+        className={`${messageStyle} ${showMenu && isMobile ? "ring-2 ring-sky-400/80" : ""}`}
         style={bubbleAccentStyle}
         data-testid={message.sender === user?.email ? "sent-message" : "received-message"}
         ref={messageRef}
@@ -482,67 +488,19 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
           )}
         </div>
       </div>
-      {/* Desktop-only hover strip - on mobile the same actions live in the
-          menu under the bubble instead (below), since three icons beside a
-          bubble that's already 80% wide don't fit a phone screen.
-          The react button sits between the bubble and the reply/delete
-          buttons on purpose: the desktop hover hitbox for those buttons is
-          bounded by the delete button's right edge (own messages) or the
-          bubble's left edge (received ones), so anything added outside that
-          span would clear hover the moment the cursor reached it. */}
-      {!isMobile && !isPending && (
-        <div className="relative flex">
-          <button
-            type="button"
-            ref={reactButtonRef}
-            onClick={toggleReactionPicker}
-            aria-label="React to message"
-            aria-expanded={showReactionPicker}
-            className="flex"
-          >
-            <SmilePlus
-              className={hover || showReactionPicker ? 'block' : 'hidden'}
-              size={26}
-            />
-          </button>
+      {isOwnMessage && actionsTrigger}
 
-          {/* Portaled and fixed-position: the chat box scrolls (and so clips
-              its overflow), and it can be shorter than the expanded picker. */}
-          {showReactionPicker && pickerPosition && createPortal(
-            <div
-              ref={pickerRef}
-              style={{ position: "fixed", ...pickerPosition }}
-              className="z-50 rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-700"
-            >
-              <ReactionPicker selected={myReaction?.emoji} onPick={handleReact} />
-            </div>,
-            document.body
-          )}
-        </div>
-      )}
-
-      {!isMobile && onReply && !isPending && (
-        <button onClick={handleReply}
-          className='flex'
-          aria-label="Reply to message">
-          <Reply
-            className={hover ? 'block' : 'hidden'}
-            size={28}
-          />
-        </button>
-      )}
-
-      {!isMobile && isOwnMessage && (
-        <button onClick={deleteMessageHandler}
-          ref={deleteButtonRef}
-          className='flex'
-          aria-label="Delete message">
-          <TiDeleteOutline
-            className={hover ? 'block' : 'hidden'}
-            size={40}
-            color="red"
-          />
-        </button>
+      {showMenu && (
+        <MessageActionsMenu
+          anchorRef={isMobile ? messageRef : triggerRef}
+          align={isOwnMessage ? "start" : "end"}
+          menuRef={menuRef}
+          selectedReaction={myReaction?.emoji}
+          onReact={isPending ? undefined : handleReact}
+          onReply={onReply && !isPending ? handleReply : undefined}
+          onDelete={isOwnMessage ? deleteMessageHandler : undefined}
+          onDismiss={() => { if (message._id) clearActiveMessage(message._id); }}
+        />
       )}
 
       {/* Fullscreen Media Viewer */}
@@ -560,46 +518,6 @@ const MessageBubble = ({ message, onReply, senderAccentColor }: MessageBubblePro
         />
       )}
     </div >
-
-    {/* Mobile action menu. In the flow directly under the bubble (and on
-        the bubble's own side) rather than floating beside it, so it can't
-        run off the edge of a narrow screen and widen the page. */}
-    {showMobileMenu && (
-      <div
-        ref={mobileMenuRef}
-        role="group"
-        aria-label="Message actions"
-        data-testid="message-actions-menu"
-        className="relative z-10 -mt-1.5 mb-3 w-fit max-w-full overflow-hidden rounded-2xl border border-gray-200 bg-white text-gray-900 shadow-lg md:-mt-4 md:mb-6 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-      >
-        <ReactionPicker selected={myReaction?.emoji} onPick={handleReact} />
-        {(onReply || isOwnMessage) && (
-          <div className="flex flex-col border-t border-gray-200 py-1 dark:border-gray-600">
-            {onReply && (
-              <button
-                type="button"
-                onClick={handleReply}
-                className="flex items-center gap-3 px-4 py-2 text-left text-base hover:bg-gray-100 dark:hover:bg-gray-600"
-              >
-                <Reply size={20} aria-hidden="true" />
-                Reply
-              </button>
-            )}
-            {isOwnMessage && (
-              <button
-                type="button"
-                onClick={deleteMessageHandler}
-                className="flex items-center gap-3 px-4 py-2 text-left text-base text-red-600 hover:bg-gray-100 dark:text-red-400 dark:hover:bg-gray-600"
-              >
-                <Trash2 size={20} aria-hidden="true" />
-                Delete
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-    )}
-    </div>
   );
 };
 
