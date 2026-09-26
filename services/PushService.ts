@@ -124,10 +124,10 @@ export async function sendPushToEmails(emails: string[], payload: PushPayload, {
             if (gone) {
                 await PushSubscription.deleteOne({ _id: sub._id });
             }
-            const reason = error.statusCode
-                ? `${error.statusCode} ${String(error.body ?? '').replace(/\s+/g, ' ').slice(0, 200)}`
-                : String(error.message ?? error);
-            results.push(`${host} failed: ${reason.trim()}${gone ? ' (removed)' : ''}`);
+            // Status code only - a push service's error body or a network
+            // error's message can carry the endpoint.
+            const reason = error.statusCode ?? error.code ?? 'network error';
+            results.push(`${host} failed: ${reason}${gone ? ' (removed)' : ''}`);
         }
     }
     const summary = results.length > 0 ? results.join(', ')
