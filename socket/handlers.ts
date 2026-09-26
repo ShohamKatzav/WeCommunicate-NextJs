@@ -16,7 +16,7 @@ interface SocketData {
     typingIn?: Set<string>;
     // Whether this tab is on screen, as last reported by the client ('app
     // visibility'). Unknown counts as hidden, so a client that never reports
-    // still gets the call push.
+    // still gets the call push. A stale "visible" is caught by checkOnScreen.
     appVisible?: boolean;
 }
 
@@ -753,6 +753,15 @@ const CALL_MAX_CANDIDATES = 300;
 const CALL_MAX_DESCRIPTIONS = 100;
 const CALL_MAX_SDP_LENGTH = 32 * 1024;
 const CALL_MAX_CANDIDATE_LENGTH = 1024;
+// How long a tab that says it's on screen has to confirm it before the call
+// is pushed anyway. The answer comes straight from the socket's message
+// handler (no server work, no rendering), so a page that can run JS answers
+// in one round trip - a few hundred ms even on a slow mobile network - and
+// 3s leaves room for several. A tab slower than that is treated as suspended
+// and gets a push while it shows the call, so the answer time is logged
+// (see checkOnScreen) to check this against real devices. Longer would only
+// delay the ring on a suspended phone, which the 30s ring can't spare much of.
+const CALL_VISIBILITY_CHECK_MS = 3 * 1000;
 const CALL_PUSHES_PER_WINDOW = 10;
 const CALL_PUSH_WINDOW_SECONDS = 10 * 60;
 // Far above real use - only stops a client that spams invites from filling
@@ -948,8 +957,54 @@ async function handleCallInvite(io: AppServer, socket: AppSocket, data: CallSign
     // page can't put anything on screen. So the push goes out unless one of
     // the callee's tabs is actually visible - including when another device
     // of theirs is connected but sitting in the background.
-    const onScreen = calleeSockets.some(id => io.sockets.sockets.get(id)?.data.appVisible);
-    if (!onScreen) await pushIncomingCall(call);
+    const screen = await checkOnScreen(io, calleeSockets);
+    if (screen.onScreen) {
+        console.log(`Call ${call.callId}: no push, ${screen.why}`);
+        return;
+    }
+    await pushIncomingCall(call, screen.why);
+}
+
+// Whether any of these tabs is on screen right now. A tab's last 'app
+// visibility' report can't be taken on its word: an iPhone Home Screen app is
+// suspended moments after it leaves the screen, often before its "hidden"
+// report goes out, and its socket stays connected - still saying visible -
+// until the ping timeout, up to ~45s later. So each tab that last said it was
+// visible is asked again, and one that can't answer counts as hidden.
+async function checkOnScreen(io: AppServer, socketIds: string[]) {
+    if (socketIds.length === 0) return { onScreen: false, why: 'no callee tab connected' };
+    const claimed = socketIds.flatMap(id => {
+        const socket = io.sockets.sockets.get(id);
+        return socket?.data.appVisible ? [socket] : [];
+    });
+    if (claimed.length === 0) {
+        return { onScreen: false, why: `${socketIds.length} callee tab(s) connected, all reported hidden` };
+    }
+    const askedAt = Date.now();
+    let slowestAnswerMs = 0;
+    const answers = await Promise.all(claimed.map(socket =>
+        socket.timeout(CALL_VISIBILITY_CHECK_MS).emitWithAck('app visibility check').then(
+            (visible: unknown) => {
+                slowestAnswerMs = Math.max(slowestAnswerMs, Date.now() - askedAt);
+                socket.data.appVisible = visible === true;
+                return visible === true ? 'visible' : 'hidden';
+            },
+            // No answer isn't taken as hidden for the next call too: a tab
+            // that was merely slow to answer is still on screen.
+            () => 'no answer'
+        )
+    ));
+    // The answer time is logged so the timeout can be judged against real
+    // round trips rather than guessed.
+    const silent = answers.filter(answer => answer === 'no answer').length;
+    const answered = silent < answers.length ? `, answered within ${slowestAnswerMs}ms` : '';
+    if (answers.includes('visible')) {
+        return { onScreen: true, why: `a callee tab confirmed it is on screen${answered}` };
+    }
+    return {
+        onScreen: false,
+        why: `${claimed.length} callee tab(s) last reported visible, now ${silent} gave no answer in ${CALL_VISIBILITY_CHECK_MS / 1000}s (suspended) and ${claimed.length - silent} said hidden${answered}`
+    };
 }
 
 async function getNickname(email: string) {
@@ -970,13 +1025,33 @@ async function calleeTranslator(call: ActiveCall) {
 
 // A push can't carry the call - it only gets the callee to open the app,
 // where 'call sync' picks up the invite if it's still ringing.
-async function pushIncomingCall(call: ActiveCall) {
-    const allowed = await RedisService.checkRateLimit(
-        'call-push', call.caller, CALL_PUSHES_PER_WINDOW, CALL_PUSH_WINDOW_SECONDS
-    );
-    if (!allowed || call.ended) return;
+// `why` is checkOnScreen's reason, so each call logs one line saying whether
+// it was pushed and why.
+async function pushIncomingCall(call: ActiveCall, why: string) {
+    // A call answered or declined while the visibility check was waiting
+    // must not ring: that ring would never be replaced. Checked before the
+    // rate limit so such a call doesn't use up one of the caller's pushes.
+    const stillRinging = () => !call.ended && call.state === 'ringing';
+    if (!stillRinging()) {
+        console.log(`Call ${call.callId}: no push, the call was already answered or ended (${why})`);
+        return;
+    }
+    const [allowed, t] = await Promise.all([
+        RedisService.checkRateLimit('call-push', call.caller, CALL_PUSHES_PER_WINDOW, CALL_PUSH_WINDOW_SECONDS),
+        calleeTranslator(call),
+    ]);
+    if (!allowed) {
+        console.log(`Call ${call.callId}: no push, the caller is over ${CALL_PUSHES_PER_WINDOW} call pushes in ${CALL_PUSH_WINDOW_SECONDS / 60} minutes (${why})`);
+        return;
+    }
+    // Again, right before `pushed` is set with no await in between - once
+    // it's set, an answer from here on sends the replacement.
+    if (!stillRinging()) {
+        console.log(`Call ${call.callId}: no push, the call was already answered or ended (${why})`);
+        return;
+    }
+    console.log(`Call ${call.callId}: pushing, ${why}`);
     call.pushed = true;
-    const t = await calleeTranslator(call);
     await sendPushToEmails([call.callee], {
         title: call.video ? t('notifications.incomingVideo') : t('notifications.incomingVoice'),
         body: t('notifications.calling', { name: call.callerName }),

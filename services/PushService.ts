@@ -102,21 +102,45 @@ export async function sendPushToEmails(emails: string[], payload: PushPayload, {
 
     const options = payload.kind ? DELIVERY_OPTIONS[payload.kind] : undefined;
     let successCount = 0;
+    // One line per push, so "the phone showed nothing" can be told apart from
+    // "nothing was sent" in the server log. Only the push service's host is
+    // logged - the full endpoint is what lets anyone push to that device.
+    const results: string[] = [];
     for (const sub of subscriptions) {
-        if (exceptEndpoint && (sub.data as { endpoint?: string }).endpoint === exceptEndpoint) continue;
+        const endpoint = (sub.data as { endpoint?: string }).endpoint;
+        if (exceptEndpoint && endpoint === exceptEndpoint) continue;
+        const host = pushServiceHost(endpoint);
         try {
-            await webpush.sendNotification(
+            const { statusCode } = await webpush.sendNotification(
                 sub.data as webpush.PushSubscription,
                 JSON.stringify({ icon: '/icon.png', ...payload }),
                 options
             );
             successCount++;
+            results.push(`${host} ${statusCode}`);
         } catch (error: any) {
             // We'll delete stale object - like when browser data deleted it'll return 410
-            if (error.statusCode === 410 || error.statusCode === 404) {
+            const gone = error.statusCode === 410 || error.statusCode === 404;
+            if (gone) {
                 await PushSubscription.deleteOne({ _id: sub._id });
             }
+            // Status code only - a push service's error body or a network
+            // error's message can carry the endpoint.
+            const reason = error.statusCode ?? error.code ?? 'network error';
+            results.push(`${host} failed: ${reason}${gone ? ' (removed)' : ''}`);
         }
     }
+    const summary = results.length > 0 ? results.join(', ')
+        : subscriptions.length > 0 ? 'no device besides the one that caused it'
+            : 'no live subscription';
+    console.log(`Push ${payload.kind ?? 'message'}: ${summary}`);
     return successCount;
+}
+
+function pushServiceHost(endpoint: string | undefined) {
+    try {
+        return new URL(endpoint!).host;
+    } catch {
+        return 'invalid endpoint';
+    }
 }
