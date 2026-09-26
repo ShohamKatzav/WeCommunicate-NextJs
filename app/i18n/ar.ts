@@ -33,7 +33,6 @@ const ar: Messages = {
         attachment: "مرفق",
     },
     nav: {
-        privacy: "الخصوصية",
         main: "الرئيسية",
         login: "تسجيل الدخول",
         chat: "الدردشة",

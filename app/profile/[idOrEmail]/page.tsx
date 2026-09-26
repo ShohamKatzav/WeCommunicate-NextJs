@@ -80,7 +80,7 @@ export default function OtherUserProfilePage() {
 
     if (notFound || !profile) {
         return (
-            <div className="max-w-md mx-auto px-4 py-8">
+            <div className="max-w-md mx-auto px-4 pt-4 pb-8">
                 {backToChat}
                 <p className="text-center text-muted-foreground">
                     {t("profile.userNotFound")}
@@ -90,7 +90,7 @@ export default function OtherUserProfilePage() {
     }
 
     return (
-        <div className="max-w-md mx-auto px-4 py-8">
+        <div className="max-w-md mx-auto px-4 pt-4 pb-8">
             {backToChat}
             <ProfileCard profile={profile} />
         </div>

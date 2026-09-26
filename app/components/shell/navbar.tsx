@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from 'next/navigation';
@@ -47,6 +47,34 @@ const Navbar = () => {
   const pathname = usePathname();
   const t = useT();
 
+  // The desktop row only when it fits. It needs anywhere from ~800px to
+  // ~1100px depending on the language and on being signed in (Russian
+  // labels are long), so no one breakpoint works: where it doesn't fit, the
+  // menu button takes over - the same menu phones get, with every link in
+  // it - instead of the row cutting the name short or wrapping labels.
+  // The row stays rendered, out of sight, so its full width can be measured.
+  const [collapsed, setCollapsed] = useState(false);
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  const logoRef = useRef<HTMLAnchorElement | null>(null);
+  const linksRef = useRef<HTMLUListElement | null>(null);
+  useLayoutEffect(() => {
+    const row = rowRef.current, logo = logoRef.current, links = linksRef.current;
+    if (!row || !logo || !links) return;
+    const measure = () => {
+      // Below md the row is display:none and the menu button shows anyway.
+      if (getComputedStyle(links).display === "none") return;
+      const title = logo.querySelector("h1");
+      const logoWidth = logo.getBoundingClientRect().width + (title ? title.scrollWidth - title.clientWidth : 0);
+      const style = getComputedStyle(row);
+      const available = row.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      setCollapsed(links.getBoundingClientRect().width + logoWidth + 16 > available);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, [user, t]);
+
   const toggleNav = () => {
     setNav(!nav);
     if (!nav) {
@@ -58,19 +86,19 @@ const Navbar = () => {
 
   const handleLogOut = () => logOut({ destination: '/login' });
 
+  // The app's own pages first, then the ones about it, and the account
+  // last - Log in sits where the profile and Log out go once signed in.
   // Login stays a text link: it navigates to a page, and a door icon
   // next to nothing else reads as log out. Log out is an action, rendered
-  // separately after the account controls.
+  // separately after the account controls. The privacy policy is in the
+  // footer (and on sign-up), not here.
   const links = [
-    { id: 1, text: t("nav.login"), link: "/login", auth: false, action: () => { } },
     { id: 2, text: t("nav.chat"), link: "/chat", auth: true, action: () => { } },
     { id: 3, text: t("nav.locations"), link: "/locations", auth: true, action: () => { } },
     { id: 4, text: t("nav.moderator"), link: "/moderator", auth: true, moderatorOnly: true, action: () => { } },
-    { id: 5, text: t("nav.about"), link: "/about", auth: null, action: () => { } },
     { id: 6, text: t("nav.contact"), link: "/contact", auth: null, action: () => { } },
-    // Phone menu only: from md up the footer is on every page, chat included,
-    // and carries this link; on a phone the chat hides the footer.
-    { id: 7, text: t("nav.privacy"), link: "/privacy", auth: null, mobileOnly: true, action: () => { } },
+    { id: 5, text: t("nav.about"), link: "/about", auth: null, action: () => { } },
+    { id: 1, text: t("nav.login"), link: "/login", auth: false, action: () => { } },
   ];
 
   const isUserConnected = () => {
@@ -133,8 +161,9 @@ const Navbar = () => {
         className="navbar flex items-center bg-bar-background shadow-md nav wrap-break-word"
         aria-label={t("nav.main")}
       >
-        <div className="flex w-full items-center justify-between px-3 md:px-5">
+        <div ref={rowRef} className="flex w-full items-center justify-between px-3 md:px-5">
           <Link
+            ref={logoRef}
             href="/"
             className="flex min-w-0 items-center gap-2.5"
           >
@@ -148,13 +177,21 @@ const Navbar = () => {
               className="h-8 w-8 shrink-0 rounded-lg"
             />
             <h1 className="truncate text-lg font-semibold tracking-tight md:text-xl">
-              We Communicate
+              WeCommunicate
             </h1>
           </Link>
 
-          <ul className="hidden items-center md:flex">
+          <ul
+            ref={linksRef}
+            // Collapsed: kept laid out at its natural width for measuring,
+            // but invisible, out of the flow and out of reach (inert) - the
+            // menu has the same links.
+            className={`hidden items-center whitespace-nowrap md:flex ${collapsed ? "md:pointer-events-none md:invisible md:absolute" : ""}`}
+            aria-hidden={collapsed || undefined}
+            inert={collapsed}
+          >
             {links.map((item) => (
-              shouldDisplayLink(item) && !item.mobileOnly &&
+              shouldDisplayLink(item) &&
               <li key={item.id}>
                 <Link
                   onClick={(e) => handleLinkClick(e, item.link, item.action)}
@@ -193,7 +230,7 @@ const Navbar = () => {
           <button
             type="button"
             onClick={() => toggleNav()}
-            className="relative z-50 cursor-pointer rounded-md p-2 text-muted-foreground hover:bg-foreground/10 hover:text-foreground md:hidden"
+            className={`relative z-50 cursor-pointer rounded-md p-2 text-muted-foreground hover:bg-foreground/10 hover:text-foreground ${collapsed ? "" : "md:hidden"}`}
             aria-label={nav ? t("nav.closeMenu") : t("nav.openMenu")}
             aria-expanded={nav}
           >

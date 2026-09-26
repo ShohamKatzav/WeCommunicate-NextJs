@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getT } from "../i18n/server";
 import { pageTitleClassName } from "../components/shell/pageTitle";
+import PageTitle from "../components/shell/fitTitle";
 
 // When this policy last changed - update it with the text.
 const LAST_UPDATED = new Date("2026-09-25T00:00:00Z");
@@ -55,11 +56,11 @@ export default async function PrivacyPage() {
     return (
         <div className="mx-auto max-w-3xl px-4 pb-20 sm:px-6 sm:pb-28">
             <header className="mb-14 text-center">
-                <h1 className={pageTitleClassName}>
+                <PageTitle className={pageTitleClassName}>
                     <span className="text-transparent bg-clip-text bg-linear-to-r from-violet-700 to-fuchsia-700 dark:from-violet-300 dark:to-fuchsia-400">
                         {t("privacy.title")}
                     </span>
-                </h1>
+                </PageTitle>
                 <p className="mt-6 text-sm text-muted-foreground">{t("privacy.updated", { date: updated })}</p>
                 <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">{t("privacy.intro")}</p>
                 <nav aria-label={t("privacy.contents")} className="mx-auto mt-6 flex max-w-2xl flex-wrap justify-center gap-x-3 gap-y-2">

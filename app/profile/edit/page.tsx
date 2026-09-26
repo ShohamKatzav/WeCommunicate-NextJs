@@ -224,7 +224,7 @@ export default function EditProfilePage() {
         // Tight on a phone: the navbar already clears the top, and this card
         // has to finish inside the first screen. sm: restores a little air
         // once the window is tall enough that the extra padding is free.
-        <div className="mx-auto max-w-md px-3 pt-2 pb-4 sm:px-4 sm:py-8">
+        <div className="mx-auto max-w-md px-3 pt-2 pb-4 sm:px-4 sm:pt-4 sm:pb-8">
             {fileToCrop && (
                 <ImageCropper
                     file={fileToCrop}

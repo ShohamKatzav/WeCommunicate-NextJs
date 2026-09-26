@@ -28,7 +28,6 @@ const fr: Messages = {
         attachment: "Pièce jointe",
     },
     nav: {
-        privacy: "confidentialité",
         main: "Navigation principale",
         login: "connexion",
         chat: "discussion",

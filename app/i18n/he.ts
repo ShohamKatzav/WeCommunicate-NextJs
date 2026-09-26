@@ -31,7 +31,6 @@ const he: Messages = {
         attachment: "קובץ מצורף",
     },
     nav: {
-        privacy: "פרטיות",
         main: "ראשי",
         login: "התחברות",
         chat: "צ'אט",
@@ -290,7 +289,9 @@ const he: Messages = {
         hidePassword: "הסתרת הסיסמה",
         cannotConnect: "אין חיבור לשרת. בדקו את החיבור לאינטרנט.",
         login: {
-            title: "התחברות ל-WeCommunicate",
+            // \u2011 is a non-breaking hyphen: the prefix stays with the name
+            // instead of being left alone at the end of a title line.
+            title: "התחברות ל\u2011WeCommunicate",
             identifier: "אימייל או מספר טלפון",
             password: "סיסמה",
             passwordPlaceholder: "הזינו כאן את הסיסמה",
@@ -311,7 +312,7 @@ const he: Messages = {
         otp: {
             privacyNote: "מה אנחנו שומרים ולמה: <link>מדיניות הפרטיות</link>.",
             titleReset: "איפוס סיסמה",
-            titleSignUp: "יצירת חשבון ב-WeCommunicate",
+            titleSignUp: "יצירת חשבון ב\u2011WeCommunicate",
             titleVerify: "אימות קוד",
             titleNewPassword: "בחירת סיסמה חדשה",
             titleSetPassword: "בחירת סיסמה",
