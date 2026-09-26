@@ -275,17 +275,26 @@ const Footer = () => {
                     </div>
                 </div>
 
-                <div className="mt-6 flex flex-col gap-2 border-t border-border/40 pt-4 text-xs text-muted-foreground sm:mt-10 sm:flex-row sm:items-center sm:justify-between sm:pt-6">
+                <div className="mt-6 flex flex-col gap-2 border-t border-border/40 pt-4 text-xs sm:mt-10 sm:flex-row sm:items-center sm:justify-between sm:pt-6">
                     {/* Signed in or not - it's also where a visitor looks before
                         signing up. */}
-                    <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <span>{t("footer.copyright", { year })}</span>
-                        <span aria-hidden="true">·</span>
-                        <Link href="/privacy" className="transition-colors hover:text-foreground hover:underline">
+                    <p className="text-muted-foreground">
+                        {t("footer.copyright", { year })}
+                    </p>
+                    {/* Below sm the copyright already fills the row, so the
+                        privacy link shares the next one with the language
+                        picker instead of wrapping onto a line by itself.
+                        Primary and always underlined: the muted hover-only
+                        treatment read as more copyright text. */}
+                    <div className="flex items-center justify-between gap-3 sm:justify-end sm:gap-4">
+                        <Link
+                            href="/privacy"
+                            className="font-medium text-primary underline underline-offset-2 transition-colors hover:no-underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        >
                             {t("footer.privacy")}
                         </Link>
-                    </p>
-                    <LanguagePicker />
+                        <LanguagePicker />
+                    </div>
                 </div>
             </div>
         </footer>

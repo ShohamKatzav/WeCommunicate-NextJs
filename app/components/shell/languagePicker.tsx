@@ -16,7 +16,7 @@ const LanguagePicker = () => {
     const [pending, startTransition] = useTransition();
 
     return (
-        <label className="inline-flex items-center gap-1.5 self-start sm:self-center rounded-md border border-border/40 bg-foreground/5 ps-2 pe-1 transition-colors hover:border-border hover:text-foreground focus-within:ring-2 focus-within:ring-primary">
+        <label className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border/40 bg-foreground/5 ps-2 pe-1 transition-colors hover:border-border hover:text-foreground focus-within:ring-2 focus-within:ring-primary">
             <Globe className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             {/* Each language named in itself, so whoever is stuck in the
                 wrong one can still find theirs. */}
