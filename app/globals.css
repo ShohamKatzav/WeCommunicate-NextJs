@@ -71,10 +71,10 @@
 /* The navbar is position: fixed (see app/components/shell/bars.css), so it does not
    reserve space in flow. The space above page content is reserved instead by
    --content-top-offset, applied in exactly one place (the navbar wrapper's
-   margin-bottom) so a view that needs to cancel it can. On a desktop window
-   the extra over the navbar's own height reads as breathing room; on a phone
-   that same surplus is most of the screen's usable height, so there it is
-   only enough to keep content off the bar.
+   margin-bottom) so a view that needs to cancel it can. It is only enough to
+   keep content off the bar, on every screen: page titles bring their own
+   small top margin (pageTitle.ts), and a larger desktop surplus (it was
+   160px) just pushed every page's title far down the window.
    The site footer is in document flow and shown on every page, including
    /chat on a tall desktop window. Everywhere except that case this stays
    at its 0px default; footer.tsx only overwrites it (to the footer's real
@@ -87,7 +87,7 @@
 :root {
   --navbar-height: 64px;
   --footer-height: 0px;
-  --content-top-offset: 160px;
+  --content-top-offset: calc(var(--navbar-height) + 0.75rem);
   /* Overwritten at runtime by BottomPromptStack while a prompt is on screen.
      The stack only ever shows one slim prompt bar at a time (see
      usePromptSlot.tsx), so this never grows past a single bar's height no

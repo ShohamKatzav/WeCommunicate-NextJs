@@ -46,14 +46,14 @@ export default function ProfilePage() {
 
     if (!profile) {
         return (
-            <div className="max-w-md mx-auto px-4 py-8 text-center text-muted-foreground">
+            <div className="max-w-md mx-auto px-4 pt-4 pb-8 text-center text-muted-foreground">
                 {t("profile.loadFailed")}
             </div>
         );
     }
 
     return (
-        <div className="max-w-md mx-auto px-4 py-8">
+        <div className="max-w-md mx-auto px-4 pt-4 pb-8">
             <ProfileCard profile={profile} isOwn />
         </div>
     );

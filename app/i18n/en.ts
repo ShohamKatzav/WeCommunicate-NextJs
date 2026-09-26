@@ -31,7 +31,6 @@ const en = {
         attachment: "Attachment",
     },
     nav: {
-        privacy: "Privacy",
         main: "Main",
         login: "login",
         chat: "chat",

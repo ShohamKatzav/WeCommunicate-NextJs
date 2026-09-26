@@ -1,6 +1,8 @@
+import { Fragment } from 'react';
 import { Mail, Phone, Linkedin, Facebook, Github } from 'lucide-react';
 import { getT } from '../i18n/server';
 import { pageTitleClassName } from '../components/shell/pageTitle';
+import PageTitle from '../components/shell/fitTitle';
 
 const Contact = async () => {
     const t = await getT();
@@ -37,9 +39,9 @@ const Contact = async () => {
             <div className="pb-12">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center">
-                        <h1 className={pageTitleClassName}>
+                        <PageTitle className={pageTitleClassName}>
                             <span className="text-transparent bg-clip-text bg-linear-to-r from-emerald-700 to-cyan-800 dark:from-emerald-300 dark:to-cyan-400">{t('contact.title')}</span>
-                        </h1>
+                        </PageTitle>
                         <p className="mt-4 max-w-2xl mx-auto text-xl text-muted-foreground">
                             {t('contact.intro')}
                         </p>
@@ -56,21 +58,25 @@ const Contact = async () => {
                             href={method.link}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="group bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700 p-6 transform hover:scale-105 transition-all duration-200 flex items-center gap-4"
+                            className="group flex min-w-0 items-center gap-3 rounded-lg border border-gray-300 bg-white p-4 shadow-lg transition-all duration-200 hover:scale-105 dark:border-gray-700 dark:bg-gray-800 sm:gap-4 sm:p-6"
                         >
                             <div className="shrink-0">
                                 <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-full group-hover:bg-blue-200 dark:group-hover:bg-blue-800 transition-colors duration-200">
                                     {method.icon}
                                 </div>
                             </div>
-                            <div className="flex-1">
+                            <div className="min-w-0 flex-1">
                                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
                                     {method.title}
                                 </h3>
                                 <p className="text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors duration-200">
                                     {/* An address or number reads left to right even
-                                        inside a right-to-left page. */}
-                                    <bdi dir="ltr">{method.value}</bdi>
+                                        inside a right-to-left page. On the narrowest
+                                        phones an address may break after its "@" -
+                                        never anywhere else. */}
+                                    <bdi dir="ltr">{method.value.split('@').map((part, i, all) => (
+                                        <Fragment key={i}>{part}{i < all.length - 1 && <>@<wbr /></>}</Fragment>
+                                    ))}</bdi>
                                 </p>
                             </div>
                         </a>

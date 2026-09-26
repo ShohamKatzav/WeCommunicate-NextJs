@@ -9,6 +9,7 @@ import { isPhone } from '@/app/lib/contact';
 import { useI18n } from '@/app/i18n/client';
 import type { Locale } from '@/app/i18n/config';
 import { pageTitleClassName } from '@/app/components/shell/pageTitle';
+import PageTitle from '@/app/components/shell/fitTitle';
 
 interface OTPProcessProps {
     mode: 'forgot' | 'sign-up';
@@ -274,7 +275,7 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
             <div className="mainContainer grid px-3 pb-[calc(4rem+var(--bottom-prompt-height))] md:grid-cols-3 md:px-4 md:pb-[calc(2rem+var(--bottom-prompt-height))]">
                 <div className='md:col-start-2 flex flex-col gap-3 md:gap-4'>
                     <div className="titleContainer">
-                        <h1 className={pageTitleClassName}>
+                        <PageTitle className={pageTitleClassName}>
                             <span className="text-transparent bg-clip-text bg-linear-to-r to-indigo-800 from-pink-700 dark:to-indigo-400 dark:from-pink-300">
                                 {step === 'email' && mode === 'forgot' ? t("auth.otp.titleReset") :
                                     step === 'email' && mode === 'sign-up' ? t("auth.otp.titleSignUp") :
@@ -282,7 +283,7 @@ const OTPProcess = ({ mode }: OTPProcessProps) => {
                                             step === 'password' && mode === 'forgot' ? t("auth.otp.titleNewPassword") :
                                                 t("auth.otp.titleSetPassword")}
                             </span>
-                        </h1>
+                        </PageTitle>
                         {(generalError || successMessage) && (
                             <div className="mt-2 md:mt-8 font-normal">
                                 <div className={`md:col-start-2 md:col-span-3 px-4 py-3 rounded mb-2 ${successMessage

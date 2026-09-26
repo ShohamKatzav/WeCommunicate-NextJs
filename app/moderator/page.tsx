@@ -9,6 +9,7 @@ import Loading from '../components/ui/loading';
 import { useSocket } from '../hooks/useSocket';
 import { useT } from '../i18n/client';
 import { pageTitleClassName } from '../components/shell/pageTitle';
+import PageTitle from '../components/shell/fitTitle';
 import type { TFunction } from '../i18n/messages';
 
 function sessionUserId(token?: string): string | null {
@@ -238,9 +239,9 @@ export default function ModeratorPanel() {
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 sm:pb-28">
             <div className="mb-8 text-center">
-                <h1 className={`${pageTitleClassName} mb-4`}>
+                <PageTitle className={`${pageTitleClassName} mb-4`}>
                     <span className="text-transparent bg-clip-text bg-linear-to-r from-amber-700 to-rose-700 dark:from-amber-300 dark:to-rose-400">{t("moderator.title")}</span>
-                </h1>
+                </PageTitle>
                 <p className="mx-auto max-w-2xl text-muted-foreground">
                     {t("moderator.subtitle")}
                 </p>

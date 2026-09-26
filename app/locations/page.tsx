@@ -11,6 +11,7 @@ import LocationsTable, { FriendDistanceRow } from '../components/locations/locat
 import { getDistanceKm } from '../utils/geolocation';
 import { useT } from '../i18n/client';
 import { pageTitleClassName } from '../components/shell/pageTitle';
+import PageTitle from '../components/shell/fitTitle';
 
 
 const center = {
@@ -160,9 +161,9 @@ function Locations() {
   // so the page always renders - location access only decides the banner.
   return (
     <section className="mx-auto w-full max-w-6xl px-3 pb-8 sm:px-4">
-      <h1 className={`${pageTitleClassName} mb-8 md:mb-12`}>
+      <PageTitle className={`${pageTitleClassName} mb-8 md:mb-12`}>
         <span className="text-transparent bg-clip-text bg-linear-to-r to-blue-900 from-teal-700 dark:to-blue-400 dark:from-teal-300">{t('locations.title')}</span>
-      </h1>
+      </PageTitle>
 
       <LocationAccessInformation
         information={locationAccessinfo}

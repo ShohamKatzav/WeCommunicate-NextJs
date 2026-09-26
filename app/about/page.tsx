@@ -1,6 +1,7 @@
 import Link from "next/link";
 import CollapsibleSection from "../components/ui/collapsibleSection";
 import { pageTitleClassName } from "../components/shell/pageTitle";
+import PageTitle from "../components/shell/fitTitle";
 import { getLocale, getT } from "../i18n/server";
 import {
     MessageSquare,
@@ -60,21 +61,17 @@ const About = async () => {
     const locale = await getLocale();
     // Geist has no Hebrew, so this word falls through to Segoe UI and draws
     // about 80% as tall as the Latin line at the same size. 1.25em brings
-    // the ink height back in line with "We-Communicate".
+    // the ink height back in line with "WeCommunicate".
     const localTitleClassName = locale === "he" ? "text-[1.25em]" : "";
     return (
         <div className="relative overflow-hidden">
             <div className="max-w-7xl mx-auto">
                 <main className="max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="text-center">
-                        <h1 className={pageTitleClassName}>
+                        <PageTitle className={pageTitleClassName}>
                             <span className={`text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-indigo-800 dark:from-blue-300 dark:to-indigo-400 ${localTitleClassName}`}>{t("about.title")}</span><br />
-                            {/* One line on a phone too: at the title size it wrapped
-                                at the hyphen into "We-" / "Communicate". nowrap keeps
-                                it whole, and min(1em, 9vw) shrinks it with the screen -
-                                the full title size wherever that already fits. */}
-                            <span className="inline-block whitespace-nowrap text-[min(1em,9vw)] text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-indigo-800 dark:from-blue-300 dark:to-indigo-400">We-Communicate</span>
-                        </h1>
+                            <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-indigo-800 dark:from-blue-300 dark:to-indigo-400">WeCommunicate</span>
+                        </PageTitle>
                         <p className="mt-6 max-w-2xl mx-auto text-lg text-muted-foreground">
                             {t("about.intro")}
                         </p>

@@ -29,7 +29,6 @@ const ru: Messages = {
         attachment: "Вложение",
     },
     nav: {
-        privacy: "конфиденциальность",
         main: "Главное меню",
         login: "вход",
         chat: "чат",
