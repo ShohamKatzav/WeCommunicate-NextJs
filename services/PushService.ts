@@ -28,7 +28,7 @@ interface SendOptions {
 
 // All the call kinds share a Topic, so a push service still holding an
 // undelivered ring (a phone in Doze) swaps it for whatever replaced it
-// instead of delivering both.
+// instead of delivering both. Not sent to Apple's - see optionsFor.
 const CALL_TOPIC = 'incoming-call';
 
 const DELIVERY_OPTIONS: Partial<Record<NonNullable<PushPayload['kind']>, webpush.RequestOptions>> = {
@@ -51,6 +51,15 @@ const DELIVERY_OPTIONS: Partial<Record<NonNullable<PushPayload['kind']>, webpush
         topic: CALL_TOPIC,
     },
 };
+
+// Apple's push service turns away a push that carries a Topic header (400
+// BadWebPushTopic), so every call push to an iPhone or a Mac failed. Those
+// go without one - once delivered, the service worker still swaps a ring
+// for what replaced it by the notification's tag.
+function optionsFor(host: string, options: webpush.RequestOptions | undefined) {
+    const apple = host === 'push.apple.com' || host.endsWith('.push.apple.com');
+    return apple && options?.topic ? { ...options, topic: undefined } : options;
+}
 
 // Rows saved before expiresAt existed. No session alive now can outlast
 // SESSION_MAX_AGE_SECONDS, and a device still in use restamps its row with
@@ -114,7 +123,7 @@ export async function sendPushToEmails(emails: string[], payload: PushPayload, {
             const { statusCode } = await webpush.sendNotification(
                 sub.data as webpush.PushSubscription,
                 JSON.stringify({ icon: '/icon.png', ...payload }),
-                options
+                optionsFor(host, options)
             );
             successCount++;
             results.push(`${host} ${statusCode}`);
