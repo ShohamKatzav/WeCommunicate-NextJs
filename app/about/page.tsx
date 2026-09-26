@@ -69,7 +69,11 @@ const About = async () => {
                     <div className="text-center">
                         <h1 className={pageTitleClassName}>
                             <span className={`text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-indigo-800 dark:from-blue-300 dark:to-indigo-400 ${localTitleClassName}`}>{t("about.title")}</span><br />
-                            <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-indigo-800 dark:from-blue-300 dark:to-indigo-400">We-Communicate</span>
+                            {/* One line on a phone too: at the title size it wrapped
+                                at the hyphen into "We-" / "Communicate". nowrap keeps
+                                it whole, and min(1em, 9vw) shrinks it with the screen -
+                                the full title size wherever that already fits. */}
+                            <span className="inline-block whitespace-nowrap text-[min(1em,9vw)] text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-indigo-800 dark:from-blue-300 dark:to-indigo-400">We-Communicate</span>
                         </h1>
                         <p className="mt-6 max-w-2xl mx-auto text-lg text-muted-foreground">
                             {t("about.intro")}
