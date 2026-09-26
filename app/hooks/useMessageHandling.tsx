@@ -21,8 +21,11 @@ interface UseMessageHandlingProps {
     setChat: (messages: Message[]) => void;
     messageToSend: Message;
     setMessageToSend: React.Dispatch<React.SetStateAction<Message>>;
-    updateConversationsBar: (message: Message | null, mode?: string, cleanId?: string, knownMembers?: ChatUser[]) => Promise<void>;
+    updateConversationsBar: (message: Message | null, mode?: string, cleanId?: string, knownMembers?: ChatUser[], replacesTempId?: string) => Promise<void>;
     pendingClearsRef: React.RefObject<PendingClears>;
+    // Optimistic sidebar updates (see useConversationsManager).
+    showSentMessage?: (message: Message, conversationId: string, otherMembers: ChatUser[]) => void;
+    dropSentMessage?: (tempId: string) => void;
 }
 
 const isAtOrBeforeCutoff = (dateValue: Date | string | undefined, cutoff: string | undefined): boolean => {
@@ -41,7 +44,9 @@ export const useMessageHandling = ({
     messageToSend,
     setMessageToSend,
     updateConversationsBar,
-    pendingClearsRef
+    pendingClearsRef,
+    showSentMessage,
+    dropSentMessage
 }: UseMessageHandlingProps) => {
     const t = useT();
 
@@ -150,9 +155,12 @@ export const useMessageHandling = ({
                 conversationID: currentConversationId.current || newConversationId
             };
 
-            updateConversationsBar(finalMessage, "", undefined, newConversationMembers);
+            // tempId: this replaces the optimistic entry the send put in the bar.
+            updateConversationsBar(finalMessage, "", undefined, newConversationMembers, tempId);
+        } else {
+            dropSentMessage?.(tempId);
         }
-    }, [socket, currentConversationId, participants, chatRef, setChat, updateConversationsBar, pendingClearsRef]);
+    }, [socket, currentConversationId, participants, chatRef, setChat, updateConversationsBar, pendingClearsRef, dropSentMessage]);
 
     // `overrideFile` lets a caller send a file that was only just produced
     // (e.g. voiceRecorder.tsx, right after its upload finishes) without
@@ -186,12 +194,15 @@ export const useMessageHandling = ({
             };
             setMessageToSend(prev => ({ ...prev, text: '', file: null, replyTo: undefined }));
             setChat([...chatRef.current, newTempMessage as Message]);
+            // The sidebar moves now too, not once the server has saved it.
+            showSentMessage?.(newTempMessage as Message, currentConversationId.current, participants.current);
 
             try {
                 const result = await saveMessage(newTempMessage);
                 if (result.blocked) {
                     // Remove the temp message
                     setChat(chatRef.current.filter(m => m._id !== tempId));
+                    dropSentMessage?.(tempId);
 
                     if (result.banned) {
                         // Already banned before this message was even evaluated -
@@ -245,6 +256,7 @@ export const useMessageHandling = ({
                 // the other person as if it were the message.
                 if (!result?.success || !result.messageDoc) {
                     setChat(chatRef.current.filter(m => m._id !== tempId));
+                    dropSentMessage?.(tempId);
                     toast.error(result?.message || t('chat.send.error'));
                     return;
                 }
@@ -264,11 +276,12 @@ export const useMessageHandling = ({
                 } else {
                     console.error('Failed to send message:', error);
                     setChat(chatRef.current.filter(m => m._id !== tempId));
+                    dropSentMessage?.(tempId);
                     toast.error(t('chat.send.error'));
                 }
             }
         }
-    }, [socket, loadingSocket, participants, messageToSend, chatRef, setChat, setMessageToSend, handleServerSavedMessageResponse, t]);
+    }, [socket, loadingSocket, participants, messageToSend, chatRef, setChat, setMessageToSend, handleServerSavedMessageResponse, t, currentConversationId, showSentMessage, dropSentMessage]);
 
 
     return {

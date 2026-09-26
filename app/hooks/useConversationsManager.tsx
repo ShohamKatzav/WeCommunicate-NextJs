@@ -5,6 +5,12 @@ import ChatUser from '@/types/chatUser';
 import { getConversationMembers } from '@/app/lib/chatActions';
 import { PendingClears } from './usePendingCleanHistory';
 
+// The id of a sidebar row shown for a brand-new conversation before the
+// server has created it (see showSentMessage). Never a real conversation id,
+// so nothing may join a room or look one up by it - see useChatRoom.
+export const PENDING_CONVERSATION_PREFIX = 'pending:';
+export const isPendingConversationId = (id?: string) => !!id?.startsWith(PENDING_CONVERSATION_PREFIX);
+
 interface UseConversationsManagerProps {
     initialConversations: Conversation[];
     pendingClears: PendingClears;
@@ -128,8 +134,40 @@ export const useConversationsManager = ({
         // (see useMessageHandling's handleServerSavedMessageResponse) - lets
         // its row appear immediately instead of only after the members
         // lookup below, which never happens if the connection drops first.
-        knownMembers?: ChatUser[]
+        knownMembers?: ChatUser[],
+        // The temp id of the message this one is the server's copy of (see
+        // showSentMessage): the optimistic entry - and a pending row's
+        // placeholder id - become the real ones, instead of the row showing
+        // the message twice or appearing twice.
+        replacesTempId?: string
     ) => {
+        if (replacesTempId && message?.conversationID) {
+            const conversationId = message.conversationID;
+            const pendingId = PENDING_CONVERSATION_PREFIX + replacesTempId;
+            const swap = (messages: Message[] = []) => {
+                const replaced = messages.map(m => m._id === replacesTempId ? message : m);
+                return replaced.filter((m, i) => replaced.findIndex(x => x._id === m._id) === i);
+            };
+            setConversationsForBar(prev => {
+                const pendingRow = prev.find(c => c._id === pendingId);
+                if (pendingRow) {
+                    const existing = prev.find(c => c._id === conversationId);
+                    if (existing) {
+                        // The conversation was already there (hidden, or opened
+                        // another way) - fold the optimistic row into it.
+                        return prev
+                            .filter(c => c._id !== pendingId)
+                            .map(c => c._id === conversationId
+                                ? { ...c, messages: swap([...(c.messages || []), ...(pendingRow.messages || [])]) }
+                                : c);
+                    }
+                    return prev.map(c => c._id === pendingId ? { ...c, _id: conversationId, messages: swap(c.messages) } : c);
+                }
+                if (!prev.some(c => c.messages?.some(m => m._id === replacesTempId))) return prev;
+                return prev.map(c => c.messages?.some(m => m._id === replacesTempId) ? { ...c, messages: swap(c.messages) } : c);
+            });
+        }
+
         if (mode === "Clean" && cleanId) {
             setConversationsForBar(prev => {
                 let updated = [...prev];
@@ -205,9 +243,44 @@ export const useConversationsManager = ({
         void fetchAndAddConversation(conversationId, message);
     }, [fetchAndAddConversation, pendingClearsRef]);
 
+    // Optimistic: a message this user just sent shows in the bar at once -
+    // its chat moves to the top with the new preview - instead of after the
+    // server has saved it (moderation plus the database write), and for a
+    // brand-new chat also after a members lookup. A chat the bar doesn't have
+    // yet gets a row under a pending id, from the members the open chat
+    // already knows. updateConversationsBar(saved, ..., tempId) swaps in the
+    // real message and id; dropSentMessage takes it back if the send failed.
+    const showSentMessage = useCallback((message: Message, conversationId: string, otherMembers: ChatUser[]) => {
+        if (!message._id) return;
+        if (conversationId && knownConversationIds.current.has(conversationId)) {
+            void updateConversationsBar({ ...message, conversationID: conversationId });
+            return;
+        }
+        if (otherMembers.length === 0) return;
+        const pendingId = PENDING_CONVERSATION_PREFIX + message._id;
+        setConversationsForBar(prev => [
+            { _id: pendingId, members: otherMembers, messages: [{ ...message, conversationID: pendingId }] },
+            ...prev.filter(c => c._id !== pendingId),
+        ]);
+    }, [updateConversationsBar]);
+
+    const dropSentMessage = useCallback((tempId: string) => {
+        const pendingId = PENDING_CONVERSATION_PREFIX + tempId;
+        setConversationsForBar(prev => {
+            if (!prev.some(c => c._id === pendingId || c.messages?.some(m => m._id === tempId))) return prev;
+            return prev
+                .filter(c => c._id !== pendingId)
+                .map(c => c.messages?.some(m => m._id === tempId)
+                    ? { ...c, messages: (c.messages ?? []).filter(m => m._id !== tempId) }
+                    : c);
+        });
+    }, []);
+
     return {
         conversationsForBar,
         updateConversationsBar,
-        setConversationsForBar
+        setConversationsForBar,
+        showSentMessage,
+        dropSentMessage
     };
 };

@@ -7,6 +7,7 @@ import { PendingClears } from './usePendingCleanHistory';
 import { findConversationId, getOrCreateConversationId } from '../lib/conversationActions';
 import { TYPING_IDLE_MS, TYPING_REFRESH_MS } from '../config/limits';
 import { registerOpenRoom } from '../utils/chatReturn';
+import { isPendingConversationId } from './useConversationsManager';
 
 interface UseChatRoomProps {
     socket: Socket | null;
@@ -130,6 +131,9 @@ export const useChatRoom = ({
             const targetIds = roomParticipants.map(p => p._id).sort();
 
             return conversations.find(conv => {
+                // A row for a chat the server hasn't created yet has no real
+                // id to open or join (see showSentMessage).
+                if (isPendingConversationId(conv._id)) return false;
                 const targetMembers = conv.members.filter(member =>
                     member.email?.toUpperCase() !== userEmail?.toUpperCase()
                 );
