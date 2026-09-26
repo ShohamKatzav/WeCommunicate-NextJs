@@ -89,6 +89,13 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
                 const reportVisibility = (visible = document.visibilityState === 'visible') => {
                     if (newSocket.connected) newSocket.emit('app visibility', visible);
                 };
+                // Before skipping a call push because this tab said it was on
+                // screen, the server asks again: an installed iPhone app can
+                // be suspended before its "hidden" report goes out, and a
+                // suspended page can't answer this - so it gets the push.
+                newSocket.on('app visibility check', (answer?: (visible: boolean) => void) => {
+                    if (typeof answer === 'function') answer(document.visibilityState === 'visible');
+                });
                 // After reconnectionAttempts run out, Socket.IO stops trying
                 // for good; coming back to the app (or back online) starts it
                 // again, so a tab left open doesn't quietly stop receiving
