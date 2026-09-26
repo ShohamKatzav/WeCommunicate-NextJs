@@ -166,13 +166,13 @@ export default class ChatPage {
 
     getSenderDivAtConversationsBar(userShortName: string): Locator {
         const capitalSecondUserShortName = userShortName.slice(0, 1).toUpperCase() + userShortName.slice(1);
-        return this.page.locator(`span.font-medium:text-is("${capitalSecondUserShortName}")`).first();
+        return this.page.locator(`[data-testid="conversation-name"]:text-is("${capitalSecondUserShortName}")`).first();
     }
 
     getConversationRow(username: string): Locator {
         const capitalizedUsername = username.charAt(0).toUpperCase() + username.slice(1);
         return this.page.locator('li').filter({
-            has: this.page.locator('span.font-medium', { hasText: capitalizedUsername })
+            has: this.page.getByTestId('conversation-name').filter({ hasText: capitalizedUsername })
         }).first();
     }
 
@@ -246,7 +246,7 @@ export default class ChatPage {
     async getNotificationDiv(username: string): Promise<Locator> {
         const firstCapitalizedUsername = username.charAt(0).toUpperCase() + username.slice(1);
         const listItem = this.page.locator('li').filter({
-            has: this.page.locator(`span.font-medium:has-text("${firstCapitalizedUsername}")`)
+            has: this.page.getByTestId('conversation-name').filter({ hasText: firstCapitalizedUsername })
         }).first();
 
         await listItem.waitFor();

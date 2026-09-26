@@ -93,7 +93,7 @@ customTest.describe('PWA share target', () => {
             text: 'Should not appear in the composer'
         });
         await expect(chat.shareToHeader).toBeVisible({ timeout: 10000 });
-        await chat.page.getByRole('button', { name: 'Cancel' }).click();
+        await chat.page.getByRole('button', { name: 'Cancel', exact: true }).click();
 
         await chat.ensureConversation(recipient);
         await expect(chat.messageInput).not.toHaveValue(new RegExp(sharedTitle));

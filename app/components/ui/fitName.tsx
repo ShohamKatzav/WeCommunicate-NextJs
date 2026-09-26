@@ -7,6 +7,8 @@ interface FitNameProps {
     // Shown on hover once the name had to be cut short (the last resort).
     fullText?: string;
     className?: string;
+    // A stable hook for tests - the markup inside changes with the fit.
+    testId?: string;
 }
 
 // Characters a long name can break after without splitting a word: the
@@ -32,7 +34,7 @@ type Fit = { fontPx: number | null; truncated: boolean };
 // Measured on a hidden copy that has the break points in it, so what's on
 // screen (a cut name has none - they'd still break under nowrap) never
 // skews the result. Refitted whenever the column's width changes.
-const FitName = ({ text, fullText, className = "" }: FitNameProps) => {
+const FitName = ({ text, fullText, className = "", testId }: FitNameProps) => {
     const ref = useRef<HTMLDivElement | null>(null);
     const [fit, setFit] = useState<Fit>({ fontPx: null, truncated: false });
 
@@ -107,6 +109,7 @@ const FitName = ({ text, fullText, className = "" }: FitNameProps) => {
             // (physical on purpose: text-start would follow the name's own
             // direction, not the page's).
             dir="auto"
+            data-testid={testId}
             title={fit.truncated ? (fullText || text) : undefined}
             style={fit.truncated ? { lineHeight: LINE_HEIGHT } : {
                 fontSize: fit.fontPx ? `${fit.fontPx}px` : undefined,

@@ -35,7 +35,7 @@ customTest.describe('Self-destructing messages', () => {
         await chat.dropDown.openDisappearingMessages();
         await expect(chat.dropDown.getDisappearingDurationOption('24 hours')).toBeEnabled({ timeout: 10000 });
         await expect(chat.dropDown.getDisappearingDurationOption('24 hours')).toBeChecked();
-        await chat.page.getByRole('button', { name: 'Cancel' }).click();
+        await chat.page.getByRole('button', { name: 'Cancel', exact: true }).click();
         await expect(chat.dropDown.disappearingMessagesHeading).toBeHidden();
 
         await chat.sendMessage(messageText);

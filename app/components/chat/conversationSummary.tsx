@@ -136,6 +136,7 @@ const ConversationSummary = ({ conversation, getLastMessages, searchMatch }: Con
                             text={otherMembers.map(member => memberName(member, t)).join(", ")}
                             fullText={otherMembers.map(member => member.nickname?.trim() || member.email || memberName(member, t)).join(", ")}
                             className="min-w-0 flex-1 font-medium"
+                            testId="conversation-name"
                         />
                         {newMessageNotification[conversation._id!] > 0 && (
                             <div

@@ -52,7 +52,7 @@ export default class ProfilePage {
         this.nicknameInput = page.locator('#nickname');
         this.aboutInput = page.locator('#about');
         this.saveButton = page.getByRole('button', { name: 'Save' });
-        this.cancelButton = page.getByRole('button', { name: 'Cancel' });
+        this.cancelButton = page.getByRole('button', { name: 'Cancel', exact: true });
 
         this.phoneEditor = page.getByTestId('phone-number-editor');
         this.phoneAddOrChangeButton = this.phoneEditor.getByRole('button', { name: /^(Add|Change)$/ });
