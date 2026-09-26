@@ -77,7 +77,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
 
     const { pendingClears, pendingClearsRef, setPendingClear, clearPendingClear } = usePendingCleanHistory(user?.email);
 
-    const { conversationsForBar, updateConversationsBar, setConversationsForBar } = useConversationsManager({
+    const { conversationsForBar, updateConversationsBar, setConversationsForBar, showSentMessage, dropSentMessage } = useConversationsManager({
         initialConversations: initialConversationsWithMessages,
         pendingClears,
         pendingClearsRef,
@@ -119,7 +119,9 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
         messageToSend,
         setMessageToSend,
         updateConversationsBar,
-        pendingClearsRef
+        pendingClearsRef,
+        showSentMessage,
+        dropSentMessage
     });
 
     // Socket events
