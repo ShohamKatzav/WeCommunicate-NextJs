@@ -46,12 +46,12 @@ customTest.describe('Chat Notifications Functionality', () => {
             const secondUserShortName = anotherLoginData?.username.split('@')[0] || '';
             await (await authPage.getChatPage().selectUser(secondUserShortName)).click();
 
-            // Send messages while user 2 is offline
-            await authPage.getChatPage().messageInput.fill(ExtractedTestData.test_messages[0]);
-            await authPage.getChatPage().sendMessageButton.click();
-            await authPage.getChatPage().messageInput.fill(ExtractedTestData.test_messages[1]);
-            await authPage.getChatPage().sendMessageButton.click();
-            await expect(authPage.getChatPage().pendingMessageIndicator).toHaveCount(0);
+            // Send messages while user 2 is offline. Each save has to finish
+            // before the next one is sent: on CI the two clocks share the
+            // default 5s expect budget, and the second save is often still
+            // in flight when that budget runs out (the retry then passes).
+            await authPage.getChatPage().sendMessage(ExtractedTestData.test_messages[0]);
+            await authPage.getChatPage().sendMessage(ExtractedTestData.test_messages[1]);
 
             let pOManager2 = await authPage.getLoginPage().loginAnotherUser(browser, anotherLoginData!);
             await pOManager2.getChatPage().waitForNotificationCount(firstUserShortName, 2);

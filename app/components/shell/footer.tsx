@@ -138,7 +138,11 @@ const Footer = () => {
                 className="h-[3px] bg-linear-to-r from-pink-400 via-indigo-500 to-indigo-700"
                 aria-hidden="true"
             />
-            <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10 lg:px-8 md:py-12">
+            {/* pb-20: room under the last row for the fixed Report a bug
+                pill (bugReport.css), so the language picker is never under
+                it at the end of a page - and on a wide /chat, where the
+                pill parks right here. */}
+            <div className="mx-auto max-w-6xl px-4 pt-6 pb-20 sm:px-6 sm:pt-10 lg:px-8 md:pt-12">
                 <div className="grid gap-6 sm:grid-cols-2 sm:gap-10 lg:grid-cols-4">
                     <div className="sm:col-span-2 lg:col-span-1">
                         <Link href="/" className="inline-flex items-center gap-2.5">

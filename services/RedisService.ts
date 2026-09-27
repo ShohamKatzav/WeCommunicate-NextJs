@@ -193,6 +193,14 @@ export default class RedisService {
         return count <= limit;
     }
 
+    // Hands back a window checkRateLimit already counted - for a caller whose
+    // attempt then failed on our side (the email provider was down, say), so
+    // the retry isn't refused as if the first one had gone through.
+    static async resetRateLimit(scope: string, identifier: string) {
+        if (!identifier) return;
+        await this.redis().del(`ratelimit:${scope}:${this.normalizeEmail(identifier)}`);
+    }
+
     // Everything this service keeps for one account, for account deletion
     // (services/AccountDeletionService.ts): unread counts, OTP codes and their
     // attempt/cooldown counters for each of the account's contacts, and the

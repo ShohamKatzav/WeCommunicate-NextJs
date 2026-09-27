@@ -1,0 +1,110 @@
+/* The "Report a bug" pill (reportBugButton.tsx) floats in the bottom corner
+   on the reading-direction's end side, clear of the safe area and above any
+   bottom prompt (--bottom-prompt-height, bottomPromptStack.tsx). Below the
+   z-index of the chat drawers, their backdrop, the call overlay and every
+   modal, so it never sits on top of one. The footer leaves room at its
+   bottom for it (footer.tsx), so at the end of a page it covers nothing.
+   20px off the bottom on a phone, 24px from the wider layout up - enough
+   air that it doesn't read as stuck to the edge. */
+.bug-report-fab {
+  position: fixed;
+  z-index: 15;
+  right: calc(env(safe-area-inset-right) + 1rem);
+  bottom: calc(max(var(--bottom-prompt-height, 0px), env(safe-area-inset-bottom)) + 1.25rem);
+}
+
+[dir="rtl"] .bug-report-fab {
+  right: auto;
+  left: calc(env(safe-area-inset-left) + 1rem);
+}
+
+/* The inverse of the compact query below. */
+@media screen and (min-width: 769px) and (min-height: 501px),
+       screen and (min-width: 1025px) {
+  .bug-report-fab {
+    right: calc(env(safe-area-inset-right) + 1.5rem);
+    bottom: calc(max(var(--bottom-prompt-height, 0px), env(safe-area-inset-bottom)) + 1.5rem);
+  }
+
+  [dir="rtl"] .bug-report-fab {
+    right: auto;
+    left: calc(env(safe-area-inset-left) + 1.5rem);
+  }
+
+  /* /chat keeps the footer on screen here, under the chat shell and under
+     any prompt bar, so the pill sits in the room at the footer's bottom
+     rather than over the composer. */
+  .bug-report-fab[data-on-chat] {
+    bottom: calc(env(safe-area-inset-bottom) + 1.5rem);
+  }
+
+  /* The pill is always in view here, so the conversation menu
+     (chatDropdown.tsx) doesn't repeat it. */
+  .bug-report-menu-entry {
+    display: none;
+  }
+}
+
+/* The same query that hides the footer on /chat (bars.css): an open
+   conversation fills the screen, so anywhere the pill floats is on top of
+   the thread. While one is open, its ⋯ menu carries Report a bug instead
+   (chatDropdown.tsx, data-bug-report-menu); with none open, the pill stays
+   in its corner as on any other page. */
+@media screen and (max-width: 768px),
+       screen and (max-height: 500px) and (max-width: 1024px) {
+  html:has([data-bug-report-menu]) .bug-report-fab[data-on-chat] {
+    display: none;
+  }
+}
+
+/* A little wiggle when hovered or focused, like a bug that's been spotted. */
+@keyframes bug-report-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-14deg); }
+  40% { transform: rotate(12deg); }
+  60% { transform: rotate(-8deg); }
+  80% { transform: rotate(5deg); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bug-report-wiggle:hover .bug-report-wiggle-icon,
+  .bug-report-wiggle:focus-visible .bug-report-wiggle-icon {
+    animation: bug-report-wiggle 0.6s ease-in-out;
+  }
+}
+
+/* The dialog (bugReportDialog.tsx): a centred card, its content scrolling
+   inside once it's taller than the window. */
+.bug-report-dialog {
+  margin: auto;
+  width: min(32rem, calc(100vw - 2rem));
+  max-width: none;
+  max-height: none;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.bug-report-panel {
+  max-height: calc(100dvh - 2rem);
+}
+
+/* A narrow phone gets a full-screen sheet instead, sized to the visual
+   viewport (set from JS while open) so an on-screen keyboard shrinks the
+   sheet rather than covering its bottom, where Send is. */
+@media (max-width: 639.98px) {
+  .bug-report-dialog {
+    margin: 0;
+    top: var(--bug-report-vv-top, 0px);
+    width: 100%;
+    height: var(--bug-report-vv-height, 100dvh);
+    border: 0;
+    border-radius: 0;
+  }
+
+  .bug-report-panel {
+    height: 100%;
+    max-height: none;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

@@ -94,3 +94,9 @@ export const DISAPPEARING_MESSAGES_OPTIONS = [
 export const TYPING_IDLE_MS = 3000;
 export const TYPING_REFRESH_MS = 3000;
 export const TYPING_EXPIRE_MS = 8000;
+
+// A bug report's "what happened" and "what did you expect" fields - checked
+// by the form (maxLength) and again by sendBugReport. The minimum only
+// refuses an empty or one-word report; the email has to say something.
+export const BUG_REPORT_MIN_LENGTH = 10;
+export const BUG_REPORT_MAX_LENGTH = 2000;

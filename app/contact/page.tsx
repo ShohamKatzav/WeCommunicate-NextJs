@@ -1,8 +1,9 @@
 import { Fragment } from 'react';
-import { Mail, Phone, Linkedin, Facebook, Github } from 'lucide-react';
+import { Mail, Phone, Linkedin, Facebook, Github, Bug } from 'lucide-react';
 import { getT } from '../i18n/server';
 import { pageTitleClassName } from '../components/shell/pageTitle';
 import PageTitle from '../components/shell/fitTitle';
+import BugReportLauncher from '../components/bugReport/bugReportLauncher';
 
 const Contact = async () => {
     const t = await getT();
@@ -51,6 +52,34 @@ const Contact = async () => {
 
             {/* Contact Methods Grid */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+                {/* Report a bug - its own block, first: the cards below are
+                    for reaching Shoham, this one is for something that broke
+                    and sends the details a fix needs along with it. */}
+                <div className="mb-6 max-w-4xl mx-auto">
+                    <div className="flex flex-col gap-4 rounded-lg border border-pink-200 bg-white p-4 shadow-lg dark:border-pink-400/30 dark:bg-gray-800 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
+                        <div className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
+                            <div className="shrink-0 rounded-full bg-pink-100 p-3 text-pink-600 dark:bg-pink-500/20 dark:text-pink-300">
+                                <Bug className="w-6 h-6" aria-hidden="true" />
+                            </div>
+                            <div className="min-w-0">
+                                <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
+                                    {t('bugReport.contactTitle')}
+                                </h2>
+                                <p className="text-gray-600 dark:text-gray-300">
+                                    {t('bugReport.contactBody')}
+                                </p>
+                            </div>
+                        </div>
+                        <BugReportLauncher
+                            source="contact"
+                            className="bug-report-wiggle inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-pink-600 px-5 py-2.5 font-semibold text-white shadow-md shadow-pink-500/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-pink-700 hover:shadow-lg active:translate-y-0 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white motion-reduce:transition-none dark:bg-pink-500 dark:text-gray-950 dark:hover:bg-pink-400 dark:focus-visible:ring-offset-gray-800"
+                        >
+                            <Bug className="bug-report-wiggle-icon w-5 h-5" aria-hidden="true" />
+                            {t('bugReport.button')}
+                        </BugReportLauncher>
+                    </div>
+                </div>
+
                 <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
                     {contactMethods.map((method, index) => (
                         <a

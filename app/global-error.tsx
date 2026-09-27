@@ -32,7 +32,7 @@ const readLocale = (): Locale => {
 // Titled here, not with a metadata export: a client component can't export one.
 const Title = () => <title>{useT()('errorPages.errorMetaTitle')}</title>;
 
-export default function GlobalError() {
+export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
     const [catalog, setCatalog] = useState<{ locale: Locale; messages: Messages }>({ locale: DEFAULT_LOCALE, messages: en });
 
     useEffect(() => {
@@ -55,7 +55,7 @@ export default function GlobalError() {
                 <I18nProvider locale={catalog.locale} messages={catalog.messages}>
                     <Title />
                     <ThemeProvider>
-                        <ErrorClient />
+                        <ErrorClient errorDigest={error?.digest} />
                     </ThemeProvider>
                 </I18nProvider>
             </body>

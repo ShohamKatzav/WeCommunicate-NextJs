@@ -91,7 +91,12 @@ const LocationBubble = ({ location, onOpen }: LocationBubbleProps) => {
             onDoubleClick={() => { if (isMobile) onOpen(); }}
             onClick={() => { if (!isMobile) onOpen(); }}
             aria-label={t("chat.bubble.openLocation", { label })}
-            className="relative block w-full max-w-[240px] overflow-hidden rounded-xl border border-white/30 bg-black/10 text-start"
+            // A fixed width, not w-full: the bubble shrink-wraps its content
+            // and nothing in here has a width of its own (the map, the pin
+            // fallback and the caption all size to this box), so w-full would
+            // shrink the card to the "You" label. max-w-full caps it at the
+            // bubble's max-width, which is what it fills on a phone.
+            className="relative block w-[260px] max-w-full overflow-hidden rounded-xl border border-white/30 bg-black/10 text-start md:w-[320px]"
         >
             <div className="h-[110px] w-full md:h-[140px]">
                 {isLoaded && !authFailed ? (
