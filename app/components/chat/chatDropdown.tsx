@@ -3,7 +3,7 @@ import { useT } from "../../i18n/client";
 import { HiOutlineEllipsisHorizontalCircle, HiOutlineUsers } from "react-icons/hi2";
 import { RiHistoryLine, RiLogoutBoxRLine } from "react-icons/ri";
 import { MdDeleteForever } from "react-icons/md";
-import { Timer } from "lucide-react";
+import { Bug, Timer } from "lucide-react";
 import Message from "@/types/message";
 import ChatUser from "@/types/chatUser";
 import { cleanHistory, deleteConversation } from "../../lib/conversationActions";
@@ -11,6 +11,7 @@ import DeleteConversationModal from "./deleteConversationModal";
 import DisappearingMessagesModal from "./disappearingMessagesModal";
 import { toast } from "sonner";
 import ConversationDetailsModal from "./conversationDetailsModal";
+import BugReportDialog from "../bugReport/bugReportDialog";
 
 interface ChatDropdownProps {
     handleLeaveRoom: () => void;
@@ -38,6 +39,8 @@ const ChatDropdown = ({
     const t = useT();
 
     const dropdownRef = useRef<HTMLDivElement | null>(null);
+    const triggerRef = useRef<HTMLButtonElement | null>(null);
+    const [showBugReport, setShowBugReport] = useState(false);
     const [showDropdown, setShowDropdown] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -135,11 +138,15 @@ const ChatDropdown = ({
     };
 
     return (
-        <div className="relative" ref={dropdownRef}>
+        // data-bug-report-menu: on a phone, this menu's Report a bug item
+        // stands in for the floating pill while a conversation is open
+        // (bugReport.css).
+        <div className="relative" ref={dropdownRef} data-bug-report-menu>
             {/* Same box as the header's other icon buttons (chatHeader.tsx):
                 44px on phones, 40px from md up. */}
             <button
                 id="dropdown-button"
+                ref={triggerRef}
                 type="button"
                 onClick={() => setShowDropdown(!showDropdown)}
                 aria-label={t("chat.menu.options")}
@@ -204,6 +211,19 @@ const ChatDropdown = ({
                     >
                         <Timer size={18} /> {t("chat.menu.disappearing")}
                     </button>
+                    {/* Phones only, divider included (bugReport.css): on a
+                        wider screen the floating pill is already in view. */}
+                    <hr className="bug-report-menu-entry my-0 border-stone-200 dark:border-gray-700" />
+                    <button
+                        onClick={() => {
+                            setShowDropdown(false);
+                            setShowBugReport(true);
+                        }}
+                        aria-haspopup="dialog"
+                        className="bug-report-menu-entry flex items-center gap-2 w-full text-start px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                        <Bug size={18} aria-hidden="true" /> {t("bugReport.button")}
+                    </button>
                     <hr className="my-0 border-stone-200 dark:border-gray-700" />
                     <button
                         onClick={() => setShowDeleteModal(true)}
@@ -213,6 +233,16 @@ const ChatDropdown = ({
                     </button>
                 </div>
             )}
+            {/* Outside the menu, so closing the menu doesn't take the form
+                with it. Focus goes back to the ⋯ button when it closes. */}
+            <BugReportDialog
+                open={showBugReport}
+                source="button"
+                onClose={() => {
+                    setShowBugReport(false);
+                    triggerRef.current?.focus();
+                }}
+            />
             {showDeleteModal && (
                 <DeleteConversationModal
                     isOpen={showDeleteModal}

@@ -7,6 +7,7 @@ import { UserProvider } from '@/app/context/userProvider';
 import { SocketProvider } from '@/app/context/socketProvider';
 import { NotificationProvider } from '@/app/context/notificationProvider';
 import IncomingCallNotice from '@/app/components/chat/incomingCallNotice';
+import ReportBugButton from '@/app/components/bugReport/reportBugButton';
 import { Toaster } from "sonner";
 import { useI18n } from "@/app/i18n/client";
 
@@ -35,6 +36,7 @@ export default function ClientProviders({ children }: { children: React.ReactNod
                         <div>{children}</div>
                         <Footer />
                     </div>
+                    <ReportBugButton />
                 </NotificationProvider>
             </SocketProvider>
         </UserProvider>
