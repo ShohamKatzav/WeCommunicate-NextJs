@@ -300,7 +300,9 @@ export class CallController {
         this.refreshCameraCount();
 
         this.socket.emit('call invite', { callId: session.callId, conversationId, video });
-        this.startRing();
+        // No ringback for the caller: a page can't route audio to a phone's
+        // earpiece (no setSinkId on mobile browsers), so it played on the
+        // loudspeaker. "Ringing…" on screen says the same thing.
         this.setSessionTimer(session, () => this.finish('ended', this.endMessage('no-answer'), 'call cancel'), RING_TIMEOUT_MS);
     }
 
@@ -551,7 +553,6 @@ export class CallController {
     private onAccept = (data: CallIds) => {
         const session = this.isCurrent(data);
         if (!session || session.direction !== 'outgoing' || this.snapshot.status !== 'outgoing') return;
-        this.stopRing();
         this.clearSessionTimers(session);
         this.update({ status: 'connecting' });
 
