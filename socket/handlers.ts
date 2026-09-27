@@ -9,6 +9,7 @@ import Account from '@/models/Account'
 import { sendPushToEmails } from '@/services/PushService';
 import { MISSED_CALL_OUTCOMES, type CallOutcome } from '@/types/messageCall';
 import { translatorFor } from '@/app/i18n/forLocale';
+import { randomBytes, timingSafeEqual } from 'crypto';
 
 interface SocketData {
     email: string;
@@ -83,6 +84,11 @@ interface ActiveCall {
     callerName: string;
     // The ring and missed-call pushes show it as the notification's icon.
     callerAvatarUrl: string | null;
+    // Sent only inside the ring push (encrypted to the callee's devices), so
+    // the notification's Decline button can decline this call and nothing
+    // else - without the session cookie, which Samsung Internet leaves off
+    // a service worker's requests.
+    declineToken: string;
     // An incoming-call push went out, so a call that ends unanswered sends
     // a "missed call" push to replace it.
     pushed: boolean;
@@ -941,6 +947,7 @@ async function handleCallInvite(io: AppServer, socket: AppSocket, data: CallSign
         calleeWasReachable: false,
         callerName: email.split('@')[0],
         callerAvatarUrl: null,
+        declineToken: randomBytes(24).toString('base64url'),
         pushed: false,
         acceptedAt: null,
         ringTimer: null,
@@ -1076,7 +1083,7 @@ async function pushIncomingCall(call: ActiveCall, why: string) {
         kind: 'call',
         // Where notifications have buttons (Chrome on Android and desktop),
         // the ring can be answered or declined right from it.
-        call: { callId: call.callId, conversationId: call.conversationId },
+        call: { callId: call.callId, conversationId: call.conversationId, declineToken: call.declineToken },
         actions: [
             { action: 'answer', title: t('calls.accept') },
             { action: 'decline', title: t('calls.decline') },
@@ -1230,11 +1237,21 @@ function handleCallDecline(io: AppServer, socket: AppSocket, data: CallSignal | 
     return declineCall(io, normalizeEmail(socket.data.email), data, socket.id);
 }
 
-// The Decline button on the ring notification (see pages/api/call-decline).
+// The Decline button on the ring notification (see pages/api/call-decline),
+// which proves itself with the call's declineToken rather than a session.
 // No tab of the callee's declined, so every one of them stops ringing.
 // Resolves to whether a ringing call was declined.
-export function declineCallFromNotification(io: AppServer, email: string, data: CallSignal | undefined) {
-    return declineCall(io, normalizeEmail(email), data);
+export function declineCallFromNotification(io: AppServer, data: (CallSignal & { declineToken?: unknown }) | undefined) {
+    const ids = parseCallIds(data);
+    const token = data?.declineToken;
+    if (!ids || typeof token !== 'string') return Promise.resolve(false);
+    // Keyed by email, which the button doesn't send - both sides share one
+    // record, so looking at the callee's entry finds each call once.
+    const call = [...activeCalls.entries()].find(([email, entry]) => entry.callee === email && entry.callId === ids.callId)?.[1];
+    const expected = call ? Buffer.from(call.declineToken) : null;
+    const given = Buffer.from(token);
+    if (!call || !expected || expected.length !== given.length || !timingSafeEqual(expected, given)) return Promise.resolve(false);
+    return declineCall(io, call.callee, data);
 }
 
 async function declineCall(io: AppServer, email: string, data: CallSignal | undefined, exceptSocketId?: string) {

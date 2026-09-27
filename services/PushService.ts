@@ -21,7 +21,7 @@ export interface PushPayload {
     // (public/service-worker.js) and the delivery options below.
     kind?: 'message' | 'call' | 'missed-call' | 'call-handled';
     // A ring's buttons, and the call they act on.
-    call?: { callId: string; conversationId: string };
+    call?: { callId: string; conversationId: string; declineToken: string };
     actions?: { action: 'answer' | 'decline'; title: string }[];
 }
 

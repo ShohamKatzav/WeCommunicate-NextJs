@@ -196,8 +196,9 @@ self.addEventListener('push', function (event) {
 })
 
 // The ring's Decline button, without opening the app. The page's socket
-// isn't there to decline with, so it goes over HTTP with the session cookie.
-// Failing (offline, signed out) just leaves the call to ring out as missed.
+// isn't there to decline with, so it goes over HTTP, proven by the call's
+// declineToken from the push. Failing (offline) just leaves the call to
+// ring out as missed.
 async function declineCall(call) {
     const subscription = await self.registration.pushManager.getSubscription().catch(() => null)
     await fetch(new URL('api/call-decline', self.registration.scope).href, {
