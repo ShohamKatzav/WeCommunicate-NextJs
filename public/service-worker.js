@@ -152,11 +152,45 @@ async function closeNotifications(tag) {
     notifications.forEach(notification => notification.close())
 }
 
+// A caller with no picture gets the initial-in-a-circle the app shows for
+// them (Avatar in app/components/ui/avatar.tsx: purple-400 to pink-500).
+// Drawn here rather than on the server so any script's letter renders, in
+// the device's own font. Anything unsupported falls back to the app icon.
+async function initialIcon(letter) {
+    if (typeof OffscreenCanvas === 'undefined') return undefined
+    try {
+        const size = 192
+        const canvas = new OffscreenCanvas(size, size)
+        const context = canvas.getContext('2d')
+        const gradient = context.createLinearGradient(0, 0, size, size)
+        gradient.addColorStop(0, 'oklch(71.4% 0.203 305.504)')
+        gradient.addColorStop(1, 'oklch(65.6% 0.241 354.308)')
+        context.fillStyle = gradient
+        context.beginPath()
+        context.arc(size / 2, size / 2, size / 2, 0, 2 * Math.PI)
+        context.fill()
+        context.fillStyle = '#fff'
+        context.font = `600 ${size * 0.4}px sans-serif`
+        context.textAlign = 'center'
+        // Centered on the glyph itself rather than the font's line box.
+        const metrics = context.measureText(letter)
+        const y = size / 2 + (metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent) / 2
+        context.fillText(letter, size / 2, y)
+        const bytes = new Uint8Array(await (await canvas.convertToBlob({ type: 'image/png' })).arrayBuffer())
+        let binary = ''
+        bytes.forEach(byte => { binary += String.fromCharCode(byte) })
+        return `data:image/png;base64,${btoa(binary)}`
+    } catch {
+        return undefined
+    }
+}
+
 self.addEventListener('push', function (event) {
     if (!event.data) return
     const data = event.data.json()
     event.waitUntil((async () => {
         if (data.kind === 'missed-call') await closeNotifications(INCOMING_CALL_TAG)
+        if (data.iconInitial) data.icon = (await initialIcon(data.iconInitial)) || data.icon
         await self.registration.showNotification(data.title, notificationFor(data))
     })())
 })

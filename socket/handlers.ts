@@ -1027,9 +1027,11 @@ async function getCallerProfile(email: string) {
     }
 }
 
-// The caller's picture where they have one, like a phone's own call screen
-// (the push falls back to the app icon).
-const callPushIcon = (call: ActiveCall) => call.callerAvatarUrl ?? undefined;
+// The caller's picture, like a phone's own call screen - or, with none, the
+// initial that Avatar shows in the app, which the service worker draws.
+const callPushIcon = (call: ActiveCall) => call.callerAvatarUrl
+    ? { icon: call.callerAvatarUrl }
+    : { iconInitial: (call.callerName || 'U').charAt(0).toUpperCase() };
 
 // Call pushes go to the callee, so they're worded in the callee's account
 // language - there's no request here to read a cookie from.
@@ -1070,7 +1072,7 @@ async function pushIncomingCall(call: ActiveCall, why: string) {
     await sendPushToEmails([call.callee], {
         title: call.video ? t('notifications.incomingVideo') : t('notifications.incomingVoice'),
         body: t('notifications.calling', { name: call.callerName }),
-        icon: callPushIcon(call),
+        ...callPushIcon(call),
         kind: 'call',
         // Where notifications have buttons (Chrome on Android and desktop),
         // the ring can be answered or declined right from it.
@@ -1091,7 +1093,7 @@ async function pushMissedCall(call: ActiveCall) {
     await sendPushToEmails([call.callee], {
         title: t('notifications.missedTitle'),
         body: call.video ? t('notifications.missedVideo', { name: call.callerName }) : t('notifications.missedVoice', { name: call.callerName }),
-        icon: callPushIcon(call),
+        ...callPushIcon(call),
         kind: 'missed-call',
     });
 }
