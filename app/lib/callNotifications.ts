@@ -67,15 +67,18 @@ export async function answerFromNotification(callId: string) {
     answerOnArrival(callId, !hasCamera);
 }
 
-// A window the notification opened carries the answer in its URL - taken out
-// again so it doesn't linger in the address bar and history.
-export function takeAnswerFromUrl() {
+// A window the notification opened carries a nonce in its URL, not the call
+// id. IncomingCallNotice gives it back to the service worker, which is the
+// only place that knows which call Answer was for. Stripped immediately so
+// it doesn't stay in the address bar or history. Anything else in ?answer=
+// (including a call id) is removed and ignored.
+export function takeAnswerNonceFromUrl() {
     const url = new URL(window.location.href);
-    const callId = url.searchParams.get('answer');
-    if (!callId) return null;
+    const nonce = url.searchParams.get('answer');
+    if (!nonce) return null;
     url.searchParams.delete('answer');
     window.history.replaceState(window.history.state, '', url);
-    return callId;
+    return /^[0-9a-f]{32}$/.test(nonce) ? nonce : null;
 }
 
 export function takePendingAnswer(callId: string): { voiceOnly: boolean } | null {

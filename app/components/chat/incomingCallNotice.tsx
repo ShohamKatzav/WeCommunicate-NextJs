@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import Avatar from '../ui/avatar';
 import { useSocket } from '../../hooks/useSocket';
 import { AsShortName } from '../../utils/stringFormat';
-import { answerFromNotification, answerOnArrival, closeIncomingCallNotifications, getOwnPushEndpoint, refreshOwnPushEndpoint, takeAnswerFromUrl } from '../../lib/callNotifications';
+import { answerFromNotification, answerOnArrival, closeIncomingCallNotifications, getOwnPushEndpoint, refreshOwnPushEndpoint, takeAnswerNonceFromUrl } from '../../lib/callNotifications';
 import useMediaDeviceAvailability from '../../hooks/useMediaDeviceAvailability';
 import { unavailableDevicesReason } from '../../lib/mediaDeviceError';
 import { useT } from '../../i18n/client';
@@ -65,9 +65,11 @@ const IncomingCallNotice = () => {
     };
 
     // The Answer button on the ring notification (public/service-worker.js):
-    // a window it opened has ?answer= in its URL, an open one gets a message.
-    // The chat's CallController does the answering - from here, this only
-    // stops its own ring and goes there. Mounted on every page, the chat too.
+    // an open tab gets a message, a new window gets a nonce in its URL and
+    // trades it for the call id. The value in the URL is never answered on
+    // its own. The chat's CallController does the answering - from here,
+    // this only stops its own ring and goes there. Mounted on every page,
+    // the chat too.
     useEffect(() => {
         const answer = (callId: string) => {
             clear();
@@ -77,9 +79,13 @@ const IncomingCallNotice = () => {
         const onMessage = (event: MessageEvent) => {
             if (event.data?.type === 'answer-call' && typeof event.data.callId === 'string') answer(event.data.callId);
         };
-        const fromUrl = takeAnswerFromUrl();
-        if (fromUrl) answer(fromUrl);
         navigator.serviceWorker?.addEventListener('message', onMessage);
+        const nonce = takeAnswerNonceFromUrl();
+        if (nonce) {
+            navigator.serviceWorker?.ready
+                .then(registration => registration.active?.postMessage({ type: 'claim-notification-answer', nonce }))
+                .catch(() => { });
+        }
         return () => navigator.serviceWorker?.removeEventListener('message', onMessage);
     }, [router]);
 
