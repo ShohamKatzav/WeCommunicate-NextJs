@@ -37,7 +37,7 @@ export default class AccountRepository {
     static async getUsersByID(IDs: string[]) {
         try {
             const obj_ids = IDs.map(id => new Types.ObjectId(id));
-            return await Account.find({ _id: { $in: obj_ids } }).select('_id email nickname avatarUrl accentColor locale lastSeen').exec();
+            return await Account.find({ _id: { $in: obj_ids } }).select('_id email nickname avatarUrl avatarDepthUrl accentColor locale lastSeen').exec();
         } catch (err) {
             console.error('Failed to find users by ID:', err);
             throw new Error('Failed to find users by ID');
@@ -45,7 +45,7 @@ export default class AccountRepository {
     }
     static async getUsersByEmails(emails: string[]) {
         try {
-            return await Account.find({ email: { $in: emails } }).select('_id email nickname avatarUrl accentColor lastSeen').exec();
+            return await Account.find({ email: { $in: emails } }).select('_id email nickname avatarUrl avatarDepthUrl accentColor lastSeen').exec();
         } catch (err) {
             console.error('Failed to find users by email:', err);
             throw new Error('Failed to find users by email');
@@ -91,12 +91,13 @@ export default class AccountRepository {
             // Only project the fields actually used below - this loads every
             // account (including password hashes) on every chat page render
             // otherwise.
-            const users = await Account.find().select('_id email nickname avatarUrl accentColor lastSeen').lean().exec();
+            const users = await Account.find().select('_id email nickname avatarUrl avatarDepthUrl accentColor lastSeen').lean().exec();
             const chatUsers = users.map(user => ({
                 _id: user._id,
                 email: user.email,
                 nickname: user.nickname,
                 avatarUrl: user.avatarUrl,
+                avatarDepthUrl: user.avatarDepthUrl,
                 accentColor: user.accentColor,
                 lastSeen: user.lastSeen
             }));
@@ -274,7 +275,7 @@ export default class AccountRepository {
     // selects public-safe fields - never password/ban/blocked internals.
     static async getProfileByIdentifier(identifier: string) {
         try {
-            const projection = '_id email phone nickname about avatarUrl accentColor locale lastSeen';
+            const projection = '_id email phone nickname about avatarUrl avatarDepthUrl accentColor locale lastSeen';
             if (Types.ObjectId.isValid(identifier)) {
                 const byId = await Account.findById(identifier).select(projection).lean().exec();
                 if (byId) return byId;
@@ -294,8 +295,8 @@ export default class AccountRepository {
         try {
             if (!Types.ObjectId.isValid(userId)) return null;
             return await Account.findById(userId)
-                .select('_id email nickname avatarUrl accentColor locale isModerator')
-                .lean<{ email?: string; nickname?: string; avatarUrl?: string; accentColor?: string; locale?: string; isModerator?: boolean }>()
+                .select('_id email nickname avatarUrl avatarDepthUrl accentColor locale isModerator')
+                .lean<{ email?: string; nickname?: string; avatarUrl?: string; avatarDepthUrl?: string; accentColor?: string; locale?: string; isModerator?: boolean }>()
                 .exec();
         } catch (err) {
             console.error('Failed to find session profile:', err);
@@ -303,7 +304,12 @@ export default class AccountRepository {
         }
     }
 
-    static async updateProfile(userId: string, updates: { nickname?: string; about?: string; accentColor?: string; locale?: string; avatarUrl?: string | null; phone?: string | null }) {
+    // Whether any account shows this blob as its picture or depth map.
+    static async isBlobUrlInUse(url: string) {
+        return Boolean(await Account.exists({ $or: [{ avatarUrl: url }, { avatarDepthUrl: url }] }));
+    }
+
+    static async updateProfile(userId: string, updates: { nickname?: string; about?: string; accentColor?: string; locale?: string; avatarUrl?: string | null; avatarDepthUrl?: string | null; phone?: string | null }) {
         try {
             const set: Record<string, unknown> = {};
             const unset: Record<string, ''> = {};
@@ -319,6 +325,10 @@ export default class AccountRepository {
                 if (updates.avatarUrl) set.avatarUrl = updates.avatarUrl;
                 else unset.avatarUrl = '';
             }
+            if (updates.avatarDepthUrl !== undefined) {
+                if (updates.avatarDepthUrl) set.avatarDepthUrl = updates.avatarDepthUrl;
+                else unset.avatarDepthUrl = '';
+            }
             if (updates.phone !== undefined) {
                 if (updates.phone) set.phone = updates.phone;
                 else unset.phone = '';
@@ -330,7 +340,7 @@ export default class AccountRepository {
             if (!Object.keys(update).length) return null;
 
             return await Account.findByIdAndUpdate(userId, update, { new: true })
-                .select('_id email phone nickname about avatarUrl accentColor locale')
+                .select('_id email phone nickname about avatarUrl avatarDepthUrl accentColor locale')
                 .lean()
                 .exec();
         } catch (err) {
@@ -352,7 +362,7 @@ export default class AccountRepository {
     static async updateEmail(userId: string, newEmail: string) {
         try {
             return await Account.findByIdAndUpdate(userId, { $set: { email: newEmail } }, { new: true })
-                .select('_id email phone nickname about avatarUrl accentColor locale')
+                .select('_id email phone nickname about avatarUrl avatarDepthUrl accentColor locale')
                 .lean()
                 .exec();
         } catch (err) {

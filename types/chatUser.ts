@@ -8,6 +8,7 @@ export default interface ChatUser {
     nickname?: string | undefined;
     unreadCount: number;
     avatarUrl?: string;
+    avatarDepthUrl?: string;
     accentColor?: string;
     // Only set once someone has actually been online and left - a user who
     // has never connected has none, and one who is connected right now has a

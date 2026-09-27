@@ -27,6 +27,8 @@ export interface CallPeer {
     email: string;
     nickname?: string;
     avatarUrl?: string;
+    // The 3D portrait on a voice call (depthPortrait.tsx), when the peer has one.
+    avatarDepthUrl?: string;
 }
 
 export interface CallSnapshot {

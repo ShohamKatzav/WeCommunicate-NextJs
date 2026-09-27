@@ -7,7 +7,7 @@ import { requestOTP, verifyOTP } from '@/app/lib/OTPActions';
 import { isEmail, type VerificationChannel } from '@/app/lib/contact';
 import { getT } from '@/app/i18n/server';
 
-type SessionAccount = { _id: { toString(): string }; email: string; phone?: string; avatarUrl?: string };
+type SessionAccount = { _id: { toString(): string }; email: string; phone?: string; avatarUrl?: string; avatarDepthUrl?: string };
 
 // Where the code goes is decided here, from the session's own account - never
 // from anything the browser sends. A real email gets the email code; a
@@ -69,6 +69,7 @@ export const deleteMyAccount = async (otp: string) => {
             email: session.account.email,
             phone: session.account.phone,
             avatarUrl: session.account.avatarUrl,
+            avatarDepthUrl: session.account.avatarDepthUrl,
         });
         return { success: true };
     } catch (err) {

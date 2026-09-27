@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Mic, MicOff, Phone, PhoneOff, RotateCcw, SwitchCamera, Video, VideoOff, X } from 'lucide-react';
 import Avatar from '../ui/avatar';
 import { AsShortName } from '../../utils/stringFormat';
@@ -8,6 +9,10 @@ import useMediaDeviceAvailability from '../../hooks/useMediaDeviceAvailability';
 import { unavailableDevicesReason } from '../../lib/mediaDeviceError';
 import { formatCallDuration } from '../../utils/callRecord';
 import { useT } from '../../i18n/client';
+
+// Three.js and the scene only load for a call that shows one.
+const DepthPortrait = dynamic(() => import('./depthPortrait'), { ssr: false });
+const PORTRAIT_SIZE = 176;
 
 interface CallOverlayProps {
     call: CallSnapshot;
@@ -90,6 +95,9 @@ const CallOverlay = ({ call, controller }: CallOverlayProps) => {
     // that is actually missing.
     const devices = useMediaDeviceAvailability();
     const t = useT();
+    // Per picture: a portrait that failed (no WebGL, an image that won't
+    // load) stays the flat Avatar for the rest of that peer's calls here.
+    const [portrait, setPortrait] = useState<{ key: string; status: 'ready' | 'failed' } | null>(null);
 
     if (call.status === 'idle' || !call.peer || !controller) return null;
 
@@ -176,6 +184,13 @@ const CallOverlay = ({ call, controller }: CallOverlayProps) => {
     const showRemoteVideo = inCall && call.remoteVideoOn;
     const showSelfView = (inCall || call.status === 'outgoing') && call.cameraOn && !!call.localStream;
 
+    // The peer's photo as a lit 3D relief, when they have a depth map - see
+    // depthPortrait.tsx. Anything short of a ready portrait shows the Avatar.
+    const { avatarUrl, avatarDepthUrl } = call.peer;
+    const portraitKey = avatarUrl && avatarDepthUrl?.startsWith('https://') ? `${avatarUrl} ${avatarDepthUrl}` : null;
+    const portraitStatus = portraitKey && portrait?.key === portraitKey ? portrait.status : 'loading';
+    const flatAvatar = <Avatar avatarUrl={avatarUrl} nickname={call.peer.nickname} email={call.peer.email} size={112} />;
+
     const statusText = {
         outgoing: t("calls.ringing"),
         connecting: t("calls.connecting"),
@@ -205,7 +220,21 @@ const CallOverlay = ({ call, controller }: CallOverlayProps) => {
                     </div>
                 ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
-                        <Avatar avatarUrl={call.peer.avatarUrl} nickname={call.peer.nickname} email={call.peer.email} size={112} />
+                        {portraitKey && portraitStatus !== 'failed' ? (
+                            <div className="relative flex items-center justify-center" style={{ width: PORTRAIT_SIZE, height: PORTRAIT_SIZE }}>
+                                {portraitStatus !== 'ready' && flatAvatar}
+                                <DepthPortrait
+                                    avatarUrl={avatarUrl!}
+                                    depthUrl={avatarDepthUrl!}
+                                    stream={inCall ? call.remoteStream : null}
+                                    name={name}
+                                    size={PORTRAIT_SIZE}
+                                    className={portraitStatus === 'ready' ? '' : 'absolute inset-0 opacity-0'}
+                                    onReady={() => setPortrait({ key: portraitKey, status: 'ready' })}
+                                    onFail={() => setPortrait({ key: portraitKey, status: 'failed' })}
+                                />
+                            </div>
+                        ) : flatAvatar}
                         <p className="max-w-full truncate text-xl font-semibold">{name}</p>
                         <p
                             className={`text-sm tabular-nums ${call.status === 'failed' ? 'max-w-xs text-red-300' : 'text-gray-300'}`}

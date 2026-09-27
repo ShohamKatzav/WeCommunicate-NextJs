@@ -53,7 +53,7 @@ export default class ConversationRepository {
 
     static async GetConversationById(conversationId: string) {
         try {
-            const conversation = await Conversation.findOne({ _id: conversationId }).populate('members', 'email nickname avatarUrl accentColor lastSeen');
+            const conversation = await Conversation.findOne({ _id: conversationId }).populate('members', 'email nickname avatarUrl avatarDepthUrl accentColor lastSeen');
             return conversation;
         } catch (error) {
             console.error('Error finding conversation:', error);
@@ -145,7 +145,7 @@ export default class ConversationRepository {
                 members: { $in: [user] },
                 deletedBy: { $nin: [user] }
             })
-                .populate('members', 'email nickname avatarUrl accentColor lastSeen')
+                .populate('members', 'email nickname avatarUrl avatarDepthUrl accentColor lastSeen')
                 .populate({
                     path: 'messages',
                     model: Message,

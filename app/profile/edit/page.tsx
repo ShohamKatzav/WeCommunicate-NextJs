@@ -19,6 +19,7 @@ import Loading from "../../components/ui/loading";
 import { ABOUT_MAX_LENGTH, DEFAULT_ACCENT_COLOR } from "../../config/limits";
 import { useI18n } from "../../i18n/client";
 import { isLocale, Locale, LOCALES, LOCALE_NAMES } from "../../i18n/config";
+import { makeAvatarDepth, type AvatarDepthStatus } from "../../lib/avatarDepth";
 
 const AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const AVATAR_MAX_SIZE = 10 * 1024 * 1024;
@@ -59,6 +60,12 @@ export default function EditProfilePage() {
     // waiting on the crop step - clearing it (Skip or Cancel) is what
     // decides whether the original or the cropped square gets uploaded.
     const [fileToCrop, setFileToCrop] = useState<File | null>(null);
+    // The 3D call portrait's depth map, made after an upload is saved (see
+    // refreshAvatarDepth). Only the latest picture's run may report back.
+    const [depthStatus, setDepthStatus] = useState<AvatarDepthStatus | null>(null);
+    const depthRunRef = useRef(0);
+    const userRef = useRef(user);
+    useEffect(() => { userRef.current = user; });
 
     // `user?.token` - not `user?.email` - is the actual "am I logged in"
     // signal: a session stays valid even for an account whose `email` field
@@ -151,8 +158,9 @@ export default function EditProfilePage() {
             const result = await updateMyAvatar(blob.url);
             if (result.success) {
                 setAvatarUrl(blob.url);
-                await updateUser({ ...user, avatarUrl: blob.url });
+                await updateUser({ ...user, avatarUrl: blob.url, avatarDepthUrl: undefined });
                 toast.success(t("profile.edit.avatarUpdated"));
+                void refreshAvatarDepth(compressed, blob.url, user.token);
             } else {
                 toast.error(result.error || t("profile.edit.avatarUpdateFailed"));
             }
@@ -161,6 +169,27 @@ export default function EditProfilePage() {
             toast.error(t("profile.edit.avatarUploadFailed"));
         } finally {
             setUploadingAvatar(false);
+        }
+    };
+
+    // Never awaited by the upload: the picture is saved already, and a
+    // failure here (no WebAssembly, the model didn't download) only leaves
+    // calls showing the flat avatar.
+    const refreshAvatarDepth = async (image: Blob, forAvatarUrl: string, token: string) => {
+        const run = ++depthRunRef.current;
+        setDepthStatus("estimating");
+        try {
+            const avatarDepthUrl = await makeAvatarDepth(image, forAvatarUrl, token, status => {
+                if (depthRunRef.current === run) setDepthStatus(status);
+            });
+            const latest = userRef.current;
+            if (depthRunRef.current === run && latest?.avatarUrl === forAvatarUrl) {
+                await updateUser({ ...latest, avatarDepthUrl });
+            }
+        } catch (err) {
+            console.warn("No 3D call portrait for this picture:", err);
+        } finally {
+            if (depthRunRef.current === run) setDepthStatus(null);
         }
     };
 
@@ -176,8 +205,10 @@ export default function EditProfilePage() {
         try {
             const result = await updateMyAvatar(null);
             if (result.success) {
+                depthRunRef.current++;
+                setDepthStatus(null);
                 setAvatarUrl(undefined);
-                await updateUser({ ...user, avatarUrl: undefined });
+                await updateUser({ ...user, avatarUrl: undefined, avatarDepthUrl: undefined });
                 toast.success(t("profile.edit.avatarRemoved"));
             } else {
                 toast.error(result.error || t("profile.edit.avatarRemoveFailed"));
@@ -270,6 +301,11 @@ export default function EditProfilePage() {
                             >
                                 <Trash2 size={14} /> {t("profile.edit.removeAvatar")}
                             </button>
+                        )}
+                        {depthStatus && (
+                            <p role="status" className="mt-1 text-xs text-muted-foreground">
+                                {depthStatus === "downloading" ? t("profile.edit.depthDownloading") : t("profile.edit.depthEstimating")}
+                            </p>
                         )}
                     </div>
                 </div>

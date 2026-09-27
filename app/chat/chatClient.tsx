@@ -143,7 +143,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
         const target = email.toLowerCase();
         const known = initialUsers.find(u => u.email?.toLowerCase() === target)
             ?? conversationsForBar.flatMap(c => c.members).find(m => m.email?.toLowerCase() === target);
-        return { email, nickname: known?.nickname, avatarUrl: known?.avatarUrl };
+        return { email, nickname: known?.nickname, avatarUrl: known?.avatarUrl, avatarDepthUrl: known?.avatarDepthUrl };
     };
 
     // Answering from another conversation or the chat list opens the call's
@@ -200,7 +200,7 @@ const ChatClient = ({ initialUsers, initialConversationsWithMessages, initialBlo
             return;
         }
         callController?.startCall(
-            { email: other.email, nickname: other.nickname, avatarUrl: other.avatarUrl },
+            { email: other.email, nickname: other.nickname, avatarUrl: other.avatarUrl, avatarDepthUrl: other.avatarDepthUrl },
             conversationId,
             video
         );

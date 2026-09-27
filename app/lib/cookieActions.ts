@@ -35,6 +35,7 @@ async function writeUserCookie(data: User, isModerator: boolean) {
       token: data.token,
       isModerator,
       avatarUrl: data.avatarUrl,
+      avatarDepthUrl: data.avatarDepthUrl,
       accentColor: data.accentColor
     }),
   });
@@ -121,6 +122,7 @@ export const getCurrentUser = async (): Promise<User> => {
       email: profile.email ?? user.email,
       nickname: profile.nickname,
       avatarUrl: profile.avatarUrl || undefined,
+      avatarDepthUrl: profile.avatarDepthUrl || undefined,
       accentColor: profile.accentColor,
       locale: isLocale(profile.locale) ? profile.locale : undefined,
       isModerator,

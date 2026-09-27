@@ -18,6 +18,10 @@ export interface IAccount extends Document {
     blocked?: Schema.Types.ObjectId[];
 
     avatarUrl?: string;
+    // A grayscale depth map of avatarUrl, made in the uploader's browser - the
+    // 3D portrait on a voice call (see depthPortrait.tsx). Cleared whenever
+    // avatarUrl changes.
+    avatarDepthUrl?: string;
     about?: string;
     accentColor?: string;
     // UI language. Missing means English; see app/i18n/config.ts.
@@ -84,6 +88,7 @@ const AccountSchema = new Schema<IAccount>({
     },
 
     avatarUrl: { type: String, required: false },
+    avatarDepthUrl: { type: String, required: false },
     about: { type: String, trim: true, maxlength: 160, required: false },
     accentColor: { type: String, required: false },
     locale: { type: String, enum: LOCALES, required: false },

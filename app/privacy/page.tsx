@@ -5,7 +5,7 @@ import { pageTitleClassName } from "../components/shell/pageTitle";
 import PageTitle from "../components/shell/fitTitle";
 
 // When this policy last changed - update it with the text.
-const LAST_UPDATED = new Date("2026-09-25T00:00:00Z");
+const LAST_UPDATED = new Date("2026-09-27T00:00:00Z");
 const CONTACT_EMAIL = "shohamkatzav95@gmail.com";
 
 // Each section in order, and the paragraphs (p) and bullet lists (ul) in it,
@@ -23,7 +23,7 @@ const SECTIONS: { id: string; blocks: Block[] }[] = [
     { id: "signIn", blocks: [{ p: "p1" }, { p: "p2" }, { p: "p3" }] },
     { id: "presence", blocks: [{ p: "p1" }] },
     { id: "device", blocks: [{ p: "p1" }, { p: "p2" }] },
-    { id: "services", blocks: [{ p: "lead" }, { ul: ["mongo", "redis", "blob", "brevo", "openai", "google", "push", "turn"] }, { p: "notSold" }] },
+    { id: "services", blocks: [{ p: "lead" }, { ul: ["mongo", "redis", "blob", "brevo", "openai", "google", "huggingface", "push", "turn"] }, { p: "notSold" }] },
     { id: "delete", blocks: [{ p: "p1" }, { p: "p2" }, { p: "p3" }] },
     { id: "contact", blocks: [{ p: "p1" }] },
 ];
