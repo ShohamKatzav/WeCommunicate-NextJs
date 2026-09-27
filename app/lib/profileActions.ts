@@ -100,7 +100,14 @@ export const updateMyProfile = async ({ nickname, about, accentColor, locale }: 
         }
 
         if (about !== undefined) {
-            const trimmed = about.trim();
+            // Line breaks are kept (the profile shows them), but at most one
+            // empty line in a row - otherwise 160 characters of Enter make a
+            // card as tall as the screen. A line of only spaces counts as empty.
+            const trimmed = about
+                .replace(/\r\n?/g, '\n')
+                .replace(/[^\S\n]+$/gm, '')
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
             if (trimmed.length > ABOUT_MAX_LENGTH) return { success: false, error: t('errors.aboutTooLong', { max: ABOUT_MAX_LENGTH }) };
             updates.about = trimmed;
         }
