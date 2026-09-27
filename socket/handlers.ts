@@ -33,6 +33,7 @@ interface LeanAccount {
     blocked?: { toString(): string }[];
     isModerator?: boolean;
     nickname?: string | null;
+    avatarUrl?: string | null;
 }
 
 interface LeanMessage {
@@ -80,6 +81,8 @@ interface ActiveCall {
     descriptions: number;
     calleeWasReachable: boolean;
     callerName: string;
+    // The ring and missed-call pushes show it as the notification's icon.
+    callerAvatarUrl: string | null;
     // An incoming-call push went out, so a call that ends unanswered sends
     // a "missed call" push to replace it.
     pushed: boolean;
@@ -739,7 +742,11 @@ async function recordLastSeen(io: AppServer, email?: string) {
 // chat list, hasn't joined that room but still has to see the call ringing.
 // ---------------------------------------------------------------------------
 
-const activeCalls = new Map<string, ActiveCall>(); // lowercased email -> call (both sides share one record)
+// On globalThis because the socket server (pages/api/socket) and the ring
+// notification's Decline button (pages/api/call-decline) are separate route
+// bundles, which don't necessarily share one copy of this module.
+const callRegistry = globalThis as typeof globalThis & { activeCalls?: Map<string, ActiveCall> };
+const activeCalls = callRegistry.activeCalls ??= new Map<string, ActiveCall>(); // lowercased email -> call (both sides share one record)
 
 const CALL_RING_TIMEOUT_MS = 30 * 1000;
 // Long enough for connectionStateRecovery to bring a socket back after a
@@ -933,6 +940,7 @@ async function handleCallInvite(io: AppServer, socket: AppSocket, data: CallSign
         descriptions: 0,
         calleeWasReachable: false,
         callerName: email.split('@')[0],
+        callerAvatarUrl: null,
         pushed: false,
         acceptedAt: null,
         ringTimer: null,
@@ -942,12 +950,13 @@ async function handleCallInvite(io: AppServer, socket: AppSocket, data: CallSign
     activeCalls.set(peerEmail, call);
     call.ringTimer = setTimeout(() => safely(() => handleCallRingTimeout(io, call)), CALL_RING_TIMEOUT_MS);
 
-    const [calleeSockets, callerName] = await Promise.all([
+    const [calleeSockets, caller] = await Promise.all([
         getLiveSocketIds(io, peerEmail),
-        getNickname(email)
+        getCallerProfile(email)
     ]);
     if (call.ended) return;
-    if (callerName) call.callerName = callerName;
+    if (caller.nickname) call.callerName = caller.nickname;
+    call.callerAvatarUrl = caller.avatarUrl;
     if (calleeSockets.length > 0) {
         call.calleeWasReachable = true;
         io.to(calleeSockets).emit('call invite', inviteFor(call));
@@ -1007,14 +1016,20 @@ async function checkOnScreen(io: AppServer, socketIds: string[]) {
     };
 }
 
-async function getNickname(email: string) {
+async function getCallerProfile(email: string) {
     try {
-        const account = await Account.findOne({ email }).select('nickname').lean<LeanAccount | null>();
-        return account?.nickname || null;
+        const account = await Account.findOne({ email }).select('nickname avatarUrl').lean<LeanAccount | null>();
+        // Only an https URL - the callee's device fetches it for the icon.
+        const avatarUrl = account?.avatarUrl?.startsWith('https://') ? account.avatarUrl : null;
+        return { nickname: account?.nickname || null, avatarUrl };
     } catch {
-        return null;
+        return { nickname: null, avatarUrl: null };
     }
 }
+
+// The caller's picture where they have one, like a phone's own call screen
+// (the push falls back to the app icon).
+const callPushIcon = (call: ActiveCall) => call.callerAvatarUrl ?? undefined;
 
 // Call pushes go to the callee, so they're worded in the callee's account
 // language - there's no request here to read a cookie from.
@@ -1055,7 +1070,15 @@ async function pushIncomingCall(call: ActiveCall, why: string) {
     await sendPushToEmails([call.callee], {
         title: call.video ? t('notifications.incomingVideo') : t('notifications.incomingVoice'),
         body: t('notifications.calling', { name: call.callerName }),
+        icon: callPushIcon(call),
         kind: 'call',
+        // Where notifications have buttons (Chrome on Android and desktop),
+        // the ring can be answered or declined right from it.
+        call: { callId: call.callId, conversationId: call.conversationId },
+        actions: [
+            { action: 'answer', title: t('calls.accept') },
+            { action: 'decline', title: t('calls.decline') },
+        ],
     });
 }
 
@@ -1068,6 +1091,7 @@ async function pushMissedCall(call: ActiveCall) {
     await sendPushToEmails([call.callee], {
         title: t('notifications.missedTitle'),
         body: call.video ? t('notifications.missedVideo', { name: call.callerName }) : t('notifications.missedVoice', { name: call.callerName }),
+        icon: callPushIcon(call),
         kind: 'missed-call',
     });
 }
@@ -1200,18 +1224,29 @@ async function handleCallAccept(io: AppServer, socket: AppSocket, data: CallSign
     await pushCallHandledElsewhere(call, 'answered', parsePushEndpoint(data));
 }
 
-async function handleCallDecline(io: AppServer, socket: AppSocket, data: CallSignal | undefined) {
+function handleCallDecline(io: AppServer, socket: AppSocket, data: CallSignal | undefined) {
+    return declineCall(io, normalizeEmail(socket.data.email), data, socket.id);
+}
+
+// The Decline button on the ring notification (see pages/api/call-decline).
+// No tab of the callee's declined, so every one of them stops ringing.
+// Resolves to whether a ringing call was declined.
+export function declineCallFromNotification(io: AppServer, email: string, data: CallSignal | undefined) {
+    return declineCall(io, normalizeEmail(email), data);
+}
+
+async function declineCall(io: AppServer, email: string, data: CallSignal | undefined, exceptSocketId?: string) {
     const ids = parseCallIds(data);
-    if (!ids) return;
-    const email = normalizeEmail(socket.data.email);
+    if (!ids) return false;
     const call = findCall(email, ids);
-    if (!call || call.state !== 'ringing' || call.callee !== email) return;
+    if (!call || call.state !== 'ringing' || call.callee !== email) return false;
 
     clearCall(call);
     io.to(call.callerSocketId).emit('call decline', ids);
-    await emitToCalleeSockets(io, call, 'call cancel', { ...ids, reason: 'declined-elsewhere' }, socket.id);
+    await emitToCalleeSockets(io, call, 'call cancel', { ...ids, reason: 'declined-elsewhere' }, exceptSocketId);
     await pushCallHandledElsewhere(call, 'declined', parsePushEndpoint(data));
     await recordCall(io, call, 'declined');
+    return true;
 }
 
 async function handleCallCancel(io: AppServer, socket: AppSocket, data: CallSignal | undefined) {

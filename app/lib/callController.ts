@@ -2,7 +2,7 @@ import { Socket } from 'socket.io-client';
 import type { IceServerConfig } from './iceServers';
 import { describeMediaError } from './mediaDeviceError';
 import type { TFunction } from '../i18n/messages';
-import { closeIncomingCallNotifications, getOwnPushEndpoint, refreshOwnPushEndpoint, takePendingAnswer } from './callNotifications';
+import { closeIncomingCallNotifications, getOwnPushEndpoint, onPendingAnswer, refreshOwnPushEndpoint, takePendingAnswer } from './callNotifications';
 
 // Client side of 1:1 calls. Media is a single RTCPeerConnection between the
 // two browsers; the socket only carries the ringing events and the SDP/ICE
@@ -206,6 +206,7 @@ export class CallController {
     private starting = false;
     private lastCall: { peer: CallPeer; conversationId: string; video: boolean } | null = null;
     private destroyed = false;
+    private stopPendingAnswers: () => void;
 
     constructor(socket: Socket, userEmail: string, hooks: CallControllerHooks) {
         this.socket = socket;
@@ -221,6 +222,7 @@ export class CallController {
         socket.on('call unavailable', this.onUnavailable);
         socket.on('call signal', this.onSignal);
         socket.on('connect', this.onSocketConnect);
+        this.stopPendingAnswers = onPendingAnswer(this.onPendingAnswer);
 
         // Picks up a call that started ringing before this page was open
         // (e.g. opened from the incoming-call push).
@@ -484,6 +486,7 @@ export class CallController {
         this.socket.off('call unavailable', this.onUnavailable);
         this.socket.off('call signal', this.onSignal);
         this.socket.off('connect', this.onSocketConnect);
+        this.stopPendingAnswers();
         this.listeners.clear();
         this.ring = null;
     }
@@ -532,6 +535,15 @@ export class CallController {
             return;
         }
         this.startRing();
+    };
+
+    // Answered from the ring notification while the call was already ringing
+    // here (see answerFromNotification in callNotifications.ts).
+    private onPendingAnswer = () => {
+        const session = this.session;
+        if (this.destroyed || !session || session.direction !== 'incoming' || this.snapshot.status !== 'incoming') return;
+        const pending = takePendingAnswer(session.callId);
+        if (pending) void this.accept(pending.voiceOnly ? { video: false } : undefined);
     };
 
     private onAccept = (data: CallIds) => {

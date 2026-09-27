@@ -428,7 +428,7 @@ const en = {
         },
         notifications: {
             title: "Notifications",
-            p1: "If you turn on notifications, your browser's push service (for example Google's for Chrome or Apple's for Safari) gives us an address to send them to. We store it with your account's email, and it expires with your sign-in. Each notification - the sender's name and the message text, or that someone is calling - passes through that push service to reach your device.",
+            p1: "If you turn on notifications, your browser's push service (for example Google's for Chrome or Apple's for Safari) gives us an address to send them to. We store it with your account's email, and it expires with your sign-in. Each notification - the sender's name and the message text, or that someone is calling, with a link to their profile picture - passes through that push service to reach your device.",
             p2: "Unread counts for your conversations are kept in Upstash Redis.",
         },
         moderation: {

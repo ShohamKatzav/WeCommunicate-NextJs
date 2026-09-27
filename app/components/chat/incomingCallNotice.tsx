@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import Avatar from '../ui/avatar';
 import { useSocket } from '../../hooks/useSocket';
 import { AsShortName } from '../../utils/stringFormat';
-import { answerOnArrival, closeIncomingCallNotifications, getOwnPushEndpoint, refreshOwnPushEndpoint } from '../../lib/callNotifications';
+import { answerFromNotification, answerOnArrival, closeIncomingCallNotifications, getOwnPushEndpoint, refreshOwnPushEndpoint, takeAnswerFromUrl } from '../../lib/callNotifications';
 import useMediaDeviceAvailability from '../../hooks/useMediaDeviceAvailability';
 import { unavailableDevicesReason } from '../../lib/mediaDeviceError';
 import { useT } from '../../i18n/client';
@@ -45,6 +45,8 @@ const IncomingCallNotice = () => {
     useEffect(() => { tRef.current = t; });
     const { socket } = useSocket();
     const pathname = usePathname();
+    const pathnameRef = useRef(pathname);
+    useEffect(() => { pathnameRef.current = pathname; });
     const router = useRouter();
     const devices = useMediaDeviceAvailability();
     const [invite, setInvite] = useState<Invite | null>(null);
@@ -61,6 +63,25 @@ const IncomingCallNotice = () => {
         timeoutRef.current = null;
         setInvite(null);
     };
+
+    // The Answer button on the ring notification (public/service-worker.js):
+    // a window it opened has ?answer= in its URL, an open one gets a message.
+    // The chat's CallController does the answering - from here, this only
+    // stops its own ring and goes there. Mounted on every page, the chat too.
+    useEffect(() => {
+        const answer = (callId: string) => {
+            clear();
+            void answerFromNotification(callId);
+            if (!isChatPath(pathnameRef.current)) router.push('/chat');
+        };
+        const onMessage = (event: MessageEvent) => {
+            if (event.data?.type === 'answer-call' && typeof event.data.callId === 'string') answer(event.data.callId);
+        };
+        const fromUrl = takeAnswerFromUrl();
+        if (fromUrl) answer(fromUrl);
+        navigator.serviceWorker?.addEventListener('message', onMessage);
+        return () => navigator.serviceWorker?.removeEventListener('message', onMessage);
+    }, [router]);
 
     useEffect(() => {
         if (!socket || !active) return;
