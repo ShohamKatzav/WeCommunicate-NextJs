@@ -16,6 +16,7 @@ export interface DeletableAccount {
     email: string;
     phone?: string;
     avatarUrl?: string;
+    avatarDepthUrl?: string;
 }
 
 type IdDoc = { _id: Types.ObjectId };
@@ -73,6 +74,7 @@ export default class AccountDeletionService {
             ...files.map(f => f.url),
             ...pendingShares.map(share => share.file?.url),
             account.avatarUrl,
+            account.avatarDepthUrl,
         ]);
 
         await FileModel.deleteMany({ _id: { $in: fileIds } });

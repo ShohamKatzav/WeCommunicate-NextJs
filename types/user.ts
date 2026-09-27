@@ -6,6 +6,7 @@ export default interface User {
     token?: string,
     isModerator?: boolean,
     avatarUrl?: string,
+    avatarDepthUrl?: string,
     accentColor?: string,
     locale?: Locale
 }

@@ -10,6 +10,7 @@ import Conversation from "@/models/Conversation";
 import PushSubscription from "@/models/PushSubscription";
 import { extractUserIDFromCoockie } from "@/app/lib/cookieActions";
 import { deleteFile } from "@/app/lib/fileActions";
+import FileModel from "@/models/FileModel";
 import { requestOTP, verifyOTP, deleteOTP } from "@/app/lib/OTPActions";
 import { isEmail, isPhone, normalizePhone } from "@/app/lib/contact";
 import { ABOUT_MAX_LENGTH, ACCENT_COLORS } from "@/app/config/limits";
@@ -135,6 +136,15 @@ export const updateMyProfile = async ({ nickname, about, accentColor, locale }: 
     }
 }
 
+// Best-effort: a blob left behind is only storage, never a failed save.
+async function deleteBlobQuietly(url: string, what: string) {
+    try {
+        await deleteFile(url);
+    } catch (err) {
+        console.error(`Failed to delete ${what} blob:`, err);
+    }
+}
+
 // Kept separate from updateMyProfile: the avatar upload flow already has the
 // new blob URL in hand (see uploadFile.tsx's pattern) and shouldn't need to
 // resend nickname/about/accent just to change the picture. Deleting the
@@ -147,18 +157,17 @@ export const updateMyAvatar = async (avatarUrl: string | null) => {
         const userID = await extractUserIDFromCoockie();
         if (typeof userID !== 'string') return { success: false, error: t('errors.unauthorized') };
 
-        const current = await AccountRepository.getProfileByIdentifier(userID);
-        const previousAvatarUrl = (current as { avatarUrl?: string } | null)?.avatarUrl;
+        const current = await AccountRepository.getProfileByIdentifier(userID) as { avatarUrl?: string; avatarDepthUrl?: string } | null;
+        const previousAvatarUrl = current?.avatarUrl;
+        const changed = previousAvatarUrl !== (avatarUrl || undefined);
+        // A depth map belongs to the picture it was made from - a new one
+        // gets its own later (setMyAvatarDepth), none at all until then.
+        const previousDepthUrl = changed ? current?.avatarDepthUrl : undefined;
 
-        const profile = await AccountRepository.updateProfile(userID, { avatarUrl });
+        const profile = await AccountRepository.updateProfile(userID, changed ? { avatarUrl, avatarDepthUrl: null } : { avatarUrl });
 
-        if (previousAvatarUrl && previousAvatarUrl !== avatarUrl) {
-            try {
-                await deleteFile(previousAvatarUrl);
-            } catch (err) {
-                console.error('Failed to delete previous avatar blob:', err);
-            }
-        }
+        if (changed && previousAvatarUrl) await deleteBlobQuietly(previousAvatarUrl, 'previous avatar');
+        if (previousDepthUrl) await deleteBlobQuietly(previousDepthUrl, 'previous avatar depth');
 
         if (!profile) return { success: false, error: t('errors.nothingToUpdate') };
 
@@ -167,6 +176,57 @@ export const updateMyAvatar = async (avatarUrl: string | null) => {
         return { success: true, profile: JSON.parse(JSON.stringify(profile)) };
     } catch (err) {
         console.error('Failed to update avatar:', err);
+        return { success: false, error: t('errors.updateAvatarFailed') };
+    }
+}
+
+// Only a depth map this browser just uploaded (avatarDepth.ts): its own
+// name prefix, on our Blob store, and not already anyone's picture or file.
+// Replacing the avatar deletes the old depth URL, so taking over another
+// account's blob here would let someone delete it.
+const AVATAR_DEPTH_PATH = /^\/avatar-depth[^/]*\.png$/;
+async function isFreshDepthUpload(url: string) {
+    let parsed: URL;
+    try {
+        parsed = new URL(url);
+    } catch {
+        return false;
+    }
+    if (parsed.protocol !== 'https:' || !parsed.hostname.endsWith('.public.blob.vercel-storage.com') || !AVATAR_DEPTH_PATH.test(parsed.pathname)) return false;
+    const [account, file] = await Promise.all([
+        AccountRepository.isBlobUrlInUse(url),
+        FileModel.exists({ url }),
+    ]);
+    return !account && !file;
+}
+
+// The follow-up to updateMyAvatar once this browser has made a depth map of
+// the new picture - or null to drop it. Nothing waits on this: the avatar is
+// already saved, and a failure only means a flat avatar on calls.
+// forAvatarUrl is the picture the map was made from; if it's been replaced
+// or removed since, the map is thrown away instead of saved.
+export const setMyAvatarDepth = async (depthUrl: string | null, forAvatarUrl?: string) => {
+    const t = await getT();
+    try {
+        await connectDB();
+        const userID = await extractUserIDFromCoockie();
+        if (typeof userID !== 'string') return { success: false, error: t('errors.unauthorized') };
+        if (depthUrl !== null && !await isFreshDepthUpload(depthUrl)) return { success: false, error: t('errors.nothingToUpdate') };
+
+        const current = await AccountRepository.getProfileByIdentifier(userID) as { avatarUrl?: string; avatarDepthUrl?: string } | null;
+        if (depthUrl !== null && (!current?.avatarUrl || current.avatarUrl !== forAvatarUrl)) {
+            await deleteBlobQuietly(depthUrl, 'an outdated avatar depth');
+            return { success: false, error: t('errors.nothingToUpdate') };
+        }
+
+        await AccountRepository.updateProfile(userID, { avatarDepthUrl: depthUrl });
+        const previousDepthUrl = current?.avatarDepthUrl;
+        if (previousDepthUrl && previousDepthUrl !== depthUrl) await deleteBlobQuietly(previousDepthUrl, 'previous avatar depth');
+
+        revalidatePath('/chat');
+        return { success: true, avatarDepthUrl: depthUrl ?? undefined };
+    } catch (err) {
+        console.error('Failed to update avatar depth:', err);
         return { success: false, error: t('errors.updateAvatarFailed') };
     }
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { Mail, Phone } from "lucide-react";
 import ChatUser from "@/types/chatUser";
@@ -12,10 +13,50 @@ import { isEmail } from "../../lib/contact";
 import { useSocket } from "../../hooks/useSocket";
 import { useT } from "../../i18n/client";
 
+const DepthPortrait = dynamic(() => import("../chat/depthPortrait"), { ssr: false });
+const PORTRAIT_SIZE = 160;
+
 interface ProfileCardProps {
     profile: Profile;
     isOwn?: boolean;
 }
+
+// Someone else's photo, as the same lit relief a voice call shows, when
+// they have a depth map. Until it draws (and if it can't) the flat Avatar
+// stays. The line under it is the only hint that it can be dragged.
+const ProfilePortrait = ({ avatarUrl, depthUrl, name, nickname, email }: {
+    avatarUrl: string;
+    depthUrl: string;
+    name: string;
+    nickname?: string;
+    email?: string;
+}) => {
+    const t = useT();
+    const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>('loading');
+    if (status === 'failed') {
+        return <Avatar avatarUrl={avatarUrl} nickname={nickname} email={email} size={96} />;
+    }
+    return (
+        <div className="flex flex-col items-center gap-1.5">
+            <div className="relative flex items-center justify-center" style={{ width: PORTRAIT_SIZE, height: PORTRAIT_SIZE }}>
+                {status !== 'ready' && <Avatar avatarUrl={avatarUrl} nickname={nickname} email={email} size={96} />}
+                <DepthPortrait
+                    avatarUrl={avatarUrl}
+                    depthUrl={depthUrl}
+                    stream={null}
+                    name={name}
+                    size={PORTRAIT_SIZE}
+                    className={status === 'ready' ? '' : 'absolute inset-0 opacity-0'}
+                    onReady={() => setStatus('ready')}
+                    onFail={() => setStatus('failed')}
+                />
+            </div>
+            {status === 'ready' && (
+                <p className="text-xs text-muted-foreground">{t("profile.portraitHint")}</p>
+            )}
+        </div>
+    );
+};
 
 const ProfileCard = ({ profile, isOwn }: ProfileCardProps) => {
     const displayName = profile.nickname || AsShortName(profile.email);
@@ -62,7 +103,17 @@ const ProfileCard = ({ profile, isOwn }: ProfileCardProps) => {
     return (
         <div className="bg-card text-card-foreground rounded-xl shadow-md p-6 max-w-md mx-auto">
             <div className="flex flex-col items-center gap-3 text-center">
-                <Avatar avatarUrl={profile.avatarUrl} nickname={profile.nickname} email={profile.email} size={96} />
+                {!isOwn && profile.avatarUrl && profile.avatarDepthUrl?.startsWith("https://") ? (
+                    <ProfilePortrait
+                        avatarUrl={profile.avatarUrl}
+                        depthUrl={profile.avatarDepthUrl}
+                        name={displayName}
+                        nickname={profile.nickname}
+                        email={profile.email}
+                    />
+                ) : (
+                    <Avatar avatarUrl={profile.avatarUrl} nickname={profile.nickname} email={profile.email} size={96} />
+                )}
                 <h1 className="text-xl font-semibold" data-testid="profile-nickname">{displayName}</h1>
 
                 {!isOwn && (

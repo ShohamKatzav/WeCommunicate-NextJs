@@ -411,7 +411,7 @@ const en = {
         media: {
             title: "Voice notes and profile photos",
             voice: "A voice note is a recording from your microphone that you make and send yourself. It's uploaded and stored like any other file in the conversation. It isn't a call.",
-            photo: "Taking a profile photo in the app uses your camera for that one picture, which is stored as your profile picture.",
+            photo: "Taking a profile photo in the app uses your camera for that one picture, which is stored as your profile picture. When you set a profile picture, your browser also makes a depth map from it - a grayscale image of how near each part of the photo is - and it's stored next to the picture. Other signed-in users see the two together as a 3D portrait on voice calls and on your profile. Changing or removing the picture deletes its depth map.",
         },
         calls: {
             title: "Voice and video calls",
@@ -439,7 +439,7 @@ const en = {
         signIn: {
             title: "Signing in",
             p1: "Verification codes - for signing up, resetting your password, changing your email or phone number, and deleting your account - are 6 digits, valid for 10 minutes and usable once. They're kept in Upstash Redis and sent by Brevo by email or SMS, so Brevo receives your email address or phone number along with the code.",
-            p2: "Once you're signed in, a cookie on this device holds your session: a signed token that lasts 7 days, plus a copy of your nickname, profile picture, accent color and moderator status. Page scripts can't read it. A second cookie remembers your language for a year.",
+            p2: "Once you're signed in, a cookie on this device holds your session: a signed token that lasts 7 days, plus a copy of your nickname, profile picture and its depth map, accent color and moderator status. Page scripts can't read it. A second cookie remembers your language for a year.",
             p3: "To slow down password guessing and spam, Upstash Redis keeps short-lived counters of attempts per email address, phone number or account.",
         },
         presence: {
@@ -457,10 +457,11 @@ const en = {
             items: {
                 mongo: "<b>MongoDB</b> - our database: accounts, messages, conversations, locations, notification subscriptions and moderation records.",
                 redis: "<b>Upstash Redis</b> - verification codes, online status, unread counts, rate-limit counters, and content shared into the app while it waits (a few minutes) to be sent.",
-                blob: "<b>Vercel Blob</b> - profile pictures and files sent in chats.",
+                blob: "<b>Vercel Blob</b> - profile pictures and their depth maps, and files sent in chats.",
                 brevo: "<b>Brevo</b> - sends verification codes by email and SMS.",
                 openai: "<b>OpenAI</b> - checks message text for moderation.",
                 google: "<b>Google</b> - maps, and the STUN server that helps calls connect.",
+                huggingface: "<b>Hugging Face</b> - your browser downloads the model that makes the depth map from it, once. It sees your network address; your photo isn't sent there.",
                 push: "<b>Your browser's push service</b> - delivers notifications.",
                 turn: "<b>A TURN relay</b>, when one is configured - carries calls that can't connect directly.",
             },
@@ -469,7 +470,7 @@ const en = {
         delete: {
             title: "Deleting your account",
             p1: "You can delete your account at any time from <edit>Edit profile</edit>. We send a code to your email - or by SMS if you signed up with a phone number - and once you enter it, your account is deleted right away.",
-            p2: "That removes your account, your messages and their files, your profile picture, your saved location, your notification subscriptions and moderation records, your reactions and other people's quotes of your messages, and your place in every conversation. Other people keep their own messages, and see \"Deleted account\" where you were, with a note that the account was deleted - your name isn't kept. A conversation with no one left in it is deleted. Every device you're signed in on is signed out.",
+            p2: "That removes your account, your messages and their files, your profile picture and its depth map, your saved location, your notification subscriptions and moderation records, your reactions and other people's quotes of your messages, and your place in every conversation. Other people keep their own messages, and see \"Deleted account\" where you were, with a note that the account was deleted - your name isn't kept. A conversation with no one left in it is deleted. Every device you're signed in on is signed out.",
             p3: "What the services above have already delivered - a notification or an email, for example - can't be called back.",
         },
         contact: {
@@ -819,6 +820,7 @@ const en = {
         ended: "Call ended",
         videoCallWith: "Video call with {name}",
         voiceCallWith: "Voice call with {name}",
+        portraitOf: "3D portrait of {name}",
         mute: "Mute microphone",
         unmute: "Unmute microphone",
         cameraOff: "Turn camera off",
@@ -995,6 +997,7 @@ const en = {
         accentColor: "Accent color",
         editProfile: "Edit profile",
         avatarAlt: "{name}'s avatar",
+        portraitHint: "Drag to turn",
         avatarAltFallback: "User avatar",
         edit: {
             title: "Edit profile",
@@ -1017,6 +1020,8 @@ const en = {
             avatarUploadFailed: "Failed to upload avatar",
             avatarRemoved: "Avatar removed",
             avatarRemoveFailed: "Failed to remove avatar",
+            depthEstimating: "Preparing your 3D call portrait…",
+            depthDownloading: "Downloading the 3D portrait model (first time only)…",
             avatarType: "Please choose a JPG, PNG, or WEBP image",
             avatarSize: "Image must be smaller than 10MB",
         },

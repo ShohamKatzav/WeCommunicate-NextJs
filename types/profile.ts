@@ -7,6 +7,7 @@ export default interface Profile {
     nickname?: string;
     about?: string;
     avatarUrl?: string;
+    avatarDepthUrl?: string;
     accentColor?: string;
     locale?: Locale;
     // Stripped server-side (see profileActions.getProfile) when the viewer

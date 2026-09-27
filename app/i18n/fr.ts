@@ -407,7 +407,7 @@ const fr: Messages = {
         media: {
             title: "Messages vocaux et photos de profil",
             voice: "Un message vocal est un enregistrement de votre micro que vous réalisez et envoyez vous-même. Il est envoyé et conservé comme n’importe quel autre fichier de la conversation. Ce n’est pas un appel.",
-            photo: "Prendre une photo de profil dans l’application utilise votre caméra pour cette seule photo, qui est enregistrée comme photo de profil.",
+            photo: "Prendre une photo de profil dans l’application utilise votre caméra pour cette seule photo, qui est enregistrée comme photo de profil. Quand vous choisissez une photo de profil, votre navigateur en tire aussi une carte de profondeur - une image en niveaux de gris qui indique la distance de chaque partie de la photo - enregistrée à côté de la photo. Les autres utilisateurs connectés voient les deux ensemble sous forme de portrait 3D pendant les appels vocaux et sur votre profil. Changer ou retirer la photo supprime sa carte de profondeur.",
         },
         calls: {
             title: "Appels vocaux et vidéo",
@@ -435,7 +435,7 @@ const fr: Messages = {
         signIn: {
             title: "Connexion",
             p1: "Les codes de vérification - pour l’inscription, la réinitialisation du mot de passe, le changement d’e-mail ou de numéro de téléphone et la suppression du compte - comportent 6 chiffres, sont valables 10 minutes et à usage unique. Ils sont conservés dans Upstash Redis et envoyés par Brevo par e-mail ou SMS : Brevo reçoit donc votre adresse e-mail ou votre numéro de téléphone avec le code.",
-            p2: "Une fois connecté, un cookie sur cet appareil conserve votre session : un jeton signé valable 7 jours, plus une copie de votre pseudo, de votre photo de profil, de votre couleur d’accent et de votre statut de modérateur. Les scripts de la page ne peuvent pas le lire. Un second cookie mémorise votre langue pendant un an.",
+            p2: "Une fois connecté, un cookie sur cet appareil conserve votre session : un jeton signé valable 7 jours, plus une copie de votre pseudo, de votre photo de profil et de sa carte de profondeur, de votre couleur d’accent et de votre statut de modérateur. Les scripts de la page ne peuvent pas le lire. Un second cookie mémorise votre langue pendant un an.",
             p3: "Pour freiner les tentatives de devinette de mot de passe et le spam, Upstash Redis conserve des compteurs de tentatives de courte durée par adresse e-mail, numéro de téléphone ou compte.",
         },
         presence: {
@@ -453,10 +453,11 @@ const fr: Messages = {
             items: {
                 mongo: "<b>MongoDB</b> - notre base de données : comptes, messages, conversations, positions, abonnements aux notifications et dossiers de modération.",
                 redis: "<b>Upstash Redis</b> - codes de vérification, statut en ligne, nombres de non-lus, compteurs de limitation, et contenu partagé vers l’application pendant qu’il attend (quelques minutes) d’être envoyé.",
-                blob: "<b>Vercel Blob</b> - photos de profil et fichiers envoyés dans les discussions.",
+                blob: "<b>Vercel Blob</b> - photos de profil et leurs cartes de profondeur, et fichiers envoyés dans les discussions.",
                 brevo: "<b>Brevo</b> - envoie les codes de vérification par e-mail et SMS.",
                 openai: "<b>OpenAI</b> - vérifie le texte des messages pour la modération.",
                 google: "<b>Google</b> - les cartes, et le serveur STUN qui aide les appels à se connecter.",
+                huggingface: "<b>Hugging Face</b> - votre navigateur y télécharge une fois le modèle qui crée la carte de profondeur. Le service voit votre adresse réseau ; votre photo n’y est pas envoyée.",
                 push: "<b>Le service push de votre navigateur</b> - distribue les notifications.",
                 turn: "<b>Un relais TURN</b>, s’il est configuré - achemine les appels qui ne peuvent pas se connecter directement.",
             },
@@ -465,7 +466,7 @@ const fr: Messages = {
         delete: {
             title: "Supprimer votre compte",
             p1: "Vous pouvez supprimer votre compte à tout moment depuis <edit>Modifier le profil</edit>. Nous envoyons un code à votre adresse e-mail - ou par SMS si vous vous êtes inscrit avec un numéro de téléphone - et dès que vous le saisissez, votre compte est supprimé.",
-            p2: "Cela supprime votre compte, vos messages et leurs fichiers, votre photo de profil, votre position enregistrée, vos abonnements aux notifications et vos dossiers de modération, vos réactions et les citations de vos messages chez les autres, ainsi que votre place dans chaque conversation. Les autres gardent leurs propres messages et voient « Compte supprimé » à votre place, avec une mention indiquant que le compte a été supprimé - votre nom n’est pas conservé. Une conversation où il ne reste personne est supprimée. Vous êtes déconnecté de tous vos appareils.",
+            p2: "Cela supprime votre compte, vos messages et leurs fichiers, votre photo de profil et sa carte de profondeur, votre position enregistrée, vos abonnements aux notifications et vos dossiers de modération, vos réactions et les citations de vos messages chez les autres, ainsi que votre place dans chaque conversation. Les autres gardent leurs propres messages et voient « Compte supprimé » à votre place, avec une mention indiquant que le compte a été supprimé - votre nom n’est pas conservé. Une conversation où il ne reste personne est supprimée. Vous êtes déconnecté de tous vos appareils.",
             p3: "Ce que les services ci-dessus ont déjà distribué - une notification ou un e-mail, par exemple - ne peut pas être rappelé.",
         },
         contact: {
@@ -814,6 +815,7 @@ const fr: Messages = {
         ended: "Appel terminé",
         videoCallWith: "Appel vidéo avec {name}",
         voiceCallWith: "Appel vocal avec {name}",
+        portraitOf: "Portrait 3D de {name}",
         mute: "Couper le micro",
         unmute: "Réactiver le micro",
         cameraOff: "Couper la caméra",
@@ -988,6 +990,7 @@ const fr: Messages = {
         accentColor: "Couleur d’accent",
         editProfile: "Modifier le profil",
         avatarAlt: "Photo de profil de {name}",
+        portraitHint: "Glissez pour tourner",
         avatarAltFallback: "Photo de l’utilisateur",
         edit: {
             title: "Modifier le profil",
@@ -1010,6 +1013,8 @@ const fr: Messages = {
             avatarUploadFailed: "Impossible d’envoyer la photo de profil",
             avatarRemoved: "Photo de profil retirée",
             avatarRemoveFailed: "Impossible de retirer la photo de profil",
+            depthEstimating: "Préparation de votre portrait 3D pour les appels…",
+            depthDownloading: "Téléchargement du modèle de portrait 3D (la première fois seulement)…",
             avatarType: "Choisissez une image JPG, PNG ou WEBP",
             avatarSize: "L’image doit faire moins de 10 Mo",
         },

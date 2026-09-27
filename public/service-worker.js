@@ -100,6 +100,18 @@ self.addEventListener('activate', event => {
 // closes the ring once the call is answered or declined in this browser.
 const INCOMING_CALL_TAG = 'incoming-call'
 const MISSED_CALL_TAG = 'missed-call'
+// Must match ANSWER_HANDOFF_MS in app/lib/callNotifications.ts. A new
+// window has this long to trade its URL nonce for the call id.
+const ANSWER_HANDOFF_MS = 20000
+// Set only when Answer opens a new window. The call id stays here; the
+// URL carries a nonce the page gives back (claim-notification-answer).
+let pendingNotificationAnswer = null
+
+function answerNonce() {
+    const bytes = new Uint8Array(16)
+    crypto.getRandomValues(bytes)
+    return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('')
+}
 
 // Every push shows a notification, even for a call the app is already
 // ringing on screen: Safari revokes the subscription after a few pushes that
@@ -219,7 +231,8 @@ self.addEventListener('notificationclick', function (event) {
     const isCall = kind === 'call'
     // The Answer button: the page answers the call as soon as it has it,
     // instead of ringing again for a second tap (answerFromNotification in
-    // app/lib/callNotifications.ts).
+    // app/lib/callNotifications.ts). An open tab is told the call id
+    // directly. A new window only gets a nonce - the call id stays here.
     const answerCallId = event.action === 'answer' && call ? call.callId : undefined
     // Use the SW's own scope instead of a hardcoded origin - a hardcoded
     // URL breaks on any deployment other than the one it was written for
@@ -240,7 +253,11 @@ self.addEventListener('notificationclick', function (event) {
             }
             if (clients.openWindow) {
                 const url = new URL(targetUrl)
-                if (answerCallId) url.searchParams.set('answer', answerCallId)
+                if (answerCallId) {
+                    const nonce = answerNonce()
+                    pendingNotificationAnswer = { callId: answerCallId, nonce, at: Date.now() }
+                    url.searchParams.set('answer', nonce)
+                }
                 return clients.openWindow(url.href);
             }
         })
@@ -585,6 +602,21 @@ self.addEventListener('fetch', async event => {
 
 
 self.addEventListener('message', async event => {
+    // The new window opened by Answer trades the nonce from its URL for
+    // the call id. A link that only knows the call id has nothing to trade.
+    if (event.data?.type === 'claim-notification-answer') {
+        const pending = pendingNotificationAnswer
+        const fresh = pending && Date.now() - pending.at < ANSWER_HANDOFF_MS
+        if (!fresh) {
+            pendingNotificationAnswer = null
+            return
+        }
+        if (event.data.nonce !== pending.nonce || !event.source) return
+        pendingNotificationAnswer = null
+        event.source.postMessage({ type: 'answer-call', callId: pending.callId })
+        return
+    }
+
     if (event.data?.type === 'GET_QUEUE') {
         // Answers the offline outbox UI's initial snapshot request on mount
         // (useOfflineOutbox.tsx) - after that it just listens for the

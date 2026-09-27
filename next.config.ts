@@ -9,8 +9,11 @@ const DEV_SCRIPT_SOURCES = process.env.NODE_ENV === "production" ? "" : " 'unsaf
 
 const CSP_DIRECTIVES = [
     "default-src 'self'",
-    // Scripts: Your app logic, Google Maps libraries
-    `script-src 'self' https://maps.googleapis.com https://maps.gstatic.com 'unsafe-inline'${DEV_SCRIPT_SOURCES}`,
+    // Scripts: Your app logic, Google Maps libraries. 'wasm-unsafe-eval'
+    // lets the avatar depth model (app/lib/avatarDepthWorker.ts) compile
+    // ONNX Runtime's WebAssembly, served from this origin - it allows
+    // WebAssembly only, not eval().
+    `script-src 'self' https://maps.googleapis.com https://maps.gstatic.com 'unsafe-inline' 'wasm-unsafe-eval'${DEV_SCRIPT_SOURCES}`,
 
     // Styles: Your CSS, Google Fonts stylesheets
     "style-src 'self' 'unsafe-inline' https://maps.googleapis.com https://fonts.googleapis.com",
@@ -25,8 +28,10 @@ const CSP_DIRECTIVES = [
     // Documents: Vercel Blob PDF/Word/Excel loaded via <object>/<embed>/<iframe>
     "object-src 'self' https://kvhqatb9r0bjfpjq.public.blob.vercel-storage.com",
 
-    // Connections: HMR, Service Worker fetches, Vercel Blob API Handshake
-    "connect-src 'self' https://maps.googleapis.com https://maps.gstatic.com https://fonts.googleapis.com https://fonts.gstatic.com https://vercel.com https://kvhqatb9r0bjfpjq.public.blob.vercel-storage.com https://localhost:3000 ws://localhost:3000 wss://localhost:3000",
+    // Connections: HMR, Service Worker fetches, Vercel Blob API Handshake,
+    // and the avatar depth model's files - huggingface.co, which redirects
+    // the weights to its regional *.hf.co CDN.
+    "connect-src 'self' https://huggingface.co https://*.hf.co https://maps.googleapis.com https://maps.gstatic.com https://fonts.googleapis.com https://fonts.gstatic.com https://vercel.com https://kvhqatb9r0bjfpjq.public.blob.vercel-storage.com https://localhost:3000 ws://localhost:3000 wss://localhost:3000",
 
     // Fonts: Google Fonts static files
     "font-src 'self' https://fonts.gstatic.com",
