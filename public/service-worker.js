@@ -109,12 +109,15 @@ const MISSED_CALL_TAG = 'missed-call'
 function notificationFor(data) {
     const base = {
         body: data.body,
+        // A call's icon is the caller's picture; the badge (Android's status
+        // bar) stays the app's.
         icon: data.icon || '/icon.png',
-        badge: data.icon || '/icon.png',
+        badge: '/icon.png',
         data: {
             dateOfArrival: Date.now(),
             primaryKey: '2',
             kind: data.kind || 'message',
+            call: data.call,
         },
     }
     switch (data.kind) {
@@ -129,6 +132,9 @@ function notificationFor(data) {
                 // over the screen is up to the site's notification settings.
                 requireInteraction: true,
                 vibrate: [300, 150, 300, 150, 500, 150, 300],
+                // Answer / Decline. Safari doesn't show notification
+                // buttons, so on an iPhone the ring stays tap-to-open.
+                actions: data.call ? data.actions || [] : [],
             }
         case 'missed-call':
             return { ...base, tag: MISSED_CALL_TAG, silent: true }
@@ -146,18 +152,75 @@ async function closeNotifications(tag) {
     notifications.forEach(notification => notification.close())
 }
 
+// A caller with no picture gets the initial-in-a-circle the app shows for
+// them (Avatar in app/components/ui/avatar.tsx: purple-400 to pink-500).
+// Drawn here rather than on the server so any script's letter renders, in
+// the device's own font. Anything unsupported falls back to the app icon.
+async function initialIcon(letter) {
+    if (typeof OffscreenCanvas === 'undefined') return undefined
+    try {
+        const size = 192
+        const canvas = new OffscreenCanvas(size, size)
+        const context = canvas.getContext('2d')
+        const gradient = context.createLinearGradient(0, 0, size, size)
+        gradient.addColorStop(0, 'oklch(71.4% 0.203 305.504)')
+        gradient.addColorStop(1, 'oklch(65.6% 0.241 354.308)')
+        context.fillStyle = gradient
+        context.beginPath()
+        context.arc(size / 2, size / 2, size / 2, 0, 2 * Math.PI)
+        context.fill()
+        context.fillStyle = '#fff'
+        context.font = `600 ${size * 0.4}px sans-serif`
+        context.textAlign = 'center'
+        // Centered on the glyph itself rather than the font's line box.
+        const metrics = context.measureText(letter)
+        const y = size / 2 + (metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent) / 2
+        context.fillText(letter, size / 2, y)
+        const bytes = new Uint8Array(await (await canvas.convertToBlob({ type: 'image/png' })).arrayBuffer())
+        let binary = ''
+        bytes.forEach(byte => { binary += String.fromCharCode(byte) })
+        return `data:image/png;base64,${btoa(binary)}`
+    } catch {
+        return undefined
+    }
+}
+
 self.addEventListener('push', function (event) {
     if (!event.data) return
     const data = event.data.json()
     event.waitUntil((async () => {
         if (data.kind === 'missed-call') await closeNotifications(INCOMING_CALL_TAG)
+        if (data.iconInitial) data.icon = (await initialIcon(data.iconInitial)) || data.icon
         await self.registration.showNotification(data.title, notificationFor(data))
     })())
 })
 
+// The ring's Decline button, without opening the app. The page's socket
+// isn't there to decline with, so it goes over HTTP, proven by the call's
+// declineToken from the push. Failing (offline) just leaves the call to
+// ring out as missed.
+async function declineCall(call) {
+    const subscription = await self.registration.pushManager.getSubscription().catch(() => null)
+    await fetch(new URL('api/call-decline', self.registration.scope).href, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // Lets the server clear the ring on the user's other devices only.
+        body: JSON.stringify({ ...call, pushEndpoint: subscription?.endpoint }),
+    }).catch(() => { })
+}
+
 self.addEventListener('notificationclick', function (event) {
     event.notification.close()
-    const isCall = event.notification.data?.kind === 'call'
+    const { kind, call } = event.notification.data || {}
+    if (event.action === 'decline' && call) {
+        event.waitUntil(declineCall(call))
+        return
+    }
+    const isCall = kind === 'call'
+    // The Answer button: the page answers the call as soon as it has it,
+    // instead of ringing again for a second tap (answerFromNotification in
+    // app/lib/callNotifications.ts).
+    const answerCallId = event.action === 'answer' && call ? call.callId : undefined
     // Use the SW's own scope instead of a hardcoded origin - a hardcoded
     // URL breaks on any deployment other than the one it was written for
     // (including local dev), and always opening a new window instead of
@@ -171,9 +234,14 @@ self.addEventListener('notificationclick', function (event) {
             // a new one next to it.
             const callClient = isCall ? windowClients.find(client => 'focus' in client) : undefined
             const existing = chatClient || callClient
-            if (existing) return existing.focus()
+            if (existing) {
+                if (answerCallId) existing.postMessage({ type: 'answer-call', callId: answerCallId })
+                return existing.focus()
+            }
             if (clients.openWindow) {
-                return clients.openWindow(targetUrl);
+                const url = new URL(targetUrl)
+                if (answerCallId) url.searchParams.set('answer', answerCallId)
+                return clients.openWindow(url.href);
             }
         })
     );

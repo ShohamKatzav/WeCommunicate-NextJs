@@ -424,7 +424,7 @@ const fr: Messages = {
         },
         notifications: {
             title: "Notifications",
-            p1: "Si vous activez les notifications, le service push de votre navigateur (par exemple celui de Google pour Chrome ou d’Apple pour Safari) nous fournit une adresse où les envoyer. Nous la conservons avec l’adresse e-mail de votre compte, et elle expire avec votre connexion. Chaque notification - le nom de l’expéditeur et le texte du message, ou le fait qu’on vous appelle - passe par ce service push pour atteindre votre appareil.",
+            p1: "Si vous activez les notifications, le service push de votre navigateur (par exemple celui de Google pour Chrome ou d’Apple pour Safari) nous fournit une adresse où les envoyer. Nous la conservons avec l’adresse e-mail de votre compte, et elle expire avec votre connexion. Chaque notification - le nom de l’expéditeur et le texte du message, ou le fait qu’on vous appelle, avec un lien vers la photo de profil de l’appelant - passe par ce service push pour atteindre votre appareil.",
             p2: "Le nombre de messages non lus de vos conversations est conservé dans Upstash Redis.",
         },
         moderation: {

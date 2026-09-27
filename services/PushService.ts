@@ -15,9 +15,14 @@ export interface PushPayload {
     title: string;
     body: string;
     icon?: string;
+    // In place of an icon: the letter the service worker draws one from.
+    iconInitial?: string;
     // Picks the notification style in the service worker's push handler
     // (public/service-worker.js) and the delivery options below.
     kind?: 'message' | 'call' | 'missed-call' | 'call-handled';
+    // A ring's buttons, and the call they act on.
+    call?: { callId: string; conversationId: string; declineToken: string };
+    actions?: { action: 'answer' | 'decline'; title: string }[];
 }
 
 interface SendOptions {
