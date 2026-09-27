@@ -8,6 +8,7 @@ import { useUser } from "../../hooks/useUser";
 import { getMyProfile, updateMyProfile, updateMyAvatar } from "../../lib/profileActions";
 import { compressImageIfWorthwhile, convertHeicToJpegIfNeeded } from "../../components/ui/uploadFile";
 import { isEmail } from "../../lib/contact";
+import { AsShortName } from "../../utils/stringFormat";
 import Avatar from "../../components/ui/avatar";
 import AccentColorPicker from "../../components/profile/accentColorPicker";
 import PhoneNumberEditor from "../../components/profile/phoneNumberEditor";
@@ -31,6 +32,7 @@ export default function EditProfilePage() {
     const { t, locale: activeLocale, dir: pageDir } = useI18n();
     const router = useRouter();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const nicknameInputRef = useRef<HTMLInputElement>(null);
 
     const [loading, setLoading] = useState(true);
     const [nickname, setNickname] = useState("");
@@ -55,6 +57,9 @@ export default function EditProfilePage() {
     // on the next load of this page once the account gains a real email.
     const [canEditPhone, setCanEditPhone] = useState(false);
     const [saving, setSaving] = useState(false);
+    // Shown once the field has been left empty or Save was tried with it
+    // empty - not while the page first loads.
+    const [showNicknameError, setShowNicknameError] = useState(false);
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
     // Set once a picked or captured photo has passed validation and is
     // waiting on the crop step - clearing it (Skip or Cancel) is what
@@ -86,13 +91,18 @@ export default function EditProfilePage() {
             const result = await getMyProfile();
             if (cancelled) return;
             if (result.success) {
-                setNickname(result.profile.nickname || "");
+                const realEmail = isEmail(result.profile.email);
+                // Accounts from before a nickname was required have none.
+                // Start them from the name everyone already sees for them
+                // (AsShortName), so saving an accent color doesn't first
+                // need a name typed in. Never a phone-only account's
+                // synthetic "phone:..." key - that would be its number.
+                setNickname(result.profile.nickname || (realEmail ? AsShortName(result.profile.email) : ""));
                 setAbout(result.profile.about || "");
                 setAccentColor(result.profile.accentColor || DEFAULT_ACCENT_COLOR);
                 if (isLocale(result.profile.locale)) setLocale(result.profile.locale);
                 setAvatarUrl(result.profile.avatarUrl);
                 setPhone(result.profile.phone);
-                const realEmail = isEmail(result.profile.email);
                 setHasRealEmail(realEmail);
                 setEmail(realEmail ? result.profile.email : undefined);
                 setCanEditPhone(realEmail);
@@ -228,6 +238,13 @@ export default function EditProfilePage() {
     };
 
     const handleSave = async () => {
+        // Required here as on sign-up (and by updateMyProfile): a phone-only
+        // account without one would show its number as its name.
+        if (!nickname.trim()) {
+            setShowNicknameError(true);
+            nicknameInputRef.current?.focus();
+            return;
+        }
         setSaving(true);
         try {
             const result = await updateMyProfile({ nickname, about, accentColor, locale });
@@ -319,13 +336,24 @@ export default function EditProfilePage() {
                             <label htmlFor="nickname" className={labelClassName}>{t("profile.edit.nickname")}</label>
                             <input
                                 id="nickname"
+                                ref={nicknameInputRef}
                                 type="text"
                                 value={nickname}
-                                onChange={ev => setNickname(ev.target.value)}
+                                onChange={ev => {
+                                    setNickname(ev.target.value);
+                                    if (ev.target.value.trim()) setShowNicknameError(false);
+                                }}
+                                onBlur={() => setShowNicknameError(!nickname.trim())}
                                 maxLength={40}
+                                required
+                                aria-invalid={showNicknameError}
+                                aria-describedby={showNicknameError ? "nickname-error" : undefined}
                                 disabled={saving}
-                                className={fieldClassName}
+                                className={`${fieldClassName} aria-invalid:border-destructive`}
                             />
+                            {showNicknameError && (
+                                <p id="nickname-error" className="mt-1 text-xs text-destructive">{t("errors.nicknameRequired")}</p>
+                            )}
                         </div>
                         <div className="min-w-0">
                             <label htmlFor="locale" className={labelClassName}>{t("profile.edit.language")}</label>
@@ -388,7 +416,7 @@ export default function EditProfilePage() {
                     <button
                         type="button"
                         onClick={handleSave}
-                        disabled={saving || !nickname.trim()}
+                        disabled={saving}
                         className="flex-1 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {saving ? t("profile.edit.saving") : t("profile.edit.save")}
