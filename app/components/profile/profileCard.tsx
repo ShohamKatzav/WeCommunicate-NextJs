@@ -151,7 +151,9 @@ const ProfileCard = ({ profile, isOwn }: ProfileCardProps) => {
                 )}
 
                 {profile.about ? (
-                    <p dir="auto" className="text-sm wrap-break-word" data-testid="profile-about">{profile.about}</p>
+                    // pre-line: the line breaks typed in the About textarea
+                    // stay; runs of spaces still collapse.
+                    <p dir="auto" className="text-sm wrap-break-word whitespace-pre-line" data-testid="profile-about">{profile.about}</p>
                 ) : (
                     isOwn && <p className="text-sm text-muted-foreground italic">{t("profile.addAbout")}</p>
                 )}
